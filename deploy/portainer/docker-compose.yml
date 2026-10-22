@@ -1,0 +1,74 @@
+# Stack for Portainer: pulls the images published by the "Publish images" workflow.
+# No build, no file to mount except the map data folder (ARTIFACTS_DIR).
+# Variables to set in Portainer (Stack > Environment variables): see deploy/portainer/README.md.
+name: enshrouded-map
+
+services:
+  api:
+    image: ghcr.io/lokidata/enshrouded-map-api:${IMAGE_TAG:-latest}
+    pull_policy: always
+    environment:
+      ENVIRONMENT: production
+      DATABASE_URL: sqlite:////data/app.db
+      SETUP_TOKEN: ${SETUP_TOKEN:-} # empty: generated at start and printed in the api log
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      INVITATION_MINUTES: ${INVITATION_MINUTES:-20}
+      FORWARDED_ALLOW_IPS: ${WEB_IP:-172.28.0.10} # the web container: the only one allowed to tell the client address
+    volumes:
+      - db-data:/data
+    networks: [backend]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 512m
+    cpus: 1.0
+    pids_limit: 128
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+
+  web:
+    image: ghcr.io/lokidata/enshrouded-map-web:${IMAGE_TAG:-latest}
+    pull_policy: always
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      REVERSE_PROXY_IP: ${REVERSE_PROXY_IP:-127.0.0.1} # address your reverse proxy connects from
+    ports:
+      - "${WEB_BIND:-0.0.0.0}:${WEB_PORT:-8080}:8080"
+    volumes:
+      - ${ARTIFACTS_DIR:?folder on the server holding the map data (tiles, icons, map-data.json...)}:/srv/artifacts:ro
+    networks:
+      edge: {}
+      backend:
+        ipv4_address: ${WEB_IP:-172.28.0.10}
+    read_only: true
+    tmpfs: [/tmp, "/etc/nginx/conf.d:uid=101,gid=101,mode=755"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 256m
+    cpus: 1.0
+    pids_limit: 64
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+networks:
+  edge: {}
+  backend:
+    internal: true # the API has no route to the outside, and nothing outside reaches it
+    ipam:
+      config:
+        - subnet: ${BACKEND_SUBNET:-172.28.0.0/24}
+
+volumes:
+  db-data:

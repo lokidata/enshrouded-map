@@ -1,0 +1,29 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: {interval: weekly}
+    cooldown: {default-days: 7} # new releases wait a week: gives time for compromised ones to be pulled
+    groups:
+      actions: {patterns: ["*"]}
+  - package-ecosystem: uv
+    directory: /backend
+    schedule: {interval: weekly}
+    cooldown: {default-days: 7} # new releases wait a week: gives time for compromised ones to be pulled
+    groups:
+      python: {patterns: ["*"], update-types: [minor, patch]}
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule: {interval: weekly}
+    cooldown: {default-days: 7} # new releases wait a week: gives time for compromised ones to be pulled
+    groups:
+      angular: {patterns: ["@angular/*", "@angular-devkit/*", "angular-eslint"]}
+      npm-minor-patch: {patterns: ["*"], update-types: [minor, patch]}
+  - package-ecosystem: docker
+    directory: /backend
+    schedule: {interval: weekly}
+    cooldown: {default-days: 7} # new releases wait a week: gives time for compromised ones to be pulled
+  - package-ecosystem: docker
+    directory: /frontend
+    schedule: {interval: weekly}
+    cooldown: {default-days: 7} # new releases wait a week: gives time for compromised ones to be pulled

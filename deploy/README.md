@@ -1,5 +1,7 @@
 # Deployment
 
+On a server with Portainer, see [portainer/README.md](portainer/README.md) (images from GHCR). This page is the local / compose-from-source setup.
+
 Two containers behind your reverse proxy (it terminates TLS and adds HSTS):
 
 - `web`: nginx. Serves the Angular build and the map data (`artifacts/map`, mounted read-only), proxies `/api/` to `api`. The only published port.
