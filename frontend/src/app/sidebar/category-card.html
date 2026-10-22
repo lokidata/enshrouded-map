@@ -1,0 +1,49 @@
+<div class="card" [attr.data-state]="state()" [class.expanded]="open()">
+  <button
+    type="button"
+    class="toggle"
+    [attr.aria-pressed]="state() === 'all' ? 'true' : state() === 'some' ? 'mixed' : 'false'"
+    (click)="toggle()"
+  >
+    <span class="ic">
+      @if (category().icon; as icon) {
+        <img [src]="icon" alt="" />
+      } @else if (category().kind === 'dots') {
+        <i class="dot big" [style.background]="dotColor()"></i>
+      } @else {
+        <span class="text-icon">Aa</span>
+      }
+    </span>
+    <span class="name">{{ category().label[lang.index()] }}</span>
+    <span class="count">{{ countText() }}</span>
+  </button>
+  <button
+    type="button"
+    class="caret"
+    [class.open]="open()"
+    [disabled]="single()"
+    [attr.aria-expanded]="open()"
+    [attr.aria-label]="'showElements' | transloco"
+    (click)="open.set(!open())"
+  >
+    ›
+  </button>
+</div>
+@if (open()) {
+  <div class="items">
+    @for (item of rows(); track item.key) {
+      <label class="item">
+        <input
+          type="checkbox"
+          [checked]="filters.isShown(cat(), item.key)"
+          (change)="setItem(item.key, $event)"
+        />
+        @if (item.color) {
+          <i class="dot" [style.background]="item.color"></i>
+        }
+        <span class="name">{{ item.name[lang.index()] }}</span>
+        <span class="count">{{ itemCount(item.key, item.count) }}</span>
+      </label>
+    }
+  </div>
+}

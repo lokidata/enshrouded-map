@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "skills": {
+    "alembic": {
+      "source": "bm629/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/alembic/SKILL.md",
+      "computedHash": "d6bfd1624712094b346ecfd4da1b42cfbd37658b9df526c6feb4bf2f1e46cad5"
+    },
+    "angular-developer": {
+      "source": "angular/skills",
+      "sourceType": "github",
+      "skillPath": "angular-developer/SKILL.md",
+      "computedHash": "cef5f1739f4a7158f20230f7e5a03c9b4b150b77174f22938512dcc49e270b91"
+    },
+    "angular-new-app": {
+      "source": "angular/skills",
+      "sourceType": "github",
+      "skillPath": "angular-new-app/SKILL.md",
+      "computedHash": "49bd84ab08bd3498c52f476bed48fbb942dc6dbc0925607e84549adbed34bccf"
+    },
+    "fastapi-python": {
+      "source": "mindrally/skills",
+      "sourceType": "github",
+      "skillPath": "fastapi-python/SKILL.md",
+      "computedHash": "34459011c624a82684f829f22877aeb21a0898ca9b5e090a699aff06542446ca"
+    },
+    "python-project-structure": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "skillPath": "plugins/python-development/skills/python-project-structure/SKILL.md",
+      "computedHash": "2f4f560964af8ecad4d54666c044baa54671d0abd1136c848b539befe24db170"
+    },
+    "python-type-safety": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "skillPath": "plugins/python-development/skills/python-type-safety/SKILL.md",
+      "computedHash": "16314aa8a4a465773be809c517f62f8ef704f5ab1bb237e8c9b8a759689fcb21"
+    },
+    "sqlalchemy": {
+      "source": "bm629/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/sqlalchemy/SKILL.md",
+      "computedHash": "6fd81a03e2cb99a1152494aa56855a31137091c0720e5bb15535d9c266ce02c8"
+    }
+  }
+}

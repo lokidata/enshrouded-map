@@ -1,0 +1,6 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Generated or third-party files, ignored by git anyway"
+paths = ['''graphify-out/''', '''node_modules/''', '''\.venv/''', '''frontend/\.angular/''']

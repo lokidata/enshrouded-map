@@ -1,0 +1,43 @@
+<dialog
+  #dialog
+  aria-labelledby="auth-title"
+  (cancel)="keepOpen($event)"
+  (close)="auth.dialog.set(null)"
+>
+  <form (submit)="submit($event)">
+    <h2 id="auth-title">
+      {{
+        (auth.dialog() === 'setup'
+          ? 'setupTitle'
+          : auth.dialog() === 'invite'
+            ? 'inviteTitle'
+            : 'login'
+        ) | transloco
+      }}
+    </h2>
+    @if (auth.dialog() === 'setup') {
+      <p class="hint">{{ 'setupHint' | transloco }}</p>
+    }
+    <label>
+      {{ 'username' | transloco }}
+      <input [formField]="credentials.username" autocomplete="username" />
+    </label>
+    <label>
+      {{ 'password' | transloco }}
+      <input
+        type="password"
+        [formField]="credentials.password"
+        [attr.autocomplete]="auth.dialog() === 'login' ? 'current-password' : 'new-password'"
+      />
+    </label>
+    <div class="error" role="alert">{{ error() ? ('errors.' + error() | transloco) : '' }}</div>
+    <div class="actions">
+      @if (auth.dialog() !== 'setup') {
+        <button type="button" (click)="close()">{{ 'cancel' | transloco }}</button>
+      }
+      <button type="submit" class="primary">
+        {{ (auth.dialog() === 'login' ? 'login' : 'create') | transloco }}
+      </button>
+    </div>
+  </form>
+</dialog>

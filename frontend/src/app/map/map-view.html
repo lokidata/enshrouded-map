@@ -1,0 +1,9 @@
+<div #host class="map-host"></div>
+<div class="coords" aria-hidden="true">{{ coords() }}</div>
+@if (legendOn()) {
+  <div class="legend">
+    @for (b of biomes(); track b.label) {
+      <span><i [style.background]="b.color"></i>{{ b.label }}</span>
+    }
+  </div>
+}

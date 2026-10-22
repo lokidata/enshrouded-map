@@ -1,0 +1,7 @@
+{
+  "id": "map_export",
+  "name": "Map export",
+  "version": "0.1.0",
+  "capabilities": ["export"],
+  "description": "Exports map textures, icons and translations for an interactive map."
+}

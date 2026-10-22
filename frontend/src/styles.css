@@ -1,0 +1,22 @@
+:root {
+  --bg: #16181c;
+  --panel: #1f2228;
+  --text: #e6e6e6;
+  --muted: #9aa0a8;
+  --border: #2f343c;
+  --hover: #2a2e35;
+  --accent: #e8a33c;
+}
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font:
+    14px/1.4 system-ui,
+    sans-serif;
+}

@@ -1,0 +1,10 @@
+artifacts/
+*.db
+*.db-*
+node_modules/
+.venv/
+__pycache__/
+.env
+dist/
+.angular/
+graphify-out/

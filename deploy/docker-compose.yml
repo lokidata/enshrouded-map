@@ -1,0 +1,73 @@
+name: enshrouded-map
+
+services:
+  api:
+    build: ../backend
+    image: enshrouded-map-api:local
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      ENVIRONMENT: production
+      DATABASE_URL: sqlite:////data/app.db
+      FORWARDED_ALLOW_IPS: 172.28.0.10 # the web container: the only one allowed to tell the client address
+    volumes:
+      - db-data:/data
+    networks: [backend]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 512m
+    cpus: 1.0
+    pids_limit: 128
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+
+  web:
+    build: ../frontend
+    image: enshrouded-map-web:local
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      REVERSE_PROXY_IP: ${REVERSE_PROXY_IP:-127.0.0.1}
+    ports:
+      - "${WEB_BIND:-127.0.0.1}:${WEB_PORT:-8080}:8080"
+    volumes:
+      - ${ARTIFACTS_DIR:-../artifacts/map}:/srv/artifacts:ro
+      - ./nginx.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ./security-headers.conf:/etc/nginx/security-headers.conf:ro
+    networks:
+      edge: {}
+      backend:
+        ipv4_address: 172.28.0.10
+    read_only: true
+    tmpfs: [/tmp, "/etc/nginx/conf.d:uid=101,gid=101,mode=755"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 256m
+    cpus: 1.0
+    pids_limit: 64
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+networks:
+  edge: {}
+  backend:
+    internal: true # the API has no route to the outside, and nothing outside reaches it
+    ipam:
+      config:
+        - subnet: 172.28.0.0/24
+
+volumes:
+  db-data:

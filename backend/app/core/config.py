@@ -1,0 +1,29 @@
+from functools import lru_cache
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    """All configuration comes from environment variables (or a local .env)."""
+
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    environment: str = "production"  # "development" enables the OpenAPI docs
+    database_url: str = "sqlite:///./data/app.db"
+
+    cookie_secure: bool = True  # set COOKIE_SECURE=false only for plain-http tests
+    session_days: int = 30
+    invitation_minutes: int = 20  # lifetime of the link a user sends to create an account
+
+    login_rate_limit: str = "10/5 minutes"  # per client address
+    register_rate_limit: str = "10/hour"  # setup and invitations
+    lockout_threshold: int = 5  # failed logins before an account is locked progressively
+
+    max_marks: int = 200_000
+    max_settings_bytes: int = 256_000
+    max_body_bytes: int = 4_000_000
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()

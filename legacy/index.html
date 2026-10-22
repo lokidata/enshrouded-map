@@ -1,0 +1,823 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Carte Enshrouded</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  :root {
+    --bg: #16181c;
+    --panel: #1f2228;
+    --text: #e6e6e6;
+    --muted: #9aa0a8;
+    --border: #2f343c;
+    --hover: #2a2e35;
+    --accent: #e8a33c;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 14px/1.4 system-ui, sans-serif; }
+  #app { display: flex; height: 100%; }
+  #sidebar { width: 380px; flex-shrink: 0; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+  #sidebar header { padding: 14px 16px 10px; border-bottom: 1px solid var(--border); }
+  #title-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  #sidebar h1 { margin: 0; font-size: 18px; }
+  #lang { display: flex; border: 1px solid var(--border); border-radius: 5px; overflow: hidden; }
+  #lang button { border: 0; background: var(--bg); color: var(--muted); padding: 3px 8px; cursor: pointer; font-size: 12px; }
+  #lang button.active { background: var(--accent); color: #1a1a1a; }
+  #search { width: 100%; padding: 7px 9px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); }
+  #toggles { display: flex; gap: 6px; margin-top: 8px; }
+  #toggles button { flex: 1; padding: 4px; border: 1px solid var(--border); border-radius: 5px; background: var(--bg); color: var(--muted); cursor: pointer; }
+  #toggles button:hover { color: var(--text); }
+  #cats { overflow-y: auto; padding: 8px 8px 16px; flex: 1; }
+  .item .count { margin-left: auto; color: var(--muted); font-size: 12px; }
+  .caret { width: 16px; padding: 0; border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 11px; transition: transform .15s; flex-shrink: 0; }
+  .caret:hover { color: var(--text); }
+  .caret.open { transform: rotate(90deg); }
+  .caret:disabled { visibility: hidden; }
+  .items { margin: 0 0 4px 30px; border-left: 1px solid var(--border); }
+  .item { display: flex; align-items: center; gap: 7px; padding: 2px 8px; border-radius: 4px; cursor: pointer; user-select: none; font-size: 13px; color: #cfd3d8; }
+  .item:hover { background: var(--hover); }
+  .item input { margin: 0; }
+  .item .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .item[hidden], .items[hidden] { display: none; }
+  /* menu: sections of category cards */
+  .section-title { margin: 14px 4px 6px; font: 700 12px/1 system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase; color: var(--c); }
+  .section-title:first-child { margin-top: 4px; }
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .card { position: relative; display: flex; align-items: center; gap: 6px; min-height: 44px; padding: 6px 2px 6px 7px;
+          border: 1px solid color-mix(in srgb, var(--c) 60%, transparent); border-radius: 4px;
+          background: color-mix(in srgb, var(--c) 13%, var(--panel)); cursor: pointer; user-select: none;
+          transition: opacity .15s, background .15s, border-color .15s; }
+  .card:hover { background: color-mix(in srgb, var(--c) 22%, var(--panel)); }
+  .card:focus-visible { outline: 2px solid var(--c); outline-offset: 1px; }
+  .card[data-state="none"] { opacity: .45; background: transparent; border-color: var(--border); }
+  .card[data-state="none"]:hover { opacity: .75; }
+  .card[data-state="some"] { border-style: dashed; }
+  .card.expanded { box-shadow: inset 0 -2px 0 var(--c); }
+  .card .ic { width: 24px; height: 24px; flex-shrink: 0; display: grid; place-items: center; }
+  .card .text-icon { font: italic 600 13px Georgia, serif; color: #f3e6c8; }
+  .card .ic img { width: 24px; height: 24px; filter: drop-shadow(0 0 1px #000); }
+  .card .name { flex: 1; min-width: 0; font: 700 13px/1.2 Georgia, "Times New Roman", serif; color: #f1e9d6;
+                hyphens: auto; -webkit-hyphens: auto; overflow-wrap: break-word; }
+  .card .count { margin-left: 2px; font-size: 11px; color: var(--muted); white-space: nowrap; }
+  .card .caret { width: 15px; height: 26px; padding: 0; border: 0; background: none; color: var(--muted); font-size: 17px;
+                 line-height: 1; cursor: pointer; border-radius: 3px; }
+  .card .caret:hover { color: var(--text); background: #ffffff14; }
+  .card .caret:disabled { visibility: hidden; }
+  .card .caret.open { transform: rotate(90deg); color: var(--c); }
+  .cards .items { grid-column: 1 / -1; margin: 0 0 4px; padding: 4px 0; border: 1px solid color-mix(in srgb, var(--c) 35%, transparent);
+                  border-radius: 4px; background: #00000026; max-height: 320px; overflow-y: auto; }
+  .dot.big { width: 14px; height: 14px; }
+  #account { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 13px; color: var(--muted); }
+  #account .who { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+  #account button, .popup-actions button, #auth button { padding: 4px 9px; border: 1px solid var(--border); border-radius: 5px; background: var(--bg); color: var(--text); cursor: pointer; font-size: 12px; }
+  #account button.primary, #auth button.primary, .popup-actions button.primary { background: var(--accent); border-color: var(--accent); color: #1a1a1a; }
+  .popup-actions { margin-top: 8px; }
+  .popup-actions .hint { color: #555; font-size: 12px; }
+  .popup-actions .hint a { color: #b06d10; cursor: pointer; text-decoration: underline; }
+  /* done elements stay on the map as faint "ghosts" */
+  .marker-icon.done { opacity: 0.8; filter: grayscale(0.7) drop-shadow(0 0 3px #6fe06f) drop-shadow(0 0 2px #6fe06f) drop-shadow(0 0 1px #6fe06f); }
+  .marker-icon.done:hover { opacity: 1; }
+  #auth { border: 1px solid var(--border); border-radius: 10px; background: var(--panel); color: var(--text); padding: 18px 20px; width: min(320px, calc(100vw - 32px)); }
+  #auth::backdrop { background: #0008; }
+  #auth h2 { margin: 0 0 12px; font-size: 16px; }
+  #auth label { display: block; font-size: 12px; color: var(--muted); margin-top: 10px; }
+  #auth input { width: 100%; margin-top: 4px; padding: 7px 9px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); }
+  #auth .error { color: #ff7b72; font-size: 12px; min-height: 16px; margin-top: 10px; }
+  #auth .actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
+  #auth .switch { margin-top: 12px; font-size: 12px; color: var(--muted); }
+  #auth .switch a { color: var(--accent); cursor: pointer; }
+  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; border: 1px solid #000a; flex-shrink: 0; }
+  #legend { padding: 10px 16px; border-top: 1px solid var(--border); font-size: 12px; color: var(--muted); display: none; grid-template-columns: 1fr 1fr; gap: 3px 10px; }
+  #legend.shown { display: grid; }
+  #legend span { display: flex; align-items: center; gap: 6px; }
+  #legend i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+  #map { flex: 1; background: #10141a; } /* same as the void and tile padding of render_map.py */
+  #coords { position: absolute; right: 10px; bottom: 10px; z-index: 1000; background: #000a; color: #eee; padding: 3px 8px; border-radius: 4px; font: 12px ui-monospace, monospace; pointer-events: none; }
+  .marker-icon { filter: drop-shadow(0 0 2px #000) drop-shadow(0 0 1px #000); }
+  .marker-icon.fast-travel { filter: drop-shadow(0 0 3px #7cc4ff) drop-shadow(0 0 1px #000); }
+  .map-label { color: #f6ecd2; font: italic 600 13px Georgia, serif; text-shadow: 0 0 3px #000, 0 0 2px #000; white-space: nowrap; text-align: center; pointer-events: auto; }
+  .map-label.region { font-size: 17px; letter-spacing: 0.06em; text-transform: uppercase; color: #fff4d6; }  .leaflet-tooltip { font-size: 12px; }
+  .leaflet-popup-content { margin: 10px 12px; }
+  .popup-name { font-weight: 600; font-size: 14px; }
+  .popup-meta { color: #555; font-size: 12px; margin-top: 4px; }
+  .popup-raw { color: #888; font: 11px ui-monospace, monospace; margin-top: 6px; word-break: break-all; }
+  @media (max-width: 700px) {
+    #app { flex-direction: column; }
+    #sidebar { width: 100%; height: 40%; border-right: 0; border-bottom: 1px solid var(--border); }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <aside id="sidebar">
+    <header>
+      <div id="title-row">
+        <h1 id="title">Carte Enshrouded</h1>
+        <div id="lang"></div>
+      </div>
+      <input id="search" type="search">
+      <div id="toggles">
+        <button id="all"></button>
+        <button id="none"></button>
+      </div>
+      <div id="account"></div>
+    </header>
+    <div id="cats"></div>
+    <div id="legend"></div>
+  </aside>
+  <div id="map"></div>
+</div>
+<div id="coords"></div>
+<dialog id="auth">
+  <form method="dialog" id="auth-form">
+    <h2 id="auth-title"></h2>
+    <label><span id="auth-user-label"></span><input id="auth-user" autocomplete="username" required minlength="3" maxlength="32"></label>
+    <label><span id="auth-pass-label"></span><input id="auth-pass" type="password" required minlength="6"></label>
+    <div class="error" id="auth-error"></div>
+    <div class="actions">
+      <button type="button" id="auth-cancel"></button>
+      <button type="submit" class="primary" id="auth-submit"></button>
+    </div>
+    <div class="switch"><span id="auth-switch-text"></span> <a id="auth-switch"></a></div>
+  </form>
+</dialog>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="markers.js"></script>
+<script>
+const DATA = window.MAP_DATA;
+const SIZE = DATA.worldSize;
+const UI = {
+  fr: { title: "Carte Enshrouded", search: "Rechercher un lieu…", all: "Tout", none: "Rien",
+        map: "Carte", biomes: "Biomes", fastTravel: "voyage rapide", altitude: "altitude", size: "taille",
+        login: "Se connecter", logout: "Déconnexion", register: "Créer un compte", username: "Nom d'utilisateur",
+        password: "Mot de passe", cancel: "Annuler", noAccount: "Pas encore de compte ?", haveAccount: "Déjà un compte ?",
+        markDone: "Marquer comme fait", unmark: "Retirer la marque", loginToTrack: "pour suivre votre progression",
+        progress: "faits",
+        errors: { taken: "Ce nom est déjà pris.", credentials: "Nom ou mot de passe incorrect.",
+                  username: "3 à 32 caractères : lettres, chiffres, _ . -", password: "6 caractères minimum.",
+                  "too many attempts": "Trop de tentatives, réessayez dans quelques minutes.",
+                  network: "Serveur injoignable.", save: "La progression n'a pas pu être enregistrée." } },
+  en: { title: "Enshrouded map", search: "Search a place…", all: "All", none: "None",
+        map: "Map", biomes: "Biomes", fastTravel: "fast travel", altitude: "altitude", size: "size",
+        login: "Log in", logout: "Log out", register: "Create account", username: "Username",
+        password: "Password", cancel: "Cancel", noAccount: "No account yet?", haveAccount: "Already have an account?",
+        markDone: "Mark as done", unmark: "Unmark", loginToTrack: "to track your progress",
+        progress: "done",
+        errors: { taken: "This name is already taken.", credentials: "Wrong username or password.",
+                  username: "3 to 32 characters: letters, digits, _ . -", password: "At least 6 characters.",
+                  "too many attempts": "Too many attempts, try again in a few minutes.",
+                  network: "Server unreachable.", save: "Progress could not be saved." } },
+};
+// Icon size per zoom level, and the zoom from which each label kind shows.
+const iconSize = zoom => zoom <= -4 ? 14 : zoom <= -3 ? 20 : zoom <= -2 ? 26 : 32;
+const LABEL_MIN_ZOOM = { region: -5, areaName: -2.5 };
+
+let lang = "fr";
+let accountReady = false;
+try { lang = localStorage.getItem("lang") || "fr"; } catch (e) {}
+if (!UI[lang]) lang = "fr";
+const li = () => DATA.languages.indexOf(lang);
+
+// The world is placed at lat = z - SIZE (all negative) so that tile rows
+// start at the north edge with y = 0 at every zoom level.
+const toLatLng = (x, z) => [z - SIZE, x];
+// Stable id of a map element for the progress marks: category and position.
+const markId = (cat, x, z) => `${cat}:${Math.round(x)}:${Math.round(z)}`;
+const bounds = L.latLngBounds([[-SIZE, 0], [0, SIZE]]);
+
+const map = L.map("map", {
+  crs: L.CRS.Simple,
+  minZoom: -5,
+  maxZoom: 2,
+  zoomSnap: 0.5,
+  attributionControl: false,
+  maxBounds: bounds.pad(0.15),
+});
+map.fitBounds(bounds);
+
+const tiles = L.tileLayer("tiles/{z}/{x}_{y}.jpg", {
+  minNativeZoom: -5, maxNativeZoom: 0, minZoom: -5, maxZoom: 2,
+  tileSize: 256, noWrap: true, bounds, keepBuffer: 4,
+}).addTo(map);
+const biomes = L.imageOverlay("biomes.png", bounds, { opacity: 0.85 });
+const layersControl = L.control.layers(null, null, { position: "topright" }).addTo(map);
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+// Markers
+const groups = {};
+const all = [];
+const iconCache = {};
+function iconFor(m, size) {
+  const key = `${m.cat}|${m.fastTravel}|${size}`;
+  return iconCache[key] ||= L.icon({
+    iconUrl: DATA.categories[m.cat].icon, iconSize: [size, size],
+    className: "marker-icon" + (m.fastTravel ? " fast-travel" : ""),
+  });
+}
+for (const m of DATA.markers) {
+  const cat = DATA.categories[m.cat];
+  let marker;
+  if (cat.kind === "label") {
+    marker = L.marker(toLatLng(m.x, m.z), { icon: L.divIcon({ className: "", iconSize: null }), keyboard: false });
+  } else if (cat.icon) {
+    marker = L.marker(toLatLng(m.x, m.z), { icon: iconFor(m, iconSize(map.getZoom())), riseOnHover: true });
+  } else {
+    marker = L.circleMarker(toLatLng(m.x, m.z), { radius: 4, color: "#000", weight: 1, fillColor: "#ccc", fillOpacity: 0.9 });
+  }
+  marker.data = m;
+  (groups[m.cat] ||= L.layerGroup()).addLayer(marker);
+  all.push(marker);
+}
+
+let currentIconSize = iconSize(map.getZoom());
+map.on("zoomend", () => {
+  const size = iconSize(map.getZoom());
+  if (size !== currentIconSize) {
+    currentIconSize = size;
+    for (const marker of all) {
+      const cat = DATA.categories[marker.data.cat];
+      if (cat.kind === "icon" && cat.icon) marker.setIcon(iconFor(marker.data, size));
+    }
+    // setIcon builds a new element: put the ghost style of done markers back
+    if (accountReady) for (const marker of markerById.values()) styleMarker(marker);
+    refreshTooltipOffsets();
+  }
+  applyFilters();
+});
+
+function refreshMarkerTexts() {
+  const t = UI[lang];
+  for (const marker of all) {
+    const m = marker.data;
+    const cat = DATA.categories[m.cat];
+    const name = m.name[li()];
+    if (cat.kind === "label") {
+      marker.setIcon(L.divIcon({
+        className: "", iconSize: null,
+        html: `<div class="map-label ${m.cat}" style="transform:translate(-50%,-50%)">${escapeHtml(name)}</div>`,
+      }));
+    } else {
+      marker.unbindTooltip().bindTooltip(name, { direction: "top", offset: [0, -currentIconSize / 2] });
+    }
+    marker.unbindPopup().bindPopup(
+      `<div class="popup-name">${escapeHtml(name)}</div>` +
+      `<div class="popup-meta">${escapeHtml(cat.label[li()])}` +
+      `${m.fastTravel && m.cat !== "fastTravel" ? " · " + t.fastTravel : ""}<br>` +
+      `X ${Math.round(m.x)} · Z ${Math.round(m.z)} · ${t.altitude} ${Math.round(m.y)}</div>` +
+      `<div class="popup-raw">${escapeHtml(m.raw)}</div>` +
+      (cat.kind === "label" ? "" : `<div class="popup-actions" data-id="${markId(m.cat, m.x, m.z)}"></div>`)
+    );
+  }
+}
+
+// Sidebar: categories sorted by count, labels last. Each category lists its
+// elements grouped by in-game name, so a whole category or a single element
+// can be shown.
+const itemKey = m => m.name.join("\u0001");
+const counts = {};
+const items = {};      // category -> Map(item key -> {name, count, cb, nameEl, row})
+for (const m of DATA.markers) {
+  counts[m.cat] = (counts[m.cat] || 0) + 1;
+  const list = items[m.cat] ||= new Map();
+  const key = itemKey(m);
+  if (!list.has(key)) list.set(key, { name: m.name, count: 0 });
+  list.get(key).count++;
+}
+// Resources (chests, plants, ores): point lists per element, drawn as dots.
+const resources = [];  // {cat, data, key, layer}
+for (const [cat, list] of Object.entries(DATA.resources || {})) {
+  const map_ = items[cat] ||= new Map();
+  for (const data of list) {
+    const n = data.pts.length / 3;
+    counts[cat] = (counts[cat] || 0) + n;
+    const key = itemKey(data);
+    map_.set(key, { name: data.name, count: n, color: data.color });
+    resources.push({ cat, data, key, layer: null });
+  }
+}
+// Icon categories first (by count), then resources, then map labels.
+const kindRank = k => ({ dots: 1, label: 2 }[DATA.categories[k].kind] || 0);
+const order = Object.keys(counts).sort((a, b) => kindRank(a) - kindRank(b) || counts[b] - counts[a]);
+
+// Hidden elements, as "category|item key". Categories hidden by default start fully hidden.
+const hidden = new Set();
+for (const key of order) {
+  if (!DATA.categories[key].visible) for (const k of items[key].keys()) hidden.add(key + "|" + k);
+}
+
+// Menu: sections of category cards (click = show / hide the category, the
+// arrow opens its elements).
+const SECTIONS = [
+  { label: ["Flamme", "Flame"], color: "#d9a43c",
+    cats: ["fastTravel", "flameShrine", "nightTemple", "gemForge", "obelisk", "flameAltar", "start"] },
+  { label: ["Ennemis", "Enemies"], color: "#cf5345", cats: ["boss", "elite", "enemyCamp", "balefire", "summon"] },
+  { label: ["Donjons", "Dungeons"], color: "#8a77ea", cats: ["dungeon", "dungeonEntrance", "bigDungeon", "hiddenGrave"] },
+  { label: ["Lieux", "Places"], color: "#b3ab99", cats: ["landmark", "cave", "camp", "farm", "mine", "poi"] },
+  { label: ["Butin", "Loot"], color: "#d1913f", cats: ["chest"] },
+  { label: ["Brume", "Shroud"], color: "#c95aa6", cats: ["shroudRoot", "elixirWell"] },
+  { label: ["Ressources", "Resources"], color: "#5fb08c", cats: ["plant", "ore"] },
+  { label: ["Carte", "Map"], color: "#8592a3", cats: ["region", "areaName", "hidden"] },
+];
+// Categories not listed above go to the last section.
+const placed = new Set(SECTIONS.flatMap(sec => sec.cats));
+SECTIONS[SECTIONS.length - 1].cats.push(...order.filter(k => !placed.has(k)));
+
+const checkboxes = {};   // category -> hidden checkbox holding the state (checked / indeterminate)
+const cards = {};
+const catNames = {};
+const catCounts = {};
+const subLists = {};
+const sectionTitles = [];
+const catsEl = document.getElementById("cats");
+for (const sec of SECTIONS) {
+  const keys = sec.cats.filter(k => items[k]);
+  if (!keys.length) continue;
+  const title = document.createElement("div");
+  title.className = "section-title";
+  title.style.setProperty("--c", sec.color);
+  sectionTitles.push([title, sec]);
+  const grid = document.createElement("div");
+  grid.className = "cards";
+  catsEl.append(title, grid);
+
+  for (const key of keys) {
+    const cat = DATA.categories[key];
+    const card = document.createElement("div");
+    card.className = "card";
+    card.style.setProperty("--c", sec.color);
+    card.tabIndex = 0;
+    const icon = cat.icon ? `<img src="${cat.icon}" alt="">`
+      : cat.kind === "dots" ? `<i class="dot big" style="background:${[...items[key].values()][0].color}"></i>`
+      : `<span class="text-icon">Aa</span>`;
+    const single = items[key].size === 1;
+    card.innerHTML = `<span class="ic">${icon}</span><span class="name"></span><span class="count">${counts[key]}</span>` +
+      `<button class="caret" type="button"${single ? " disabled" : ""}>›</button><input type="checkbox" hidden>`;
+    const cb = card.querySelector("input");
+    checkboxes[key] = cb;
+    cards[key] = card;
+    catNames[key] = card.querySelector(".name");
+    catCounts[key] = card.querySelector(".count");
+    const toggle = () => setCategory(key, !cb.checked);
+    card.addEventListener("click", toggle);
+    card.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } });
+
+    const sub = document.createElement("div");
+    sub.className = "items";
+    sub.hidden = true;
+    sub.style.setProperty("--c", sec.color);
+    for (const [k, item] of items[key]) {
+      const r = document.createElement("label");
+      r.className = "item";
+      const swatch = item.color ? `<i class="dot" style="background:${item.color}"></i>` : "";
+      r.innerHTML = `<input type="checkbox">${swatch}<span class="name"></span><span class="count">${item.count > 1 ? item.count : ""}</span>`;
+      item.cb = r.querySelector("input");
+      item.nameEl = r.querySelector(".name");
+      item.countEl = r.querySelector(".count");
+      item.row = r;
+      item.cb.addEventListener("change", () => {
+        item.cb.checked ? hidden.delete(key + "|" + k) : hidden.add(key + "|" + k);
+        applyFilters();
+      });
+      sub.appendChild(r);
+    }
+    subLists[key] = sub;
+    const caret = card.querySelector(".caret");
+    caret.addEventListener("click", e => {
+      e.stopPropagation();
+      sub.hidden = !sub.hidden;
+      caret.classList.toggle("open", !sub.hidden);
+      card.classList.toggle("expanded", !sub.hidden);
+    });
+    grid.append(card, sub);
+  }
+}
+
+function setCategory(key, visible) {
+  for (const k of items[key].keys()) visible ? hidden.delete(key + "|" + k) : hidden.add(key + "|" + k);
+  applyFilters();
+}
+
+// Category checkbox: checked when all its elements show, indeterminate when some do.
+function syncCheckboxes() {
+  for (const key of order) {
+    let shown = 0;
+    for (const [k, item] of items[key]) {
+      const on = !hidden.has(key + "|" + k);
+      item.cb.checked = on;
+      shown += on;
+    }
+    checkboxes[key].checked = shown === items[key].size;
+    checkboxes[key].indeterminate = shown > 0 && shown < items[key].size;
+    cards[key].dataset.state = shown === items[key].size ? "all" : shown ? "some" : "none";
+  }
+}
+
+// Element names follow the language; sorted alphabetically.
+function refreshItemNames() {
+  for (const [title, sec] of sectionTitles) title.textContent = sec.label[li()];
+  for (const key of order) {
+    const sorted = [...items[key].values()].sort((a, b) => a.name[li()].localeCompare(b.name[li()], lang));
+    for (const item of sorted) {
+      item.nameEl.textContent = item.name[li()];
+      subLists[key].appendChild(item.row);
+    }
+  }
+}
+
+document.getElementById("all").onclick = () => { hidden.clear(); applyFilters(); };
+document.getElementById("none").onclick = () => {
+  for (const key of order) for (const k of items[key].keys()) hidden.add(key + "|" + k);
+  applyFilters();
+};
+const search = document.getElementById("search");
+search.addEventListener("input", applyFilters);
+
+function normalize(s) {
+  return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+}
+
+function refreshTooltipOffsets() {
+  for (const marker of all) {
+    const tooltip = marker.getTooltip && marker.getTooltip();
+    if (tooltip) tooltip.options.offset = L.point(0, -currentIconSize / 2);
+  }
+}
+
+function applyFilters() {
+  const q = normalize(search.value.trim());
+  const zoom = map.getZoom();
+  for (const marker of all) {
+    const m = marker.data;
+    const group = groups[m.cat];
+    const matches = !q || m.name.some(n => normalize(n).includes(q)) || normalize(m.raw).includes(q);
+    // Labels only show from their zoom level, unless they match a search.
+    const zoomOk = !(m.cat in LABEL_MIN_ZOOM) || zoom >= LABEL_MIN_ZOOM[m.cat] || (q && matches);
+    const visible = !hidden.has(m.cat + "|" + itemKey(m)) && matches && zoomOk;
+    if (visible && !group.hasLayer(marker)) group.addLayer(marker);
+    if (!visible && group.hasLayer(marker)) group.removeLayer(marker);
+  }
+  for (const r of resources) {
+    const visible = !hidden.has(r.cat + "|" + r.key) && (!q || r.data.name.some(n => normalize(n).includes(q)));
+    if (visible && !r.layer) r.layer = dotsLayer(r);
+    if (visible && !map.hasLayer(r.layer)) r.layer.addTo(map);
+    if (!visible && r.layer && map.hasLayer(r.layer)) map.removeLayer(r.layer);
+  }
+  // While searching, the element lists only show matching names.
+  for (const key of order) {
+    for (const item of items[key].values()) {
+      item.row.hidden = !!q && !item.name.some(n => normalize(n).includes(q));
+    }
+  }
+  syncCheckboxes();
+  if (accountReady) scheduleFilterSave();
+}
+for (const group of Object.values(groups)) group.addTo(map);
+
+// One canvas for all the resource dots: tens of thousands of points.
+const dotRenderer = L.canvas({ padding: 0.3, tolerance: 3 });
+function dotsLayer(r) {
+  const layer = L.featureGroup();
+  const pts = r.data.pts;
+  r.dots = [];
+  for (let i = 0; i < pts.length; i += 3) {
+    const dot = L.circleMarker(toLatLng(pts[i], pts[i + 1]), {
+      renderer: dotRenderer, radius: 4, weight: 1, color: "#000", opacity: 0.8,
+      fillColor: r.data.color, fillOpacity: 0.95,
+    });
+    dot.index = i / 3;
+    dot.markId = r.ids[i / 3];
+    r.dots.push(dot);
+    layer.addLayer(dot);
+  }
+  layer.on("contextmenu", e => toggleMark(e.layer.markId));
+  layer.on("mouseover", e => e.layer.bindTooltip(r.data.name[li()], { direction: "top", offset: [0, -4] }).openTooltip());
+  layer.on("click", e => {
+    const t = UI[lang], i = e.layer.index;
+    const size = r.data.sizes ? ` · ${t.size} ≈ ${r.data.sizes[i]} m³` : "";
+    L.popup().setLatLng(e.latlng).setContent(
+      `<div class="popup-name">${escapeHtml(r.data.name[li()])}</div>` +
+      `<div class="popup-meta">${escapeHtml(DATA.categories[r.cat].label[li()])}<br>` +
+      `X ${pts[i * 3]} · Z ${pts[i * 3 + 1]} · ${t.altitude} ${pts[i * 3 + 2]}${size}</div>` +
+      `<div class="popup-raw">${escapeHtml(r.data.raw)}</div>` +
+      `<div class="popup-actions" data-id="${e.layer.markId}"></div>`).openOn(map);
+  });
+  r.layer = layer;
+  refreshDots(r);
+  return layer;
+}
+
+// Language
+const langEl = document.getElementById("lang");
+for (const code of DATA.languages) {
+  const b = document.createElement("button");
+  b.textContent = code.toUpperCase();
+  b.onclick = () => setLang(code);
+  b.dataset.lang = code;
+  langEl.appendChild(b);
+}
+
+function setLang(code) {
+  lang = code;
+  try { localStorage.setItem("lang", code); } catch (e) {}
+  const t = UI[lang];
+  document.documentElement.lang = lang;
+  document.title = t.title;
+  document.getElementById("title").textContent = t.title;
+  search.placeholder = t.search;
+  document.getElementById("all").textContent = t.all;
+  document.getElementById("none").textContent = t.none;
+  langEl.querySelectorAll("button").forEach(b => b.classList.toggle("active", b.dataset.lang === lang));
+  for (const key of order) catNames[key].textContent = DATA.categories[key].label[li()];
+  refreshItemNames();
+  if (accountReady) { renderAccount(); updateCounts(); }
+  document.getElementById("legend").innerHTML = Object.values(DATA.biomes)
+    .map(b => `<span><i style="background:${b.color}"></i>${escapeHtml(b.label[li()])}</span>`).join("");
+  layersControl.removeLayer(biomes).addOverlay(biomes, t.biomes);
+  refreshMarkerTexts();
+}
+
+map.on("overlayadd overlayremove", e => {
+  if (e.layer === biomes) document.getElementById("legend").classList.toggle("shown", e.type === "overlayadd");
+});
+
+// Cursor coordinates (world x / z).
+const coordsEl = document.getElementById("coords");
+map.on("mousemove", e => { coordsEl.textContent = `X ${Math.round(e.latlng.lng)} · Z ${Math.round(e.latlng.lat + SIZE)}`; });
+map.on("mouseout", () => { coordsEl.textContent = ""; });
+
+// ---- Accounts and progress (server.py API) ----
+let user = null;
+const done = new Set();
+const markIndex = new Map();   // mark id -> {cat, key}
+const markerById = new Map();
+for (const marker of all) {
+  const m = marker.data;
+  if (DATA.categories[m.cat].kind === "label") continue;
+  marker.markId = markId(m.cat, m.x, m.z);
+  markIndex.set(marker.markId, { cat: m.cat, key: itemKey(m) });
+  markerById.set(marker.markId, marker);
+  marker.on("contextmenu", () => toggleMark(marker.markId));
+  marker.on("add", () => styleMarker(marker));
+}
+const resourceById = new Map();
+for (const r of resources) {
+  r.ids = [];
+  for (let i = 0; i < r.data.pts.length; i += 3) {
+    const id = markId(r.cat, r.data.pts[i], r.data.pts[i + 1]);
+    r.ids.push(id);
+    markIndex.set(id, { cat: r.cat, key: r.key });
+    resourceById.set(id, [r, i / 3]);
+  }
+}
+
+async function api(method, path, body) {
+  const res = await fetch(path, {
+    method, credentials: "same-origin",
+    headers: body ? { "Content-Type": "application/json" } : {},
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw Object.assign(new Error(data.error || res.status), { status: res.status, code: data.error });
+  return data;
+}
+
+// Done markers stay on the map as ghosts (see .marker-icon.done).
+function styleMarker(marker) {
+  const el = marker.getElement && marker.getElement();
+  if (el && el.classList) el.classList.toggle("done", done.has(marker.markId));
+}
+
+// Done dots: drawn as ghosts.
+function refreshDots(r) {
+  if (!r.layer) return;
+  for (const dot of r.dots) refreshDot(r, dot);
+}
+function refreshDot(r, dot) {
+  const isDone = done.has(dot.markId);
+  dot.setStyle(isDone ? { fillOpacity: 0.6, opacity: 1, color: "#6fe06f", weight: 2.5, fillColor: "#ccc" }
+                      : { fillOpacity: 0.95, opacity: 0.8, color: "#000", weight: 1, fillColor: r.data.color });
+}
+
+function refreshDone() {
+  for (const marker of markerById.values()) styleMarker(marker);
+  for (const r of resources) refreshDots(r);
+  applyFilters();
+  updateCounts();
+}
+
+// Sidebar counts become "done/total" when logged in.
+function updateCounts() {
+  const byCat = {}, byItem = {};
+  for (const id of done) {
+    const e = markIndex.get(id);
+    if (!e) continue;
+    byCat[e.cat] = (byCat[e.cat] || 0) + 1;
+    byItem[e.cat + "|" + e.key] = (byItem[e.cat + "|" + e.key] || 0) + 1;
+  }
+  for (const key of order) {
+    const trackable = user && DATA.categories[key].kind !== "label";
+    catCounts[key].textContent = trackable ? `${byCat[key] || 0}/${counts[key]}` : counts[key];
+    for (const [k, item] of items[key]) {
+      item.countEl.textContent = trackable ? `${byItem[key + "|" + k] || 0}/${item.count}`
+                                           : (item.count > 1 ? item.count : "");
+    }
+  }
+  if (user) renderAccount();
+}
+
+async function toggleMark(id, value) {
+  if (!id || !markIndex.has(id)) return;
+  if (!user) { openAuth("login"); return; }
+  const now = value === undefined ? !done.has(id) : value;
+  now ? done.add(id) : done.delete(id);
+  refreshOne(id);
+  try {
+    await api("PUT", "/api/progress", { ids: [id], done: now });
+  } catch (e) {
+    now ? done.delete(id) : done.add(id);   // revert
+    refreshOne(id);
+    alert(UI[lang].errors.save);
+  }
+}
+
+function refreshOne(id) {
+  const marker = markerById.get(id);
+  if (marker) styleMarker(marker);
+  const res = resourceById.get(id);
+  if (res && res[0].layer) refreshDot(res[0], res[0].dots[res[1]]);
+  updateCounts();
+  const actions = document.querySelector(`.leaflet-popup .popup-actions[data-id="${id}"]`);
+  if (actions) renderActions(actions);
+}
+
+function renderActions(el) {
+  const t = UI[lang], id = el.dataset.id;
+  if (!user) {
+    el.innerHTML = `<span class="hint"><a>${escapeHtml(t.login)}</a> ${escapeHtml(t.loginToTrack)}</span>`;
+    el.querySelector("a").onclick = e => { L.DomEvent.stop(e); openAuth("login"); };
+    return;
+  }
+  const isDone = done.has(id);
+  el.innerHTML = `<button class="${isDone ? "" : "primary"}">${escapeHtml(isDone ? t.unmark : "✓ " + t.markDone)}</button>`;
+  // stop the click here: the button is replaced, and a click on a detached
+  // element would reach the map and close the popup
+  el.querySelector("button").onclick = e => { L.DomEvent.stop(e); toggleMark(id); };
+}
+map.on("popupopen", e => {
+  const el = e.popup.getElement().querySelector(".popup-actions");
+  if (el) renderActions(el);
+});
+
+// Account area and login dialog
+const accountEl = document.getElementById("account");
+
+function renderAccount() {
+  const t = UI[lang];
+  if (user) {
+    accountEl.innerHTML = `<span class="who"></span><button id="logout"></button>`;
+    accountEl.querySelector(".who").textContent = `👤 ${user} · ${done.size} ${t.progress}`;
+    accountEl.querySelector("#logout").textContent = t.logout;
+    accountEl.querySelector("#logout").onclick = async () => {
+      clearTimeout(saveTimer);
+      await saveFilters();   // last change before leaving the profile
+      try { await api("POST", "/api/logout"); } catch (e) {}
+      setUser(null, []);
+    };
+  } else {
+    accountEl.innerHTML = `<button class="primary" id="login"></button><button id="register"></button>`;
+    accountEl.querySelector("#login").textContent = t.login;
+    accountEl.querySelector("#register").textContent = t.register;
+    accountEl.querySelector("#login").onclick = () => openAuth("login");
+    accountEl.querySelector("#register").onclick = () => openAuth("register");
+  }
+}
+
+// ---- Filters saved in the profile ----
+// Only the differences with the default visibility are stored, per element
+// ("category|element"), so elements added later follow their default.
+function filterState() {
+  const filters = {};
+  for (const key of order) {
+    const def = !!DATA.categories[key].visible;
+    for (const k of items[key].keys()) {
+      const shown = !hidden.has(key + "|" + k);
+      if (shown !== def) filters[key + "|" + k] = shown;
+    }
+  }
+  return { filters };
+}
+
+function applyFilterState(settings) {
+  hidden.clear();
+  for (const key of order) {
+    if (!DATA.categories[key].visible) for (const k of items[key].keys()) hidden.add(key + "|" + k);
+  }
+  for (const [full, shown] of Object.entries((settings && settings.filters) || {})) {
+    const sep = full.indexOf("|");
+    const cat = full.slice(0, sep);
+    if (!items[cat] || !items[cat].has(full.slice(sep + 1))) continue;  // element gone from the map
+    shown ? hidden.delete(full) : hidden.add(full);
+  }
+}
+
+let savedFilters = null, saveTimer = null, pendingFilters = null;
+function scheduleFilterSave() {
+  if (!user) return;
+  const json = JSON.stringify(filterState());
+  if (json === savedFilters) return;
+  pendingFilters = json;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveFilters, 700);
+}
+async function saveFilters() {
+  const json = pendingFilters;
+  if (!json || !user) return;
+  try {
+    await api("PUT", "/api/settings", { settings: JSON.parse(json) });
+    savedFilters = json;
+    if (pendingFilters === json) pendingFilters = null;
+  } catch (e) { /* kept pending, retried on the next change */ }
+}
+// Leaving the page right after a change: send it anyway.
+window.addEventListener("pagehide", () => {
+  if (!user || !pendingFilters || pendingFilters === savedFilters) return;
+  fetch("/api/settings", { method: "PUT", keepalive: true, credentials: "same-origin",
+    headers: { "Content-Type": "application/json" }, body: JSON.stringify({ settings: JSON.parse(pendingFilters) }) });
+});
+
+function setUser(name, marks, settings) {
+  user = name;
+  done.clear();
+  for (const id of marks) done.add(id);
+  clearTimeout(saveTimer);
+  pendingFilters = null;
+  applyFilterState(name ? settings : null);
+  savedFilters = name ? JSON.stringify(filterState()) : null;
+  renderAccount();
+  refreshDone();
+  const actions = document.querySelector(".leaflet-popup .popup-actions");
+  if (actions) renderActions(actions);
+}
+
+const auth = document.getElementById("auth");
+let authMode = "login";
+function openAuth(mode) {
+  authMode = mode;
+  const t = UI[lang];
+  document.getElementById("auth-title").textContent = mode === "login" ? t.login : t.register;
+  document.getElementById("auth-user-label").textContent = t.username;
+  document.getElementById("auth-pass-label").textContent = t.password;
+  document.getElementById("auth-pass").autocomplete = mode === "login" ? "current-password" : "new-password";
+  document.getElementById("auth-submit").textContent = mode === "login" ? t.login : t.register;
+  document.getElementById("auth-cancel").textContent = t.cancel;
+  document.getElementById("auth-switch-text").textContent = mode === "login" ? t.noAccount : t.haveAccount;
+  document.getElementById("auth-switch").textContent = mode === "login" ? t.register : t.login;
+  document.getElementById("auth-error").textContent = "";
+  if (!auth.open) auth.showModal();
+  document.getElementById("auth-user").focus();
+}
+document.getElementById("auth-switch").onclick = () => openAuth(authMode === "login" ? "register" : "login");
+document.getElementById("auth-cancel").onclick = () => auth.close();
+document.getElementById("auth-form").addEventListener("submit", async e => {
+  e.preventDefault();
+  const t = UI[lang];
+  const username = document.getElementById("auth-user").value.trim();
+  const password = document.getElementById("auth-pass").value;
+  try {
+    const res = await api("POST", authMode === "login" ? "/api/login" : "/api/register", { username, password });
+    const [progress, saved] = await Promise.all([api("GET", "/api/progress"), api("GET", "/api/settings")]);
+    document.getElementById("auth-pass").value = "";
+    auth.close();
+    setUser(res.username, progress.marks, saved.settings);
+  } catch (err) {
+    document.getElementById("auth-error").textContent =
+      t.errors[err.code] || (err.status ? String(err.code || err.status) : t.errors.network);
+  }
+});
+
+accountReady = true;
+// Restore the session, if any.
+(async () => {
+  try {
+    const me = await api("GET", "/api/me");
+    if (!me.username) return setUser(null, []);
+    const [progress, saved] = await Promise.all([api("GET", "/api/progress"), api("GET", "/api/settings")]);
+    setUser(me.username, progress.marks, saved.settings);
+  } catch (e) {
+    setUser(null, []);
+  }
+})();
+
+setLang(lang);
+applyFilters();
+map.invalidateSize();
+map.fitBounds(bounds);
+</script>
+</body>
+</html>

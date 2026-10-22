@@ -1,0 +1,149 @@
+app-map {
+  position: relative;
+  display: block;
+  flex: 1;
+  min-width: 0;
+  background: #10141a;
+}
+.map-host {
+  position: absolute;
+  inset: 0;
+  background: #10141a;
+} /* same as the void and tile padding of render_map.py */
+.coords {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 1000;
+  background: #000a;
+  color: #eee;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font:
+    12px ui-monospace,
+    monospace;
+  pointer-events: none;
+}
+.coords:empty {
+  display: none;
+}
+.legend {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  z-index: 1000;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px 10px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: #000b;
+  color: var(--muted);
+  font-size: 12px;
+}
+.legend span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.legend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  display: inline-block;
+}
+.marker-icon {
+  filter: drop-shadow(0 0 2px #000) drop-shadow(0 0 1px #000);
+}
+.marker-icon.fast-travel {
+  filter: drop-shadow(0 0 3px #7cc4ff) drop-shadow(0 0 1px #000);
+}
+/* done elements stay on the map as faint "ghosts" */
+.marker-icon.done {
+  opacity: 0.8;
+  filter: grayscale(0.7) drop-shadow(0 0 3px #6fe06f) drop-shadow(0 0 2px #6fe06f)
+    drop-shadow(0 0 1px #6fe06f);
+}
+.marker-icon.done:hover {
+  opacity: 1;
+}
+.map-label {
+  color: #f6ecd2;
+  font:
+    italic 600 13px Georgia,
+    serif;
+  text-shadow:
+    0 0 3px #000,
+    0 0 2px #000;
+  white-space: nowrap;
+  text-align: center;
+  pointer-events: auto;
+}
+.map-label.region {
+  font-size: 17px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #fff4d6;
+}
+.leaflet-tooltip {
+  font-size: 12px;
+}
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: #000;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.leaflet-popup-content {
+  margin: 10px 12px;
+  height: 106px; /* with the 300 px width set in map-view.ts: the largest size the content ever needed */
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.leaflet-popup-content > div {
+  width: 100%;
+}
+.leaflet-container a.leaflet-popup-close-button {
+  color: var(--muted);
+}
+.leaflet-container a.leaflet-popup-close-button:hover {
+  color: var(--text);
+}
+.popup-name {
+  font-weight: 600;
+  font-size: 14px;
+}
+.popup-meta {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 4px;
+}
+.popup-actions {
+  margin-top: 8px;
+}
+.popup-actions button {
+  padding: 4px 9px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 12px;
+}
+.popup-actions button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #1a1a1a;
+}
+.popup-actions .hint {
+  color: var(--muted);
+  font-size: 12px;
+}
+.popup-actions .hint a {
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: underline;
+}
