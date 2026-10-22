@@ -19,6 +19,10 @@ updates:
     groups:
       angular: {patterns: ["@angular/*", "@angular-devkit/*", "angular-eslint"]}
       npm-minor-patch: {patterns: ["*"], update-types: [minor, patch]}
+    ignore:
+      # Angular pins the TypeScript range: a major bump breaks `npm ci` until Angular supports it.
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: docker
     directory: /backend
     schedule: {interval: weekly}
