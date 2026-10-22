@@ -20,4 +20,6 @@ COPY app ./app
 COPY docker-entrypoint.sh /usr/local/bin/
 USER app
 EXPOSE 8000
+HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=3 \
+  CMD ["python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=3)"]
 ENTRYPOINT ["docker-entrypoint.sh"]

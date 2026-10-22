@@ -3,7 +3,7 @@
 ## Reporting a vulnerability
 
 Please do not open a public issue. Use GitHub's private reporting:
-**Security → Report a vulnerability** on this repository. You will get an answer within a few days.
+**[Report a vulnerability](https://github.com/lokidata/enshrouded-map/security/advisories/new)** (Security tab of this repository). You will get an answer within a few days, and a fix and advisory once the problem is confirmed.
 
 ## Supported versions
 
