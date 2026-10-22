@@ -8,6 +8,9 @@ RUN npx ng build
 
 FROM nginxinc/nginx-unprivileged@sha256:b5047b9b76845eac124358373c6852377c52e4b05834a47647e955dd91cb8f1e
 COPY --from=build /build/dist/frontend/browser /usr/share/nginx/html
+# Fixed packages that the pinned base image does not have yet (zlib, musl); Dependabot moves the base forward.
+USER root
+RUN apk upgrade --no-cache zlib musl musl-utils
 # Config baked into the image: nothing to mount, so the same image runs from compose or Portainer.
 COPY nginx/default.conf.template /etc/nginx/templates/default.conf.template
 COPY nginx/security-headers.conf /etc/nginx/security-headers.conf
