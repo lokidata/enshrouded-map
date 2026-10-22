@@ -6,6 +6,7 @@ from typing import Any
 _tmp = tempfile.mkdtemp()
 os.environ.setdefault("DATABASE_URL", f"sqlite:///{_tmp}/test.db")
 os.environ["ENVIRONMENT"] = "test"
+os.environ["SETUP_TOKEN"] = "test-setup-token"
 os.environ["COOKIE_SECURE"] = "false"  # the test client talks plain http
 
 import pytest  # noqa: E402
@@ -18,6 +19,7 @@ from app.db.session import engine  # noqa: E402
 from app.main import app  # noqa: E402
 
 PW = "correct horse battery"
+SETUP_TOKEN = "test-setup-token"
 
 
 class ApiClient(TestClient):
@@ -59,6 +61,8 @@ def client() -> Iterator[ApiClient]:
 @pytest.fixture
 def user(client: ApiClient) -> ApiClient:
     """A client logged in as 'alice'."""
-    r = client.post("/api/v1/auth/setup", json={"username": "alice", "password": PW})
+    r = client.post(
+        "/api/v1/auth/setup", json={"username": "alice", "password": PW, "setup_token": SETUP_TOKEN}
+    )
     assert r.status_code == 200
     return client

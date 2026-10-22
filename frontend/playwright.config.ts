@@ -13,6 +13,7 @@ export default defineConfig({
         DATABASE_URL: `sqlite:///${db}`,
         ENVIRONMENT: 'development',
         COOKIE_SECURE: 'false',
+        SETUP_TOKEN: 'e2e-setup-token',
         REGISTER_RATE_LIMIT: '1000/minute',
       },
       reuseExistingServer: false,

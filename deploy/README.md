@@ -12,7 +12,7 @@ cp .env.example .env     # then edit: WEB_BIND, REVERSE_PROXY_IP, COOKIE_SECURE=
 docker compose up -d --build
 ```
 
-Open the site: on an empty database the first visit must create the first account; after that only a logged-in user can send an invitation link (valid 20 minutes, single use).
+Open the site: on an empty database the first visit must create the first account, with the setup code from `docker compose logs api` (or `SETUP_TOKEN` from `.env`), so that not just anyone who reaches the port first becomes the owner; after that only a logged-in user can send an invitation link (valid 20 minutes, single use).
 
 ## Updating the map
 

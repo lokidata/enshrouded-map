@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -12,6 +13,8 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./data/app.db"
 
     cookie_secure: bool = True  # set COOKIE_SECURE=false only for plain-http tests
+    # Authorises the creation of the first account; generated and logged at start when unset.
+    setup_token: SecretStr | None = None
     session_days: int = 30
     invitation_minutes: int = 20  # lifetime of the link a user sends to create an account
 

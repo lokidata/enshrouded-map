@@ -10,6 +10,7 @@ services:
     environment:
       ENVIRONMENT: production
       DATABASE_URL: sqlite:////data/app.db
+      SETUP_TOKEN: ${SETUP_TOKEN:-} # empty: generated at start and printed in the api log
       FORWARDED_ALLOW_IPS: 172.28.0.10 # the web container: the only one allowed to tell the client address
     volumes:
       - db-data:/data

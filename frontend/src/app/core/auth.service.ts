@@ -8,6 +8,8 @@ export type AuthMode = 'login' | 'setup' | 'invite';
 export interface Credentials {
   username: string;
   password: string;
+  /** Only for the very first account: shown in the API log, or set as SETUP_TOKEN. */
+  setup_token?: string;
 }
 
 export interface Invitation {

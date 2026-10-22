@@ -27,15 +27,17 @@
     "unknown": "Une erreur est survenue.",
     "save": "La progression n'a pas pu être enregistrée.",
     "setup_done": "Un compte existe déjà : demandez un lien d'invitation.",
-    "invitation_invalid": "Ce lien d'invitation est invalide, expiré ou déjà utilisé."
+    "invitation_invalid": "Ce lien d'invitation est invalide, expiré ou déjà utilisé.",
+    "setup_token": "Code d'installation incorrect."
   },
   "setupTitle": "Créer le premier compte",
-  "setupHint": "Aucun compte n'existe encore : créez le compte qui pourra ensuite inviter les autres.",
+  "setupHint": "Aucun compte n'existe encore : créez le compte qui pourra ensuite inviter les autres. Le code d'installation est affiché dans le journal de l'API (docker compose logs api) ou défini par SETUP_TOKEN.",
   "inviteTitle": "Créer votre compte",
   "createInvite": "Inviter",
   "inviteLink": "Lien d'invitation",
   "copy": "Copier",
   "copied": "Copié",
   "inviteUntil": "Lien à usage unique, valable jusqu'à {{time}}.",
-  "create": "Créer le compte"
+  "create": "Créer le compte",
+  "setupToken": "Code d'installation"
 }

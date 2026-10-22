@@ -1,12 +1,14 @@
 from datetime import timedelta
 from unittest.mock import patch
 
-from conftest import PW, ApiClient
+import pytest
+from conftest import PW, SETUP_TOKEN, ApiClient
 from sqlalchemy import update
 
 from app.core.config import Settings
+from app.core.setup_token import setup_token
 from app.db.base import utcnow
-from app.db.models import Invitation
+from app.db.models import Invitation, User
 from app.db.session import SessionLocal
 
 SETUP = "/api/v1/auth/setup"
@@ -16,7 +18,7 @@ INVITE = "/api/v1/auth/invitations"
 
 def test_setup_is_required_until_the_first_account_exists(client: ApiClient) -> None:
     assert client.get("/api/v1/auth/me").json() == {"username": None, "setup_required": True}
-    r = client.post(SETUP, json={"username": "Alice", "password": PW})
+    r = client.post(SETUP, json={"username": "Alice", "password": PW, "setup_token": SETUP_TOKEN})
     assert r.json() == {"username": "Alice", "setup_required": False}
     cookie = r.headers["set-cookie"].lower()
     assert "httponly" in cookie and "samesite=strict" in cookie
@@ -26,8 +28,49 @@ def test_setup_is_required_until_the_first_account_exists(client: ApiClient) -> 
     assert client.get("/api/v1/auth/me").json() == {"username": None, "setup_required": False}
 
 
+def test_setup_needs_the_setup_token(client: ApiClient) -> None:
+    body = {"username": "mallory", "password": PW}
+    r = client.post(SETUP, json={**body, "setup_token": "guess"})
+    assert (r.status_code, r.json()) == (403, {"detail": "setup_token"})
+    assert client.post(SETUP, json=body).status_code == 422  # missing
+    assert client.get("/api/v1/auth/me").json()["setup_required"] is True  # nothing was created
+    assert client.post(SETUP, json={**body, "setup_token": SETUP_TOKEN}).status_code == 200
+
+
+def test_setup_token_is_generated_and_logged_once_when_not_configured(
+    client: ApiClient, settings: Settings, caplog: pytest.LogCaptureFixture
+) -> None:
+    settings.setup_token = None
+    setup_token.cache_clear()
+    try:
+        token, generated = setup_token()
+        assert generated and token and token != SETUP_TOKEN
+        with caplog.at_level("WARNING", logger="app"), ApiClient(client.app):
+            pass  # starting the app logs it, since no account exists
+        assert token in caplog.text
+    finally:
+        setup_token.cache_clear()
+
+
+def test_simultaneous_setups_create_only_one_account(
+    client: ApiClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Two requests that both saw an empty database: the database must refuse the second one.
+    monkeypatch.setattr("app.api.v1.auth._no_users", lambda db: True)
+    first = client.post(
+        SETUP, json={"username": "alice", "password": PW, "setup_token": SETUP_TOKEN}
+    )
+    second = ApiClient(client.app).post(
+        SETUP, json={"username": "mallory", "password": PW, "setup_token": SETUP_TOKEN}
+    )
+    assert (first.status_code, second.status_code) == (200, 409)
+    assert second.json() == {"detail": "setup_done"}
+    with SessionLocal() as db:
+        assert db.query(User).count() == 1
+
+
 def test_setup_is_refused_once_an_account_exists(user: ApiClient) -> None:
-    r = user.post(SETUP, json={"username": "mallory", "password": PW})
+    r = user.post(SETUP, json={"username": "mallory", "password": PW, "setup_token": SETUP_TOKEN})
     assert (r.status_code, r.json()) == (409, {"detail": "setup_done"})
 
 
@@ -37,13 +80,33 @@ def test_open_registration_does_not_exist(client: ApiClient) -> None:
 
 
 def test_account_validation(client: ApiClient) -> None:
-    assert client.post(SETUP, json={"username": "al", "password": PW}).status_code == 422
-    assert client.post(SETUP, json={"username": "bob", "password": "short"}).status_code == 400
     assert (
-        client.post(SETUP, json={"username": "bob", "password": "password123"}).status_code == 400
+        client.post(
+            SETUP, json={"username": "al", "password": PW, "setup_token": SETUP_TOKEN}
+        ).status_code
+        == 422
     )
-    assert client.post(SETUP, json={"username": "bob", "password": 123456}).status_code == 422
-    r = client.post(SETUP, json={"username": "bob", "password": PW, "admin": True})
+    assert (
+        client.post(
+            SETUP, json={"username": "bob", "password": "short", "setup_token": SETUP_TOKEN}
+        ).status_code
+        == 400
+    )
+    assert (
+        client.post(
+            SETUP, json={"username": "bob", "password": "password123", "setup_token": SETUP_TOKEN}
+        ).status_code
+        == 400
+    )
+    assert (
+        client.post(
+            SETUP, json={"username": "bob", "password": 123456, "setup_token": SETUP_TOKEN}
+        ).status_code
+        == 422
+    )
+    r = client.post(
+        SETUP, json={"username": "bob", "password": PW, "setup_token": SETUP_TOKEN, "admin": True}
+    )
     assert r.status_code == 422 and r.json() == {"detail": "invalid_request"}
     assert client.get("/api/v1/auth/me").json()["setup_required"] is True  # nothing was created
 

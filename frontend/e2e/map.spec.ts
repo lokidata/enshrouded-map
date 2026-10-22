@@ -4,6 +4,7 @@ test.describe.configure({ mode: 'serial' }); // the second test needs the accoun
 
 const user = `e2e${Date.now()}`;
 const password = 'correct horse battery';
+const setupToken = process.env['SETUP_TOKEN'] ?? 'e2e-setup-token';
 
 test('register, mark an element, and find everything again after a reload', async ({ page }) => {
   const violations: string[] = [];
@@ -23,6 +24,11 @@ test('register, mark an element, and find everything again after a reload', asyn
   await expect(dialog.getByRole('button', { name: 'Annuler' })).toHaveCount(0);
   await dialog.getByLabel("Nom d'utilisateur").fill(user);
   await dialog.getByLabel('Mot de passe').fill(password);
+  // a wrong code is refused, the right one is accepted
+  await dialog.getByLabel("Code d'installation").fill('wrong');
+  await dialog.getByRole('button', { name: 'Créer le compte' }).click();
+  await expect(dialog.getByRole('alert')).toContainText("Code d'installation incorrect");
+  await dialog.getByLabel("Code d'installation").fill(setupToken);
   await dialog.getByRole('button', { name: 'Créer le compte' }).click();
   await expect(page.locator('.who')).toContainText(user);
 

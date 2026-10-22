@@ -13,6 +13,10 @@ class Credentials(StrictModel):
     password: str = Field(max_length=128)
 
 
+class SetupIn(Credentials):
+    setup_token: str = Field(max_length=128)
+
+
 class TokenIn(StrictModel):
     token: str = Field(max_length=128)
 

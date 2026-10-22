@@ -22,8 +22,10 @@ from app.core.security import (
     new_token,
     password_is_acceptable,
     token_digest,
+    tokens_equal,
     verify_password,
 )
+from app.core.setup_token import setup_token
 from app.db.base import utcnow
 from app.db.models import AuthSession, Invitation, User
 from app.schemas.auth import (
@@ -31,6 +33,7 @@ from app.schemas.auth import (
     Credentials,
     InvitationCheck,
     InvitationOut,
+    SetupIn,
     TokenIn,
     UserOut,
 )
@@ -44,19 +47,27 @@ def _ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
-def _new_user(db: Session, username: str, password: str) -> User:
-    """Adds the account (not committed). 400 for a weak password, 409 for a taken name."""
+def _new_user(db: Session, username: str, password: str, *, first: bool = False) -> User:
+    """Adds the account (not committed). 400 for a weak password, 409 when the insert conflicts:
+    "taken" for a used name, "setup_done" when another request just created the first account.
+
+    The first account carries first_account=True, which is unique: two simultaneous setups
+    cannot both succeed, on any database (other accounts keep NULL, which is never a duplicate).
+    """
     if not password_is_acceptable(password, username):
         raise HTTPException(400, "password")
     user = User(
-        username=username, username_key=username.lower(), password_hash=hash_password(password)
+        username=username,
+        username_key=username.lower(),
+        password_hash=hash_password(password),
+        first_account=True if first else None,
     )
     db.add(user)
     try:
         db.flush()
     except IntegrityError:
         db.rollback()
-        raise HTTPException(409, "taken") from None
+        raise HTTPException(409, "setup_done" if first else "taken") from None
     return user
 
 
@@ -69,14 +80,19 @@ def _no_users(db: Session) -> bool:
 def setup(
     request: Request,
     response: Response,
-    body: Credentials,
+    body: SetupIn,
     db: DbSession,
     session: Annotated[str | None, Cookie()] = None,
 ) -> UserOut:
-    """First start: the very first account. Refused as soon as any account exists."""
+    """First start: the very first account. Refused as soon as any account exists, and
+    unless the caller knows the setup token (so that not just anyone who reaches the
+    port first becomes the owner)."""
     if not _no_users(db):
         raise HTTPException(409, "setup_done")
-    user = _new_user(db, body.username, body.password)
+    if not tokens_equal(body.setup_token, setup_token()[0]):
+        audit.warning("setup_refused", extra={"ip": _ip(request)})
+        raise HTTPException(403, "setup_token")
+    user = _new_user(db, body.username, body.password, first=True)
     db.commit()
     start_session(db, response, user, session)
     audit.info("setup", extra={"user_id": user.id, "ip": _ip(request)})

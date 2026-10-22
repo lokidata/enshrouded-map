@@ -1,10 +1,12 @@
 import logging
-from collections.abc import Awaitable, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable
+from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
+from sqlalchemy import select
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.deps import csrf_protect
@@ -12,8 +14,21 @@ from app.api.limiter import limiter
 from app.api.v1 import auth, health, progress, settings
 from app.core.config import get_settings
 from app.core.logging import setup_logging
+from app.core.setup_token import setup_token
+from app.db.models import User
+from app.db.session import SessionLocal
 
 log = logging.getLogger("app")
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    with SessionLocal() as db:
+        empty = db.scalar(select(User.id).limit(1)) is None
+    token, generated = setup_token()
+    if empty and generated:  # a token chosen by the operator is never logged
+        log.warning("No account yet. Setup token for the first account: %s", token)
+    yield
 
 
 def create_app() -> FastAPI:
@@ -26,6 +41,7 @@ def create_app() -> FastAPI:
         redoc_url=None,
         openapi_url="/api/openapi.json" if dev else None,
         dependencies=[Depends(csrf_protect)],
+        lifespan=lifespan,
     )
     app.state.limiter = limiter
 

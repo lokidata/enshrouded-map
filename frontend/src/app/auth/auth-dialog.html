@@ -30,6 +30,12 @@
         [attr.autocomplete]="auth.dialog() === 'login' ? 'current-password' : 'new-password'"
       />
     </label>
+    @if (auth.dialog() === 'setup') {
+      <label>
+        {{ 'setupToken' | transloco }}
+        <input [formField]="credentials.setupToken" autocomplete="off" />
+      </label>
+    }
     <div class="error" role="alert">{{ error() ? ('errors.' + error() | transloco) : '' }}</div>
     <div class="actions">
       @if (auth.dialog() !== 'setup') {

@@ -27,15 +27,17 @@
     "unknown": "Something went wrong.",
     "save": "Progress could not be saved.",
     "setup_done": "An account already exists: ask for an invitation link.",
-    "invitation_invalid": "This invitation link is invalid, expired or already used."
+    "invitation_invalid": "This invitation link is invalid, expired or already used.",
+    "setup_token": "Wrong setup code."
   },
   "setupTitle": "Create the first account",
-  "setupHint": "No account exists yet: create the one that will be able to invite the others.",
+  "setupHint": "No account exists yet: create the one that will be able to invite the others. The setup code is shown in the API log (docker compose logs api) or set by SETUP_TOKEN.",
   "inviteTitle": "Create your account",
   "createInvite": "Invite",
   "inviteLink": "Invitation link",
   "copy": "Copy",
   "copied": "Copied",
   "inviteUntil": "Single-use link, valid until {{time}}.",
-  "create": "Create account"
+  "create": "Create account",
+  "setupToken": "Setup code"
 }

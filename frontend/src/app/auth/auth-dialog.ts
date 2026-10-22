@@ -15,12 +15,13 @@ export class AuthDialog {
   private readonly session = inject(SessionService);
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
 
-  protected readonly model = signal({ username: '', password: '' });
+  protected readonly model = signal({ username: '', password: '', setupToken: '' });
   protected readonly credentials = form(this.model, (path) => {
     required(path.username);
     required(path.password);
     maxLength(path.username, 32);
     maxLength(path.password, 128);
+    required(path.setupToken, { when: () => this.auth.dialog() === 'setup' });
   });
   protected readonly error = signal('');
 
@@ -47,10 +48,14 @@ export class AuthDialog {
     event.preventDefault();
     void submit(this.credentials, async () => {
       const mode = this.auth.dialog() ?? 'login';
-      const { username, password } = this.model();
+      const { username, password, setupToken } = this.model();
       try {
-        await this.session.authenticate(mode, { username: username.trim(), password });
-        this.model.update((m) => ({ ...m, password: '' }));
+        await this.session.authenticate(mode, {
+          username: username.trim(),
+          password,
+          ...(mode === 'setup' ? { setup_token: setupToken.trim() } : {}),
+        });
+        this.model.update((m) => ({ ...m, password: '', setupToken: '' }));
         this.close();
       } catch (err) {
         this.error.set(errorCode(err));

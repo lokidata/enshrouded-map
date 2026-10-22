@@ -1,4 +1,4 @@
-from conftest import PW, ApiClient
+from conftest import PW, SETUP_TOKEN, ApiClient
 
 
 def test_cookie_issued_on_get(client: ApiClient) -> None:
@@ -7,7 +7,7 @@ def test_cookie_issued_on_get(client: ApiClient) -> None:
 
 
 def test_unsafe_request_without_token_is_refused(client: ApiClient) -> None:
-    body = {"username": "alice", "password": PW}
+    body = {"username": "alice", "password": PW, "setup_token": SETUP_TOKEN}
     assert client.request("POST", "/api/v1/auth/setup", json=body, csrf=False).status_code == 403
     client.get("/api/v1/health")
     r = client.request("POST", "/api/v1/auth/setup", json=body, csrf=False)  # cookie but no header
