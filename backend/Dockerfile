@@ -11,6 +11,8 @@ ENV PATH=/opt/venv/bin:$PATH PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
 RUN useradd --uid 10001 --no-create-home --shell /usr/sbin/nologin app \
  && mkdir /data && chown app /data
 COPY --from=build /opt/venv /opt/venv
+# pip is only needed to install the dependencies (build stage): remove it, with its CVEs, from the final image.
+RUN /opt/venv/bin/python -m pip uninstall -y pip && /usr/local/bin/python -m pip uninstall -y pip
 WORKDIR /srv
 COPY alembic.ini ./
 COPY alembic ./alembic
