@@ -1,5 +1,5 @@
 import { Component, ElementRef, effect, inject, signal, viewChild } from '@angular/core';
-import { FormField, form, maxLength, required, submit } from '@angular/forms/signals';
+import { FormField, form, maxLength, pattern, required, submit } from '@angular/forms/signals';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { AuthService, errorCode } from '../core/auth.service';
 import { SessionService } from '../core/session.service';
@@ -21,7 +21,9 @@ export class AuthDialog {
     required(path.password);
     maxLength(path.username, 32);
     maxLength(path.password, 128);
-    required(path.setupToken, { when: () => this.auth.dialog() === 'setup' });
+    const isSetup = () => this.auth.dialog() === 'setup';
+    required(path.setupToken, { when: isSetup });
+    pattern(path.setupToken, /\S/, { when: isSetup }); // not just spaces: the value is trimmed when sent
   });
   protected readonly error = signal('');
 

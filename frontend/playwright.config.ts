@@ -1,5 +1,8 @@
 import { defineConfig } from '@playwright/test';
 
+// Same code for the API started below and for the spec (workers inherit this environment).
+process.env['SETUP_TOKEN'] ??= 'e2e-setup-token-0123';
+
 const db = `/tmp/enshrouded-e2e-${process.pid}.db`;
 
 export default defineConfig({
@@ -13,7 +16,7 @@ export default defineConfig({
         DATABASE_URL: `sqlite:///${db}`,
         ENVIRONMENT: 'development',
         COOKIE_SECURE: 'false',
-        SETUP_TOKEN: 'e2e-setup-token',
+        SETUP_TOKEN: process.env['SETUP_TOKEN'],
         REGISTER_RATE_LIMIT: '1000/minute',
       },
       reuseExistingServer: false,

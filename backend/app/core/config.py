@@ -1,6 +1,6 @@
 from functools import lru_cache
 
-from pydantic import SecretStr
+from pydantic import SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -25,6 +25,14 @@ class Settings(BaseSettings):
     max_marks: int = 200_000
     max_settings_bytes: int = 256_000
     max_body_bytes: int = 4_000_000
+
+    @field_validator("setup_token")
+    @classmethod
+    def _setup_token_size(cls, token: SecretStr | None) -> SecretStr | None:
+        # Empty means "generate one". The upper bound is what the API accepts in the request body.
+        if token and token.get_secret_value() and not 16 <= len(token.get_secret_value()) <= 128:
+            raise ValueError("SETUP_TOKEN must be 16 to 128 characters long")
+        return token
 
 
 @lru_cache

@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 import pytest
 from conftest import PW, SETUP_TOKEN, ApiClient
+from pydantic import SecretStr
 from sqlalchemy import update
 
 from app.core.config import Settings
@@ -56,7 +57,7 @@ def test_simultaneous_setups_create_only_one_account(
     client: ApiClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # Two requests that both saw an empty database: the database must refuse the second one.
-    monkeypatch.setattr("app.api.v1.auth._no_users", lambda db: True)
+    monkeypatch.setattr("app.api.v1.auth.no_users", lambda db: True)
     first = client.post(
         SETUP, json={"username": "alice", "password": PW, "setup_token": SETUP_TOKEN}
     )
@@ -67,6 +68,14 @@ def test_simultaneous_setups_create_only_one_account(
     assert second.json() == {"detail": "setup_done"}
     with SessionLocal() as db:
         assert db.query(User).count() == 1
+
+
+def test_setup_token_size_is_checked_at_startup() -> None:
+    for bad in ("short", "x" * 129):
+        with pytest.raises(ValueError, match="SETUP_TOKEN"):
+            Settings(setup_token=SecretStr(bad))
+    assert Settings(setup_token=SecretStr("x" * 16)).setup_token is not None
+    assert Settings(setup_token=SecretStr("")).setup_token is not None  # empty: generated instead
 
 
 def test_setup_is_refused_once_an_account_exists(user: ApiClient) -> None:

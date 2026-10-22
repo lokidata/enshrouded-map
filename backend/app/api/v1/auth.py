@@ -28,6 +28,7 @@ from app.core.security import (
 from app.core.setup_token import setup_token
 from app.db.base import utcnow
 from app.db.models import AuthSession, Invitation, User
+from app.db.queries import no_users
 from app.schemas.auth import (
     AcceptIn,
     Credentials,
@@ -71,10 +72,6 @@ def _new_user(db: Session, username: str, password: str, *, first: bool = False)
     return user
 
 
-def _no_users(db: Session) -> bool:
-    return db.scalar(select(User.id).limit(1)) is None
-
-
 @router.post("/setup", response_model=UserOut)
 @limiter.limit(lambda: get_settings().register_rate_limit)
 def setup(
@@ -87,7 +84,7 @@ def setup(
     """First start: the very first account. Refused as soon as any account exists, and
     unless the caller knows the setup token (so that not just anyone who reaches the
     port first becomes the owner)."""
-    if not _no_users(db):
+    if not no_users(db):
         raise HTTPException(409, "setup_done")
     if not tokens_equal(body.setup_token, setup_token()[0]):
         audit.warning("setup_refused", extra={"ip": _ip(request)})
@@ -218,4 +215,4 @@ def me(user: Annotated[User | None, Depends(current_user)], db: DbSession) -> Us
     # 200 either way: not being logged in is a normal state for the page
     if user:
         return UserOut(username=user.username)
-    return UserOut(username=None, setup_required=_no_users(db))
+    return UserOut(username=None, setup_required=no_users(db))

@@ -6,7 +6,7 @@ from fastapi import Depends, FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
-from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.deps import csrf_protect
@@ -15,7 +15,7 @@ from app.api.v1 import auth, health, progress, settings
 from app.core.config import get_settings
 from app.core.logging import setup_logging
 from app.core.setup_token import setup_token
-from app.db.models import User
+from app.db.queries import no_users
 from app.db.session import SessionLocal
 
 log = logging.getLogger("app")
@@ -23,8 +23,12 @@ log = logging.getLogger("app")
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-    with SessionLocal() as db:
-        empty = db.scalar(select(User.id).limit(1)) is None
+    try:
+        with SessionLocal() as db:
+            empty = no_users(db)
+    except SQLAlchemyError:  # tables missing (migrations not run): the first request will say so
+        log.warning("Database not ready at start")
+        empty = False
     token, generated = setup_token()
     if empty and generated:  # a token chosen by the operator is never logged
         log.warning("No account yet. Setup token for the first account: %s", token)

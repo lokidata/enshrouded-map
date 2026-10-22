@@ -1,3 +1,5 @@
+E2E_SETUP_TOKEN = e2e-setup-token-0123
+
 .PHONY: check check-backend check-frontend check-security lock stack e2e-stack scan
 
 # Code quality, tests, dependencies, secrets, images. e2e-stack is separate: it wipes the compose database.
@@ -25,8 +27,8 @@ stack:
 
 # Same Playwright tests as `check-frontend`, against the compose stack on an empty database.
 e2e-stack:
-	cd deploy && SETUP_TOKEN=e2e-setup-token docker compose down -v && SETUP_TOKEN=e2e-setup-token docker compose up -d --build --wait
-	cd frontend && SETUP_TOKEN=e2e-setup-token npx playwright test -c playwright.stack.config.ts
+	cd deploy && SETUP_TOKEN=$(E2E_SETUP_TOKEN) docker compose down -v && SETUP_TOKEN=$(E2E_SETUP_TOKEN) docker compose up -d --build --wait
+	cd frontend && SETUP_TOKEN=$(E2E_SETUP_TOKEN) npx playwright test -c playwright.stack.config.ts
 
 scan:
 	docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v trivy-cache:/root/.cache -v $(CURDIR):/src:ro aquasec/trivy:latest image --severity HIGH,CRITICAL --ignore-unfixed enshrouded-map-api:local

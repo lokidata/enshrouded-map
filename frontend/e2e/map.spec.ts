@@ -4,7 +4,7 @@ test.describe.configure({ mode: 'serial' }); // the second test needs the accoun
 
 const user = `e2e${Date.now()}`;
 const password = 'correct horse battery';
-const setupToken = process.env['SETUP_TOKEN'] ?? 'e2e-setup-token';
+const setupToken = process.env['SETUP_TOKEN']!; // set by the Playwright config or by `make e2e-stack`
 
 test('register, mark an element, and find everything again after a reload', async ({ page }) => {
   const violations: string[] = [];
