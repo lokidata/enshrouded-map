@@ -15,3 +15,4 @@ RUN apk upgrade --no-cache zlib musl musl-utils
 COPY nginx/default.conf.template /etc/nginx/templates/default.conf.template
 COPY nginx/security-headers.conf /etc/nginx/security-headers.conf
 USER 101
+HEALTHCHECK --interval=15s --timeout=5s --retries=3 CMD ["wget", "-qO-", "http://127.0.0.1:8080/healthz"]
