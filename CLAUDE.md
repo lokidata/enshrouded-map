@@ -18,6 +18,9 @@ Migration of a working prototype into a real app. The plan (approved, in French)
 ## Accounts (decided later)
 - No public sign-up. On an empty database the first visit must create the first account (`POST /auth/setup`, refused once any account exists and unless the caller sends the setup token: `SETUP_TOKEN`, or a random one printed once in the API log at start; the dialog cannot be dismissed). After that only a logged-in user can create a single-use invitation (`POST /auth/invitations`, valid `INVITATION_MINUTES`=20), sent as `<site>/#invite=<token>` (fragment, so it is never logged). The token is stored hashed; accepting it creates the account atomically.
 
+## Licence
+MIT (see `LICENSE`): use, fork and modify freely, the copyright notice must stay. It covers the original code only; the third-party skills in `.agents/` keep their own licences. The game's data and assets are not part of the repo and belong to their owners.
+
 ## Decisions taken with the user
 - Stack: FastAPI + SQLAlchemy 2 + Alembic + Pydantic v2 (uv), Angular standalone + signals, docker compose (nginx-unprivileged web + api), SQLite in a volume, code portable to PostgreSQL/MySQL via `DATABASE_URL`.
 - Exposure: LAN only, behind the user's own reverse proxy (it terminates TLS).
