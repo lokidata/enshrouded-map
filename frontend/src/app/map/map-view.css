@@ -154,6 +154,39 @@ app-map {
   border-color: var(--accent);
   color: #1a1a1a;
 }
+.popup-list {
+  max-height: 96px;
+  overflow-y: auto;
+  margin-top: 6px;
+  text-align: left;
+}
+.popup-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 3px 0;
+  border-top: 1px solid var(--border);
+}
+.popup-item {
+  min-width: 0;
+}
+.popup-item-name {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.popup-row .popup-actions {
+  margin-top: 0;
+  flex-shrink: 0;
+}
+.popup-row .popup-team {
+  margin-top: 2px;
+  max-width: 130px;
+  text-align: right;
+  -webkit-line-clamp: 1;
+}
 .popup-team {
   margin-top: 6px;
   color: var(--muted);

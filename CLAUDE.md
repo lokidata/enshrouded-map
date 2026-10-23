@@ -5,7 +5,7 @@ Migration of a working prototype into a real app. The plan (approved, in French)
 ## Current state
 - The migration of the original prototype (a single `index.html` + a stdlib `server.py`) is finished and the prototype was removed (it stays in the git history before commit "Remove legacy prototype").
 - `artifacts/map/`: generated map data (tiles/{z}/{x}_{y}.jpg, icons/, biomes.png, overview.jpg, map-data.json + resources.json). Must not go into git.
-- `pipeline/`: offline extraction scripts. They need the game install, `emm.exe` and ~6.5 GB of raw data that only exist on the Windows PC (D:\DEV\enshrouded_extract). They cannot run here; only edit them. `build_data.py` writes `map-data.json` + `resources.json` (reference counts: 1065 markers, 2702 chests, 6632 ores, 76742 plants).
+- `pipeline/`: offline extraction scripts. They need the game install, `emm.exe` and ~6.5 GB of raw data that only exist on the Windows PC (D:\DEV\enshrouded_extract). They cannot run here; only edit them. `build_data.py` writes `map-data.json` + `resources.json` (reference counts: 1343 markers incl. 179 unique items and 107 collectibles, 2579 chests (those holding a unique item or collectible are left out), 6632 ores, 76742 plants).
 
 ## Progress
 - Step 1 (repo base, `map-data.json` + `resources.json`) done.
@@ -24,6 +24,7 @@ Migration of a working prototype into a real app. The plan (approved, in French)
 - Without an account the page shows only the login dialog (no map, not dismissible). nginx serves the map files (`tiles`, `icons`, `biomes.png`, `overview.jpg`, `map-data.json`, `resources.json`) only with a valid session: `auth_request` -> `GET /api/v1/auth/check`. `ng serve` does not protect them. `map-data.json` is loaded after login (`SessionService.enter`).
 - Teams (`backend/app/api/v1/team.py`, `TeamStore`): one team per player, the creator is the owner (renames, disbands). Any member adds an existing player (`POST /team/members`), removes another one (not the owner) or creates an invitation link; that link is an account invitation (`invitations.team_id`) whose new account joins the team. Leaving hands the team to the longest-standing member. Halo on the map: orange = at least one member marked it, green = all of them (no team: green when I marked it); the popup lists who did. The others' marks are refetched every 60 s and when the tab comes back.
 - Profile menu (invite, team, password, delete account, logout). Deleting an account (`POST /auth/delete-account`, password required) erases its progress; the first account cannot be deleted. Password fields have a confirmation field. The left menu can be hidden and placed on the left, on top, or automatically (portrait = top), remembered per device.
+- Loot: cosmetics (item debug name `Vanity_*`, 105 of the 179 former "unique" items) have their own violet category `cosmetic` (pipeline: `build_resources.special_loot`, icon `cosmetic.svg`). Clicking a loot marker (unique, cosmetic, collectible) lists every shown loot marker within 3 m in one popup, each with its mark button. Mark ids of cosmetics changed from `unique:x:z` to `cosmetic:x:z`. The local `artifacts/map` was patched the same way; re-run the pipeline on the Windows PC to regenerate it.
 - `make e2e-stack` also checks that the map files are refused without a session (`PROTECTED_ASSETS=1`).
 
 ## Licence

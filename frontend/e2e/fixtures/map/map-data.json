@@ -1,7 +1,11 @@
 {"worldSize":1024,"languages":["fr","en"],"biomes":{},
 "categories":{
  "boss":{"label":["Boss","Boss"],"kind":"icon","icon":"icons/boss.svg","visible":true},
+ "unique":{"label":["Objet unique","Unique item"],"kind":"icon","icon":"icons/unique.svg","visible":false},
+ "cosmetic":{"label":["Cosmétique","Cosmetic"],"kind":"icon","icon":"icons/cosmetic.svg","visible":false},
  "chest":{"label":["Coffre","Chest"],"kind":"dots","icon":null,"visible":false}},
 "markers":[
  {"name":["Gardien de test","Test guardian"],"raw":"fixture_boss_1","cat":"boss","x":300,"y":10,"z":300,"fastTravel":false},
- {"name":["Seigneur de test","Test lord"],"raw":"fixture_boss_2","cat":"boss","x":700,"y":10,"z":600,"fastTravel":false}]}
+ {"name":["Seigneur de test","Test lord"],"raw":"fixture_boss_2","cat":"boss","x":700,"y":10,"z":600,"fastTravel":false},
+ {"name":["Épée de test","Test sword"],"raw":"Weapon_fixture","cat":"unique","x":500,"y":10,"z":800,"fastTravel":false},
+ {"name":["Chapeau de test","Test hat"],"raw":"Vanity_fixture","cat":"cosmetic","x":501,"y":10,"z":800,"fastTravel":false}]}

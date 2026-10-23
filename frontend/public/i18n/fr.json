@@ -97,5 +97,6 @@
   "layout": "Disposition du menu",
   "layout_auto": "Automatique (selon l'écran)",
   "layout_left": "Menu à gauche",
-  "layout_top": "Menu en haut"
+  "layout_top": "Menu en haut",
+  "itemsHere": "objets ici"
 }

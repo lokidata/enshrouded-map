@@ -112,7 +112,7 @@ def special_loot(src, scene, locas):
         if info["category"] == "Collectibles" or COLLECTIBLE.match(debug):
             cat = "collectible"
         elif info["category"] in UNIQUE_ITEM_CATEGORIES and not SPECIAL_LOOT_EXCLUDE.search(debug):
-            cat = "unique"
+            cat = "cosmetic" if debug.startswith("Vanity_") else "unique"
         else:
             continue
         loca_id = fnv_guid(info["name"])
@@ -121,7 +121,7 @@ def special_loot(src, scene, locas):
             continue
         pos = s["lootContainerBoundingBox"]["min"]
         out.append((cat, names, debug, pos["x"], pos["y"], pos["z"]))
-    print("special loot:", {c: sum(1 for o in out if o[0] == c) for c in ("unique", "collectible")})
+    print("special loot:", {c: sum(1 for o in out if o[0] == c) for c in ("unique", "cosmetic", "collectible")})
     return out
 
 
