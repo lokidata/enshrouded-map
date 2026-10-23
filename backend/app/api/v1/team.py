@@ -163,15 +163,16 @@ def available(user: CurrentUser, db: DbSession) -> list[Member]:
 @router.post("/members", response_model=TeamOut)
 def add_member(body: MemberIn, user: CurrentUser, db: DbSession) -> TeamOut:
     team = _my_team(db, user)
-    if db.get(User, body.user_id) is None:
+    target = db.get(User, body.user_id)
+    if target is None:
         raise HTTPException(404, "no_member")
-    db.add(TeamMember(user_id=body.user_id, team_id=team.id))
+    db.add(TeamMember(user_id=target.id, team_id=team.id))
     try:
         db.commit()
     except IntegrityError:  # already in a team
         db.rollback()
         raise HTTPException(409, "member_in_team") from None
-    audit.info("team_member_added", extra={"user_id": body.user_id, "team_id": team.id})
+    audit.info("team_member_added", extra={"user_id": target.id, "team_id": team.id})
     return _out(db, team, user)
 
 
