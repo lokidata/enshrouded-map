@@ -28,7 +28,9 @@
     "save": "La progression n'a pas pu être enregistrée.",
     "setup_done": "Un compte existe déjà : demandez un lien d'invitation.",
     "invitation_invalid": "Ce lien d'invitation est invalide, expiré ou déjà utilisé.",
-    "setup_token": "Code d'installation incorrect."
+    "setup_token": "Code d'installation incorrect.",
+    "csrf": "Jeton de sécurité (CSRF) refusé : le navigateur n'a pas gardé le cookie. En http, le serveur doit avoir COOKIE_SECURE=false ; en https, rechargez la page.",
+    "internal": "Erreur interne du serveur."
   },
   "setupTitle": "Créer le premier compte",
   "setupHint": "Aucun compte n'existe encore : créez le compte qui pourra ensuite inviter les autres. Le code d'installation est affiché dans le journal de l'API (docker compose logs api) ou défini par SETUP_TOKEN.",
