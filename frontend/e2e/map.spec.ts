@@ -261,3 +261,43 @@ test('team: create, add a player, invite a new one, see who marked what', async 
   await page.reload();
   await expect(page.locator('.leaflet-marker-icon.halo-all').first()).toBeVisible();
 });
+
+test('loot items in one chest are listed in a single popup', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel("Nom d'utilisateur").fill(user);
+  await page
+    .getByRole('dialog')
+    .getByLabel('Mot de passe', { exact: true })
+    .fill('a brand new passphrase');
+  await page.getByRole('dialog').getByRole('button', { name: 'Se connecter' }).click();
+  await expect(page.locator('.who')).toContainText(user);
+  // only the CI fixture map has this pair (see e2e/fixtures/map); the real map is not predictable
+  const fixture = await page.evaluate(async () =>
+    (await (await fetch('map-data.json')).text()).includes('Weapon_fixture'),
+  );
+  test.skip(!fixture, 'needs the fixture map');
+
+  await page.getByRole('button', { name: 'Rien', exact: true }).click();
+  await page.locator('app-category-card', { hasText: 'Objet unique' }).locator('.toggle').click();
+  await page.locator('app-category-card', { hasText: 'Cosmétique' }).locator('.toggle').click();
+  // one icon for the pair, not two
+  await expect(page.locator('img.leaflet-marker-icon[src*="cosmetic"]')).toHaveCount(0);
+  await expect(page.locator('img.leaflet-marker-icon[src*="unique"]')).toHaveCount(1);
+  // the tooltip says "+1" once the filters have been applied to both items
+  const icon = page.locator('img.leaflet-marker-icon[src*="unique"]');
+  await expect(async () => {
+    await page.mouse.move(0, 0);
+    await icon.hover({ force: true });
+    await expect(page.locator('.leaflet-tooltip', { hasText: '+1' })).toBeVisible({ timeout: 500 });
+  }).toPass();
+  await page.locator('img.leaflet-marker-icon[src*="unique"]').click({ force: true });
+  await expect(page.locator('.popup-name')).toHaveText('2 objets ici');
+  await expect(page.locator('.popup-row')).toHaveCount(2);
+  await expect(page.locator('.popup-row').filter({ hasText: 'Chapeau de test' })).toContainText(
+    'Cosmétique',
+  );
+  await page.locator('.popup-row').first().getByRole('button').click();
+  await expect(page.locator('.popup-row').first().getByRole('button')).toHaveText(
+    'Retirer la marque',
+  );
+});

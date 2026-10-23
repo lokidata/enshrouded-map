@@ -36,7 +36,11 @@ export const SECTIONS: Section[] = [
     color: '#b3ab99',
     cats: ['landmark', 'cave', 'camp', 'farm', 'mine', 'poi'],
   },
-  { label: ['Butin', 'Loot'], color: '#d1913f', cats: ['unique', 'collectible', 'chest'] },
+  {
+    label: ['Butin', 'Loot'],
+    color: '#d1913f',
+    cats: ['unique', 'cosmetic', 'collectible', 'chest'],
+  },
   { label: ['Brume', 'Shroud'], color: '#c95aa6', cats: ['shroudRoot', 'elixirWell'] },
   { label: ['Ressources', 'Resources'], color: '#5fb08c', cats: ['plant', 'ore'] },
   { label: ['Carte', 'Map'], color: '#8592a3', cats: ['region', 'areaName', 'hidden'] },

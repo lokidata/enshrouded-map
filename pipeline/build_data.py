@@ -107,20 +107,23 @@ CATEGORY_LABELS = {
     "summon": ("Pierre d'invocation", "Summoning stone"),
     "chest": ("Coffre", "Chest"),
     "unique": ("Objet unique", "Unique item"),
+    "cosmetic": ("Cosmétique", "Cosmetic"),
     "collectible": ("Objet de collection", "Collectible"),
     "plant": ("Plante", "Plant"),
     "ore": ("Minerai", "Ore"),
     "start": ("Point de départ", "Starting point"),
 }
-RESOURCE_CATEGORIES = ("chest", "plant", "ore")
+# Resource category -> game icon (debug name) shown in the menu; the map draws dots.
+RESOURCE_CATEGORIES = {"chest": "icon_chest", "plant": "icon_plants", "ore": "icon_ore"}
 # Hidden until checked: thousands of points each.
 CRYPT_NAME = re.compile(r"^Crypte des Anciens")
-HIDDEN_BY_DEFAULT = {"hidden", "chest", "plant", "ore", "unique", "collectible"}
+HIDDEN_BY_DEFAULT = {"hidden", "chest", "plant", "ore", "unique", "cosmetic", "collectible"}
 
 # Categories that do not come from map markers: category -> icon (game icon
 # debug name, or an svg written by this script).
 EXTRA_CATEGORIES = {"start": "mapmarker_spawn_flame_altar", "boss": "boss.svg", "elite": "elite.svg",
-                    "summon": "summon.svg", "unique": "unique.svg", "collectible": "collectible.svg"}
+                    "summon": "summon.svg", "unique": "unique.svg", "cosmetic": "cosmetic.svg",
+                    "collectible": "collectible.svg"}
 # Technical suffixes of enemy template names (see enemy_key).
 ENEMY_SUFFIX = re.compile(r"bosshealthbar|bosshealtbar|healthbar|hookpte|hook|summonstone|ag2|elite|deprecated|"
                           r"dungeon\d*|\d+|trap|nomovement|variant|caster")
@@ -177,6 +180,12 @@ ICON_SVGS = {
     "unique.svg": """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
 <path d="M32 2 L62 32 L32 62 L2 32 Z" fill="#3d2108" stroke="#f0a43a" stroke-width="3"/>
 <path d="M32 14 L37 27 L51 27 L40 36 L44 50 L32 42 L20 50 L24 36 L13 27 L27 27 Z" fill="#ffd36b" stroke="#7a4310" stroke-width="2"/>
+</svg>
+""",
+    # cosmetic: violet hanger on a dark violet diamond
+    "cosmetic.svg": """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+<path d="M32 2 L62 32 L32 62 L2 32 Z" fill="#26103d" stroke="#b36cf0" stroke-width="3"/>
+<path d="M32 20 a4 4 0 1 1 4 4 v3 L50 40 q3 4 -2 4 H16 q-5 0 -2 -4 L28 27 v-4" fill="#d9a8ff" stroke="#4a1f78" stroke-width="2" stroke-linejoin="round"/>
 </svg>
 """,
     # collectible: ammonite fossil on a dark teal diamond
@@ -477,8 +486,10 @@ def main(src, export, out):
                 "raw": START_SPAWN_TEMPLATE, "names": [None] * len(locas), "cat": "start", "fastTravel": False}
     # Chests, plants and ores: grouped point lists (build_resources.py).
     resource_tpl, by_debug = build_resources.resource_templates(src, locas, texts, raws)
-    for cat in RESOURCE_CATEGORIES:
-        categories[cat] = {"label": CATEGORY_LABELS[cat], "kind": "dots", "icon": None,
+    for cat, icon in RESOURCE_CATEGORIES.items():
+        guid = next(g for g, n in icon_names.items() if n == icon)
+        shutil.copyfile(f"{export}/icons/{guid}.png", f"{out}/icons/{icon}.png")
+        categories[cat] = {"label": CATEGORY_LABELS[cat], "kind": "dots", "icon": f"icons/{icon}.png",
                            "visible": cat not in HIDDEN_BY_DEFAULT}
     for cat, icon in EXTRA_CATEGORIES.items():
         if icon.endswith(".svg"):
