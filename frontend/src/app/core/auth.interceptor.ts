@@ -10,6 +10,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     catchError((err: unknown) => {
       if (err instanceof HttpErrorResponse && err.status === 401 && !req.url.includes('/auth/')) {
         auth.user.set(null);
+        auth.dialog.set('login');
       }
       return throwError(() => err);
     }),

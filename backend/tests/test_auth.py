@@ -17,6 +17,12 @@ LOGIN = "/api/v1/auth/login"
 INVITE = "/api/v1/auth/invitations"
 
 
+def test_check_is_for_nginx(client: ApiClient) -> None:
+    assert client.get("/api/v1/auth/check").status_code == 401
+    client.post(SETUP, json={"username": "alice", "password": PW, "setup_token": SETUP_TOKEN})
+    assert client.get("/api/v1/auth/check").status_code == 204
+
+
 def test_setup_is_required_until_the_first_account_exists(client: ApiClient) -> None:
     assert client.get("/api/v1/auth/me").json() == {
         "username": None,

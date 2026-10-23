@@ -15,12 +15,14 @@ export class AuthDialog {
   private readonly session = inject(SessionService);
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
 
-  protected readonly model = signal({ username: '', password: '', setupToken: '' });
+  protected readonly model = signal({ username: '', password: '', again: '', setupToken: '' });
   protected readonly credentials = form(this.model, (path) => {
     required(path.username, { when: () => this.auth.dialog() !== 'reset' });
     required(path.password);
     maxLength(path.username, 32);
     maxLength(path.password, 128);
+    maxLength(path.again, 128);
+    required(path.again, { when: () => this.auth.dialog() !== 'login' });
     const isSetup = () => this.auth.dialog() === 'setup';
     required(path.setupToken, { when: isSetup });
     pattern(path.setupToken, /\S/, { when: isSetup }); // not just spaces: the value is trimmed when sent
@@ -39,9 +41,9 @@ export class AuthDialog {
     });
   }
 
-  /** The very first account cannot be skipped. */
+  /** Without an account there is nothing else to see: the dialog cannot be dismissed. */
   protected keepOpen(event: Event): void {
-    if (this.auth.dialog() === 'setup') event.preventDefault();
+    if (!this.auth.user()) event.preventDefault();
   }
 
   protected close(): void {
@@ -52,14 +54,15 @@ export class AuthDialog {
     event.preventDefault();
     void submit(this.credentials, async () => {
       const mode = this.auth.dialog() ?? 'login';
-      const { username, password, setupToken } = this.model();
+      const { username, password, again, setupToken } = this.model();
+      if (mode !== 'login' && password !== again) return this.error.set('mismatch');
       try {
         await this.session.authenticate(mode, {
           username: username.trim(),
           password,
           ...(mode === 'setup' ? { setup_token: setupToken.trim() } : {}),
         });
-        this.model.update((m) => ({ ...m, password: '', setupToken: '' }));
+        this.model.update((m) => ({ ...m, password: '', again: '', setupToken: '' }));
         this.close();
       } catch (err) {
         this.error.set(errorCode(err));

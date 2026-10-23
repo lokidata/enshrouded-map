@@ -27,12 +27,13 @@ from app.core.security import (
 )
 from app.core.setup_token import setup_token
 from app.db.base import utcnow
-from app.db.models import AuthSession, Invitation, PasswordReset, User
-from app.db.queries import no_users
+from app.db.models import AuthSession, Invitation, PasswordReset, TeamMember, User
+from app.db.queries import leave_team, no_users
 from app.schemas.auth import (
     AcceptIn,
     ChangePasswordIn,
     Credentials,
+    DeleteAccountIn,
     InvitationCheck,
     InvitationOut,
     ResetAcceptIn,
@@ -141,7 +142,8 @@ def accept_invitation(
 ) -> UserOut:
     now = utcnow()
     # Checked first: otherwise "taken" would tell anyone, with a made-up token, which names exist.
-    if db.scalar(_usable(body.token, now)) is None:
+    invitation = db.scalar(_usable(body.token, now))
+    if invitation is None:
         audit.warning("invitation_refused", extra={"ip": _ip(request)})
         raise HTTPException(410, "invitation_invalid")
     user = _new_user(db, body.username, body.password)
@@ -159,6 +161,8 @@ def accept_invitation(
         db.rollback()
         audit.warning("invitation_refused", extra={"ip": _ip(request)})
         raise HTTPException(410, "invitation_invalid")
+    if invitation.team_id:  # sent from the team screen: the new player joins that team
+        db.add(TeamMember(user_id=user.id, team_id=invitation.team_id))
     db.commit()
     start_session(db, response, user, session)
     audit.info("register", extra={"user_id": user.id, "ip": _ip(request)})
@@ -216,6 +220,11 @@ def logout(
     return {}
 
 
+@router.get("/check", status_code=204)
+def check(_: CurrentUser) -> None:
+    """Asked by nginx (auth_request) before a map file: 204 with a session, 401 without."""
+
+
 @router.get("/me", response_model=UserOut)
 def me(user: Annotated[User | None, Depends(current_user)], db: DbSession) -> UserOut:
     # 200 either way: not being logged in is a normal state for the page
@@ -266,6 +275,26 @@ def change_password(
     start_session(db, response, user, session)
     audit.info("password_changed", extra={"user_id": user.id, "ip": _ip(request)})
     return UserOut(username=user.username, is_admin=bool(user.first_account))
+
+
+@router.post("/delete-account")
+@limiter.limit(lambda: get_settings().login_rate_limit)
+def delete_account(
+    request: Request, response: Response, body: DeleteAccountIn, user: CurrentUser, db: DbSession
+) -> dict[str, str]:
+    """The player erases their own account and all its progress, after typing their password.
+    Not the first account: only it can reset passwords, and nobody could replace it."""
+    if user.first_account:
+        raise HTTPException(403, "admin_cannot_delete")
+    if not verify_password(user.password_hash, body.password):
+        audit.warning("account_delete_refused", extra={"user_id": user.id, "ip": _ip(request)})
+        raise HTTPException(403, "current_password")
+    leave_team(db, user.id)  # the team survives without them
+    db.execute(delete(User).where(User.id == user.id))  # marks, settings and sessions cascade
+    db.commit()
+    response.delete_cookie(SESSION_COOKIE, path="/")
+    audit.info("account_deleted", extra={"user_id": user.id, "ip": _ip(request)})
+    return {}
 
 
 @router.get("/users", response_model=list[UserItem])

@@ -63,6 +63,10 @@ class Invitation(Base):
     used_by: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), default=None
     )
+    # Set when the owner sends it from the team screen: the new account joins that team.
+    team_id: Mapped[int | None] = mapped_column(
+        ForeignKey("teams.id", ondelete="CASCADE"), default=None
+    )
 
 
 class PasswordReset(Base):
@@ -75,3 +79,24 @@ class PasswordReset(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     expires_at: Mapped[datetime] = mapped_column(DateTime)
     used_at: Mapped[datetime | None] = mapped_column(DateTime, default=None)
+
+
+class Team(Base):
+    __tablename__ = "teams"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(40))
+    owner_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class TeamMember(Base):
+    """One team per player: the user id is the primary key."""
+
+    __tablename__ = "team_members"
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    team_id: Mapped[int] = mapped_column(ForeignKey("teams.id", ondelete="CASCADE"), index=True)
+    joined_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)

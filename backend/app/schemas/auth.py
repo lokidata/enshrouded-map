@@ -40,6 +40,10 @@ class InvitationCheck(BaseModel):
     valid: bool
 
 
+class DeleteAccountIn(StrictModel):
+    password: str = Field(max_length=128)
+
+
 class ChangePasswordIn(StrictModel):
     current_password: str = Field(max_length=128)
     new_password: str = Field(max_length=128)

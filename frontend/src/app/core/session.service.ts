@@ -4,7 +4,9 @@ import { firstValueFrom } from 'rxjs';
 import { AuthMode, AuthService, Credentials, UserInfo } from './auth.service';
 import { FilterStore } from './filter.store';
 import { takeHashToken } from './links';
+import { MapDataService } from './map-data.service';
 import { ProgressStore } from './progress.store';
+import { TeamStore } from './team.store';
 
 const SAVE_DELAY = 700;
 
@@ -15,6 +17,8 @@ export class SessionService {
   private readonly auth = inject(AuthService);
   private readonly progress = inject(ProgressStore);
   private readonly filters = inject(FilterStore);
+  private readonly team = inject(TeamStore);
+  private readonly mapData = inject(MapDataService);
 
   private saved: string | null = null;
   private pending: string | null = null;
@@ -44,6 +48,12 @@ export class SessionService {
 
   /** Restores the session at startup, or asks for what is missing: the first account, or an invitation / reset link. */
   async start(): Promise<void> {
+    await this.restore();
+    // Nothing is shown to someone who is not logged in except the login (or the link's) dialog.
+    if (!this.auth.user() && !this.auth.dialog()) this.auth.dialog.set('login');
+  }
+
+  private async restore(): Promise<void> {
     const link = takeHashToken();
     try {
       const me = await this.auth.me();
@@ -76,16 +86,25 @@ export class SessionService {
     try {
       await this.auth.logout();
     } finally {
-      this.auth.user.set(null);
-      this.auth.isAdmin.set(false);
-      this.progress.set([]);
-      this.filters.reset();
-      this.saved = this.pending = null;
+      this.forget();
     }
   }
 
+  /** The account is gone (deleted): back to the logged-out state, nothing left to save. */
+  forget(): void {
+    clearTimeout(this.timer);
+    this.auth.user.set(null);
+    this.auth.isAdmin.set(false);
+    this.progress.set([]);
+    this.team.clear();
+    this.filters.reset();
+    this.saved = this.pending = null;
+    this.auth.dialog.set('login');
+  }
+
   private async enter(info: UserInfo): Promise<void> {
-    const [marks, settings] = await Promise.all([
+    const [, marks, settings] = await Promise.all([
+      this.mapData.load(),
       firstValueFrom(this.http.get<{ marks: string[] }>('api/v1/progress')),
       firstValueFrom(
         this.http.get<{ settings: { filters?: Record<string, boolean> } | null }>(
@@ -101,6 +120,7 @@ export class SessionService {
     this.saved = settings.settings ? JSON.stringify({ filters: this.filters.overrides() }) : null;
     this.auth.isAdmin.set(info.is_admin);
     this.auth.user.set(info.username);
+    await this.team.load();
   }
 
   private async flush(): Promise<void> {

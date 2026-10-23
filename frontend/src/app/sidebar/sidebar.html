@@ -1,17 +1,33 @@
 <header>
   <div class="title-row">
     <h1>{{ 'title' | transloco }}</h1>
-    <div class="lang" role="group" [attr.aria-label]="'language' | transloco">
-      @for (code of languages; track code) {
-        <button
-          type="button"
-          [class.active]="lang.lang() === code"
-          [attr.aria-pressed]="lang.lang() === code"
-          (click)="lang.set(code)"
-        >
-          {{ code.toUpperCase() }}
-        </button>
-      }
+    <div class="options">
+      <div class="lang" role="group" [attr.aria-label]="'layout' | transloco">
+        @for (l of layouts; track l) {
+          <button
+            type="button"
+            [class.active]="layout.pref() === l"
+            [attr.aria-pressed]="layout.pref() === l"
+            [attr.aria-label]="'layout_' + l | transloco"
+            [title]="'layout_' + l | transloco"
+            (click)="layout.set(l)"
+          >
+            {{ layoutIcon[l] }}
+          </button>
+        }
+      </div>
+      <div class="lang" role="group" [attr.aria-label]="'language' | transloco">
+        @for (code of languages; track code) {
+          <button
+            type="button"
+            [class.active]="lang.lang() === code"
+            [attr.aria-pressed]="lang.lang() === code"
+            (click)="lang.set(code)"
+          >
+            {{ code.toUpperCase() }}
+          </button>
+        }
+      </div>
     </div>
   </div>
   <input

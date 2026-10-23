@@ -29,11 +29,15 @@ body {
 .pw input {
   padding-right: 34px;
 }
+.pw input {
+  height: 34px;
+  box-sizing: border-box;
+}
 .pw button.toggle {
   position: absolute;
-  top: 4px;
   right: 3px;
   bottom: 0;
+  height: 34px;
   width: 30px;
   padding: 0;
   border: 0;

@@ -83,3 +83,7 @@ h1 {
   grid-template-columns: 1fr 1fr;
   gap: 6px;
 }
+.options {
+  display: flex;
+  gap: 6px;
+}

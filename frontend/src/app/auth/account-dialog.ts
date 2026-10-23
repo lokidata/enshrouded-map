@@ -15,12 +15,14 @@ export class AccountDialog {
   protected readonly auth = inject(AuthService);
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
 
-  protected readonly model = signal({ current: '', next: '' });
+  protected readonly model = signal({ current: '', next: '', again: '' });
   protected readonly passwords = form(this.model, (path) => {
     required(path.current);
     required(path.next);
+    required(path.again);
     maxLength(path.current, 128);
     maxLength(path.next, 128);
+    maxLength(path.again, 128);
   });
   protected readonly showPassword = signal(false);
   protected readonly error = signal('');
@@ -54,10 +56,11 @@ export class AccountDialog {
     void submit(this.passwords, async () => {
       this.error.set('');
       this.changed.set(false);
-      const { current, next } = this.model();
+      const { current, next, again } = this.model();
+      if (next !== again) return this.error.set('mismatch');
       try {
         await this.auth.changePassword(current, next);
-        this.model.set({ current: '', next: '' });
+        this.model.set({ current: '', next: '', again: '' });
         this.changed.set(true);
       } catch (err) {
         this.error.set(errorCode(err));
@@ -87,7 +90,7 @@ export class AccountDialog {
   }
 
   private reset(): void {
-    this.model.set({ current: '', next: '' });
+    this.model.set({ current: '', next: '', again: '' });
     this.error.set('');
     this.changed.set(false);
     this.showPassword.set(false);

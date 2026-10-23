@@ -2,6 +2,7 @@ import { Component, computed, inject } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { Catalog } from '../core/catalog.service';
 import { FilterStore } from '../core/filter.store';
+import { LAYOUTS, LayoutService } from '../core/layout.service';
 import { LangService } from '../core/lang.service';
 import { MapDataService } from '../core/map-data.service';
 import { SECTIONS } from '../core/sections';
@@ -17,6 +18,9 @@ import { CategoryCard } from './category-card';
 export class Sidebar {
   protected readonly filters = inject(FilterStore);
   protected readonly lang = inject(LangService);
+  protected readonly layout = inject(LayoutService);
+  protected readonly layouts = LAYOUTS;
+  protected readonly layoutIcon = { auto: 'A', left: '◧', top: '⬒' };
   protected readonly mapData = inject(MapDataService);
   private readonly catalog = inject(Catalog);
 

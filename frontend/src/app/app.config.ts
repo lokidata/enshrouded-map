@@ -9,7 +9,6 @@ import {
 import { TranslocoService, provideTransloco } from '@jsverse/transloco';
 import { firstValueFrom } from 'rxjs';
 import { authInterceptor } from './core/auth.interceptor';
-import { MapDataService } from './core/map-data.service';
 import { SessionService } from './core/session.service';
 import { TranslocoHttpLoader } from './core/transloco-loader';
 
@@ -39,13 +38,10 @@ export const appConfig: ApplicationConfig = {
     }),
     provideAppInitializer(async () => {
       document.documentElement.lang = inject(TranslocoService).getActiveLang();
-      await Promise.all([
-        inject(MapDataService).load(),
-        firstValueFrom(inject(TranslocoService).load(storedLang())),
-      ]);
+      await firstValueFrom(inject(TranslocoService).load(storedLang()));
     }),
     provideAppInitializer(() => {
-      void inject(SessionService).start(); // not awaited: the map shows while the session is checked
+      void inject(SessionService).start(); // not awaited: the page shows while the session is checked
     }),
   ],
 };

@@ -61,8 +61,24 @@ app-map {
 /* done elements stay on the map as faint "ghosts" */
 .marker-icon.done {
   opacity: 0.8;
-  filter: grayscale(0.7) drop-shadow(0 0 3px #6fe06f) drop-shadow(0 0 2px #6fe06f)
-    drop-shadow(0 0 1px #6fe06f);
+  filter: grayscale(0.7) drop-shadow(0 0 1px #000);
+}
+/* halo of the team's progress: orange = at least one member, green = all of them */
+.marker-icon.halo-some {
+  --halo: #ffa53a;
+}
+.marker-icon.halo-all {
+  --halo: #6fe06f;
+}
+.marker-icon.halo-some,
+.marker-icon.halo-all {
+  filter: drop-shadow(0 0 3px var(--halo)) drop-shadow(0 0 2px var(--halo))
+    drop-shadow(0 0 1px var(--halo));
+}
+.marker-icon.done.halo-some,
+.marker-icon.done.halo-all {
+  filter: grayscale(0.7) drop-shadow(0 0 3px var(--halo)) drop-shadow(0 0 2px var(--halo))
+    drop-shadow(0 0 1px var(--halo));
 }
 .marker-icon.done:hover {
   opacity: 1;
@@ -96,7 +112,7 @@ app-map {
 }
 .leaflet-popup-content {
   margin: 10px 12px;
-  height: 106px; /* with the 300 px width set in map-view.ts: the largest size the content ever needed */
+  height: 128px; /* with the 300 px width set in map-view.ts: the largest size the content ever needed */
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -137,6 +153,15 @@ app-map {
   background: var(--accent);
   border-color: var(--accent);
   color: #1a1a1a;
+}
+.popup-team {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .popup-actions .hint {
   color: var(--muted);

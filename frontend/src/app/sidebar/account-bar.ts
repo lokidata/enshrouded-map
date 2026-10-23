@@ -1,24 +1,49 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, ElementRef, inject, signal } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { AuthService } from '../core/auth.service';
 import { copyText, hashLink, timeOf } from '../core/links';
 import { ProgressStore } from '../core/progress.store';
 import { SessionService } from '../core/session.service';
+import { TeamStore } from '../core/team.store';
 
 @Component({
   selector: 'app-account-bar',
+  host: {
+    '(document:click)': 'outside($event)',
+    '(keydown.escape)': 'open.set(false)',
+  },
   imports: [TranslocoPipe],
   template: `
     <div class="account">
       @if (auth.user(); as name) {
-        <span class="who"
-          >👤 {{ name }} · {{ progress.done().size }} {{ 'progress' | transloco }}</span
+        <button
+          type="button"
+          class="who"
+          aria-haspopup="menu"
+          [attr.aria-expanded]="open()"
+          (click)="open.set(!open())"
         >
-        <button type="button" (click)="invite()">{{ 'createInvite' | transloco }}</button>
-        <button type="button" (click)="auth.accountOpen.set(true)">
-          {{ 'account' | transloco }}
+          👤 {{ name }} · {{ progress.done().size }} {{ 'progress' | transloco }} ▾
         </button>
-        <button type="button" (click)="session.logout()">{{ 'logout' | transloco }}</button>
+        @if (open()) {
+          <div class="menu" role="menu">
+            <button type="button" role="menuitem" (click)="pick(invite)">
+              {{ 'createInvite' | transloco }}
+            </button>
+            <button type="button" role="menuitem" (click)="pick(openTeam)">
+              {{ 'team' | transloco }}
+            </button>
+            <button type="button" role="menuitem" (click)="pick(openPassword)">
+              {{ 'passwordMenu' | transloco }}
+            </button>
+            <button type="button" role="menuitem" class="danger" (click)="pick(openDelete)">
+              {{ 'deleteAccount' | transloco }}
+            </button>
+            <button type="button" role="menuitem" (click)="pick(logout)">
+              {{ 'logout' | transloco }}
+            </button>
+          </div>
+        }
       } @else {
         <button type="button" class="primary" (click)="auth.dialog.set('login')">
           {{ 'login' | transloco }}
@@ -40,20 +65,44 @@ import { SessionService } from '../core/session.service';
   `,
   styles: `
     .account {
-      display: flex;
-      align-items: center;
-      gap: 6px;
+      position: relative;
       margin-top: 8px;
       font-size: 13px;
       color: var(--muted);
     }
     .who {
-      flex: 1;
-      min-width: 0;
+      width: 100%;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-      color: var(--text);
+      text-align: left;
+      font-size: 13px;
+    }
+    .menu {
+      position: absolute;
+      z-index: 10;
+      left: 0;
+      right: 0;
+      top: calc(100% + 4px);
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 4px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--panel);
+    }
+    .menu button {
+      text-align: left;
+      border: 0;
+      padding: 6px 9px;
+    }
+    .menu button:hover,
+    .menu button:focus-visible {
+      background: var(--bg);
+    }
+    .menu button.danger {
+      color: #ff7b72;
     }
     button {
       padding: 4px 9px;
@@ -100,11 +149,26 @@ export class AccountBar {
   protected readonly auth = inject(AuthService);
   protected readonly progress = inject(ProgressStore);
   protected readonly session = inject(SessionService);
+  protected readonly team = inject(TeamStore);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   protected readonly link = signal<{ url: string; until: string } | null>(null);
   protected readonly copied = signal(false);
+  protected readonly open = signal(false);
 
-  protected async invite(): Promise<void> {
+  protected readonly invite = (): Promise<void> => this.createInvite();
+  protected readonly openTeam = (): void => this.team.dialogOpen.set(true);
+  protected readonly openPassword = (): void => this.auth.accountOpen.set(true);
+  protected readonly openDelete = (): void => this.auth.deleteOpen.set(true);
+  protected readonly logout = (): Promise<void> => this.session.logout();
+
+  /** Closes the menu, then runs the chosen entry. */
+  protected pick(action: () => unknown): void {
+    this.open.set(false);
+    void action();
+  }
+
+  private async createInvite(): Promise<void> {
     try {
       const { token, expires_at } = await this.auth.createInvitation();
       const url = hashLink('invite', token);
@@ -114,6 +178,10 @@ export class AccountBar {
     } catch {
       this.auth.notice.set('errors.unknown');
     }
+  }
+
+  protected outside(event: Event): void {
+    if (!this.host.nativeElement.contains(event.target as Node)) this.open.set(false);
   }
 
   protected async copy(url: string): Promise<void> {

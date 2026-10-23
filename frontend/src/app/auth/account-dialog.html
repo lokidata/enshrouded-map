@@ -1,4 +1,7 @@
 <dialog #dialog aria-labelledby="account-title" (close)="auth.accountOpen.set(false)">
+  <button type="button" class="x" [attr.aria-label]="'close' | transloco" (click)="close()">
+    ✕
+  </button>
   <h2 id="account-title">{{ 'account' | transloco }} · {{ auth.user() }}</h2>
   <form (submit)="change($event)">
     <h3>{{ 'changePassword' | transloco }}</h3>
@@ -29,11 +32,30 @@
         {{ showPassword() ? '🙈' : '👁' }}
       </button>
     </div>
+    <div class="pw">
+      <label>
+        {{ 'confirmPassword' | transloco }}
+        <input
+          [type]="showPassword() ? 'text' : 'password'"
+          [formField]="passwords.again"
+          autocomplete="new-password"
+        />
+      </label>
+      <button
+        type="button"
+        class="toggle"
+        [attr.aria-pressed]="showPassword()"
+        [attr.aria-label]="(showPassword() ? 'hidePassword' : 'showPassword') | transloco"
+        (click)="showPassword.set(!showPassword())"
+      >
+        {{ showPassword() ? '🙈' : '👁' }}
+      </button>
+    </div>
     <div class="error" role="alert">{{ error() ? ('errors.' + error() | transloco) : '' }}</div>
     @if (changed()) {
       <div class="ok" role="status">{{ 'passwordChanged' | transloco }}</div>
     }
-    <div class="actions">
+    <div class="actions start">
       <button type="submit" class="primary">{{ 'savePassword' | transloco }}</button>
     </div>
   </form>
