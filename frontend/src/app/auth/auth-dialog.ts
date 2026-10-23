@@ -17,7 +17,7 @@ export class AuthDialog {
 
   protected readonly model = signal({ username: '', password: '', setupToken: '' });
   protected readonly credentials = form(this.model, (path) => {
-    required(path.username);
+    required(path.username, { when: () => this.auth.dialog() !== 'reset' });
     required(path.password);
     maxLength(path.username, 32);
     maxLength(path.password, 128);
@@ -26,6 +26,7 @@ export class AuthDialog {
     pattern(path.setupToken, /\S/, { when: isSetup }); // not just spaces: the value is trimmed when sent
   });
   protected readonly error = signal('');
+  protected readonly showPassword = signal(false);
 
   constructor() {
     effect(() => {
@@ -34,6 +35,7 @@ export class AuthDialog {
       if (mode && !el.open) el.showModal();
       if (!mode && el.open) el.close();
       this.error.set('');
+      this.showPassword.set(false);
     });
   }
 

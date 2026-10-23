@@ -30,7 +30,11 @@
     "invitation_invalid": "Ce lien d'invitation est invalide, expiré ou déjà utilisé.",
     "setup_token": "Code d'installation incorrect.",
     "csrf": "Jeton de sécurité (CSRF) refusé : le navigateur n'a pas gardé le cookie. En http, le serveur doit avoir COOKIE_SECURE=false ; en https, rechargez la page.",
-    "internal": "Erreur interne du serveur."
+    "internal": "Erreur interne du serveur.",
+    "current_password": "Mot de passe actuel incorrect.",
+    "reset_invalid": "Ce lien de réinitialisation est invalide, expiré ou déjà utilisé.",
+    "forbidden": "Action réservée au premier compte.",
+    "user": "Utilisateur introuvable."
   },
   "setupTitle": "Créer le premier compte",
   "setupHint": "Aucun compte n'existe encore : créez le compte qui pourra ensuite inviter les autres. Le code d'installation est affiché dans le journal de l'API (docker compose logs api) ou défini par SETUP_TOKEN.",
@@ -41,5 +45,22 @@
   "copied": "Copié",
   "inviteUntil": "Lien à usage unique, valable jusqu'à {{time}}.",
   "create": "Créer le compte",
-  "setupToken": "Code d'installation"
+  "setupToken": "Code d'installation",
+  "showPassword": "Afficher le mot de passe",
+  "hidePassword": "Masquer le mot de passe",
+  "account": "Compte",
+  "changePassword": "Changer mon mot de passe",
+  "currentPassword": "Mot de passe actuel",
+  "newPassword": "Nouveau mot de passe",
+  "savePassword": "Enregistrer",
+  "passwordChanged": "Mot de passe modifié.",
+  "resetTitle": "Nouveau mot de passe",
+  "resetFor": "Compte : {{name}}",
+  "resetSection": "Réinitialiser le mot de passe d'un utilisateur",
+  "pickUser": "Utilisateur",
+  "generateLink": "Générer le lien",
+  "resetLink": "Lien de réinitialisation",
+  "resetUntil": "Lien à usage unique, valable jusqu'à {{time}}. Il remplace le précédent.",
+  "close": "Fermer",
+  "noOtherUser": "Aucun autre utilisateur pour l'instant."
 }

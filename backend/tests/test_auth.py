@@ -18,15 +18,23 @@ INVITE = "/api/v1/auth/invitations"
 
 
 def test_setup_is_required_until_the_first_account_exists(client: ApiClient) -> None:
-    assert client.get("/api/v1/auth/me").json() == {"username": None, "setup_required": True}
+    assert client.get("/api/v1/auth/me").json() == {
+        "username": None,
+        "setup_required": True,
+        "is_admin": False,
+    }
     r = client.post(SETUP, json={"username": "Alice", "password": PW, "setup_token": SETUP_TOKEN})
-    assert r.json() == {"username": "Alice", "setup_required": False}
+    assert r.json() == {"username": "Alice", "setup_required": False, "is_admin": True}
     cookie = r.headers["set-cookie"].lower()
     assert "httponly" in cookie and "samesite=strict" in cookie
     assert client.get("/api/v1/auth/me").json()["username"] == "Alice"
 
     client.post("/api/v1/auth/logout")
-    assert client.get("/api/v1/auth/me").json() == {"username": None, "setup_required": False}
+    assert client.get("/api/v1/auth/me").json() == {
+        "username": None,
+        "setup_required": False,
+        "is_admin": False,
+    }
 
 
 def test_setup_needs_the_setup_token(client: ApiClient) -> None:

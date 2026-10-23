@@ -1,0 +1,80 @@
+<dialog #dialog aria-labelledby="account-title" (close)="auth.accountOpen.set(false)">
+  <h2 id="account-title">{{ 'account' | transloco }} · {{ auth.user() }}</h2>
+  <form (submit)="change($event)">
+    <h3>{{ 'changePassword' | transloco }}</h3>
+    <label>
+      {{ 'currentPassword' | transloco }}
+      <input
+        [type]="showPassword() ? 'text' : 'password'"
+        [formField]="passwords.current"
+        autocomplete="current-password"
+      />
+    </label>
+    <div class="pw">
+      <label>
+        {{ 'newPassword' | transloco }}
+        <input
+          [type]="showPassword() ? 'text' : 'password'"
+          [formField]="passwords.next"
+          autocomplete="new-password"
+        />
+      </label>
+      <button
+        type="button"
+        class="toggle"
+        [attr.aria-pressed]="showPassword()"
+        [attr.aria-label]="(showPassword() ? 'hidePassword' : 'showPassword') | transloco"
+        (click)="showPassword.set(!showPassword())"
+      >
+        {{ showPassword() ? '🙈' : '👁' }}
+      </button>
+    </div>
+    <div class="error" role="alert">{{ error() ? ('errors.' + error() | transloco) : '' }}</div>
+    @if (changed()) {
+      <div class="ok" role="status">{{ 'passwordChanged' | transloco }}</div>
+    }
+    <div class="actions">
+      <button type="submit" class="primary">{{ 'savePassword' | transloco }}</button>
+    </div>
+  </form>
+
+  @if (auth.isAdmin()) {
+    <section>
+      <h3>{{ 'resetSection' | transloco }}</h3>
+      @if (users().length) {
+        <label>
+          {{ 'pickUser' | transloco }}
+          <select [value]="target()" (change)="pick($event)">
+            @for (u of users(); track u.id) {
+              <option [value]="u.id">{{ u.username }}</option>
+            }
+          </select>
+        </label>
+        <div class="actions">
+          <button type="button" (click)="generate()">{{ 'generateLink' | transloco }}</button>
+        </div>
+        @if (link(); as l) {
+          <label>
+            {{ 'resetLink' | transloco }}
+            <input readonly [value]="l.url" (focus)="$any($event.target).select()" />
+          </label>
+          <div class="actions">
+            <button type="button" (click)="copy(l.url)">
+              {{ (copied() ? 'copied' : 'copy') | transloco }}
+            </button>
+          </div>
+          <p class="hint">{{ 'resetUntil' | transloco: { time: l.until } }}</p>
+        }
+        <div class="error" role="alert">
+          {{ resetError() ? ('errors.' + resetError() | transloco) : '' }}
+        </div>
+      } @else {
+        <p class="hint">{{ 'noOtherUser' | transloco }}</p>
+      }
+    </section>
+  }
+
+  <div class="actions">
+    <button type="button" (click)="close()">{{ 'close' | transloco }}</button>
+  </div>
+</dialog>

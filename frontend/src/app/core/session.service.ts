@@ -1,18 +1,12 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, effect, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { AuthMode, AuthService, Credentials } from './auth.service';
+import { AuthMode, AuthService, Credentials, UserInfo } from './auth.service';
 import { FilterStore } from './filter.store';
+import { takeHashToken } from './links';
 import { ProgressStore } from './progress.store';
 
 const SAVE_DELAY = 700;
-
-/** The invitation token travels in the URL fragment (never sent to a server or logged); it is removed from the address bar. */
-function takeInviteToken(): string | null {
-  const token = new URLSearchParams(location.hash.slice(1)).get('invite');
-  if (token !== null) history.replaceState(null, '', location.pathname + location.search);
-  return token;
-}
 
 /** Login state, plus what depends on it: progress marks and the filters saved in the profile. */
 @Injectable({ providedIn: 'root' })
@@ -48,18 +42,24 @@ export class SessionService {
     });
   }
 
-  /** Restores the session at startup, or asks for what is missing: the first account, or an invitation. */
+  /** Restores the session at startup, or asks for what is missing: the first account, or an invitation / reset link. */
   async start(): Promise<void> {
-    const token = takeInviteToken();
+    const link = takeHashToken();
     try {
       const me = await this.auth.me();
-      if (me.username) return await this.enter(me.username);
+      if (me.username) return await this.enter(me);
       if (me.setup_required) return this.auth.dialog.set('setup');
-      if (token) {
-        if (!(await this.auth.checkInvitation(token)))
+      if (link?.kind === 'invite') {
+        if (!(await this.auth.checkInvitation(link.token)))
           return this.auth.notice.set('errors.invitation_invalid');
-        this.auth.inviteToken.set(token);
+        this.auth.inviteToken.set(link.token);
         this.auth.dialog.set('invite');
+      } else if (link?.kind === 'reset') {
+        const name = await this.auth.checkReset(link.token);
+        if (!name) return this.auth.notice.set('errors.reset_invalid');
+        this.auth.resetToken.set(link.token);
+        this.auth.resetUser.set(name);
+        this.auth.dialog.set('reset');
       }
     } catch {
       // API unreachable: the map works without an account
@@ -77,13 +77,14 @@ export class SessionService {
       await this.auth.logout();
     } finally {
       this.auth.user.set(null);
+      this.auth.isAdmin.set(false);
       this.progress.set([]);
       this.filters.reset();
       this.saved = this.pending = null;
     }
   }
 
-  private async enter(name: string): Promise<void> {
+  private async enter(info: UserInfo): Promise<void> {
     const [marks, settings] = await Promise.all([
       firstValueFrom(this.http.get<{ marks: string[] }>('api/v1/progress')),
       firstValueFrom(
@@ -98,7 +99,8 @@ export class SessionService {
     // A new profile has no saved filters: it keeps the ones chosen so far, and they get saved.
     if (settings.settings) this.filters.restore(settings.settings);
     this.saved = settings.settings ? JSON.stringify({ filters: this.filters.overrides() }) : null;
-    this.auth.user.set(name);
+    this.auth.isAdmin.set(info.is_admin);
+    this.auth.user.set(info.username);
   }
 
   private async flush(): Promise<void> {

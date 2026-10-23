@@ -48,3 +48,7 @@ cosign verify ghcr.io/lokidata/enshrouded-map-api:latest \
 ```
 
 If a package is private, add `ghcr.io` in Portainer → Registries with a token that has `read:packages`. Packages published from a public repository are public by default.
+
+## Lost password
+
+Users can change their password in **Compte**, and the first account can generate a reset link for them there (20 minutes, single use). If the first account is the one locked out: Portainer -> Containers -> the `api` container -> Console (`/bin/sh`, interactive), then `python -m app.cli reset-password USERNAME`.

@@ -30,7 +30,11 @@
     "invitation_invalid": "This invitation link is invalid, expired or already used.",
     "setup_token": "Wrong setup code.",
     "csrf": "Security token (CSRF) refused: the browser did not keep the cookie. Over http the server needs COOKIE_SECURE=false; over https, reload the page.",
-    "internal": "Internal server error."
+    "internal": "Internal server error.",
+    "current_password": "Wrong current password.",
+    "reset_invalid": "This reset link is invalid, expired or already used.",
+    "forbidden": "Only the first account can do this.",
+    "user": "User not found."
   },
   "setupTitle": "Create the first account",
   "setupHint": "No account exists yet: create the one that will be able to invite the others. The setup code is shown in the API log (docker compose logs api) or set by SETUP_TOKEN.",
@@ -41,5 +45,22 @@
   "copied": "Copied",
   "inviteUntil": "Single-use link, valid until {{time}}.",
   "create": "Create account",
-  "setupToken": "Setup code"
+  "setupToken": "Setup code",
+  "showPassword": "Show password",
+  "hidePassword": "Hide password",
+  "account": "Account",
+  "changePassword": "Change my password",
+  "currentPassword": "Current password",
+  "newPassword": "New password",
+  "savePassword": "Save",
+  "passwordChanged": "Password changed.",
+  "resetTitle": "New password",
+  "resetFor": "Account: {{name}}",
+  "resetSection": "Reset a user's password",
+  "pickUser": "User",
+  "generateLink": "Generate link",
+  "resetLink": "Reset link",
+  "resetUntil": "Single-use link, valid until {{time}}. It replaces the previous one.",
+  "close": "Close",
+  "noOtherUser": "No other user yet."
 }
