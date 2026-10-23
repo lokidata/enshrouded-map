@@ -18,6 +18,8 @@ Migration of a working prototype into a real app. The plan (approved, in French)
 ## Accounts (decided later)
 - No public sign-up. On an empty database the first visit must create the first account (`POST /auth/setup`, refused once any account exists and unless the caller sends the setup token: `SETUP_TOKEN`, or a random one printed once in the API log at start; the dialog cannot be dismissed). After that only a logged-in user can create a single-use invitation (`POST /auth/invitations`, valid `INVITATION_MINUTES`=20), sent as `<site>/#invite=<token>` (fragment, so it is never logged). The token is stored hashed; accepting it creates the account atomically.
 
+- Passwords: users change their own (`POST /auth/password`, current password required, other sessions revoked). The first account (`users.first_account = true`, `is_admin` in the API) generates single-use reset links for others (`/auth/password-resets*`, `#reset=<token>`, 20 min); a link replaces the previous one for the same user. If the first account is locked out: `python -m app.cli reset-password USERNAME` in the api container. Password fields have a show/hide button.
+
 ## Licence
 MIT (see `LICENSE`): use, fork and modify freely, the copyright notice must stay. It covers the original code only; the third-party skills in `.agents/` keep their own licences. The game's data and assets are not part of the repo and belong to their owners.
 

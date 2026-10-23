@@ -11,25 +11,42 @@
           ? 'setupTitle'
           : auth.dialog() === 'invite'
             ? 'inviteTitle'
-            : 'login'
+            : auth.dialog() === 'reset'
+              ? 'resetTitle'
+              : 'login'
         ) | transloco
       }}
     </h2>
     @if (auth.dialog() === 'setup') {
       <p class="hint">{{ 'setupHint' | transloco }}</p>
     }
-    <label>
-      {{ 'username' | transloco }}
-      <input [formField]="credentials.username" autocomplete="username" />
-    </label>
-    <label>
-      {{ 'password' | transloco }}
-      <input
-        type="password"
-        [formField]="credentials.password"
-        [attr.autocomplete]="auth.dialog() === 'login' ? 'current-password' : 'new-password'"
-      />
-    </label>
+    @if (auth.dialog() === 'reset') {
+      <p class="hint">{{ 'resetFor' | transloco: { name: auth.resetUser() } }}</p>
+    } @else {
+      <label>
+        {{ 'username' | transloco }}
+        <input [formField]="credentials.username" autocomplete="username" />
+      </label>
+    }
+    <div class="pw">
+      <label>
+        {{ (auth.dialog() === 'reset' ? 'newPassword' : 'password') | transloco }}
+        <input
+          [type]="showPassword() ? 'text' : 'password'"
+          [formField]="credentials.password"
+          [attr.autocomplete]="auth.dialog() === 'login' ? 'current-password' : 'new-password'"
+        />
+      </label>
+      <button
+        type="button"
+        class="toggle"
+        [attr.aria-pressed]="showPassword()"
+        [attr.aria-label]="(showPassword() ? 'hidePassword' : 'showPassword') | transloco"
+        (click)="showPassword.set(!showPassword())"
+      >
+        {{ showPassword() ? '🙈' : '👁' }}
+      </button>
+    </div>
     @if (auth.dialog() === 'setup') {
       <label>
         {{ 'setupToken' | transloco }}
@@ -42,7 +59,14 @@
         <button type="button" (click)="close()">{{ 'cancel' | transloco }}</button>
       }
       <button type="submit" class="primary">
-        {{ (auth.dialog() === 'login' ? 'login' : 'create') | transloco }}
+        {{
+          (auth.dialog() === 'login'
+            ? 'login'
+            : auth.dialog() === 'reset'
+              ? 'savePassword'
+              : 'create'
+          ) | transloco
+        }}
       </button>
     </div>
   </form>

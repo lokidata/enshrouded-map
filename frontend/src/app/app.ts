@@ -1,5 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { AccountDialog } from './auth/account-dialog';
 import { AuthDialog } from './auth/auth-dialog';
 import { AuthService } from './core/auth.service';
 import { ProgressStore } from './core/progress.store';
@@ -8,11 +9,12 @@ import { Sidebar } from './sidebar/sidebar';
 
 @Component({
   selector: 'app-root',
-  imports: [Sidebar, MapView, AuthDialog, TranslocoPipe],
+  imports: [Sidebar, MapView, AuthDialog, AccountDialog, TranslocoPipe],
   template: `
     <aside><app-sidebar /></aside>
     <app-map />
     <app-auth-dialog />
+    <app-account-dialog />
     @if (progress.saveFailed()) {
       <div class="toast" role="alert">{{ 'errors.save' | transloco }}</div>
     }

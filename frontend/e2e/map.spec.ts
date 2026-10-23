@@ -23,7 +23,7 @@ test('register, mark an element, and find everything again after a reload', asyn
   await expect(dialog).toBeVisible();
   await expect(dialog.getByRole('button', { name: 'Annuler' })).toHaveCount(0);
   await dialog.getByLabel("Nom d'utilisateur").fill(user);
-  await dialog.getByLabel('Mot de passe').fill(password);
+  await dialog.getByLabel('Mot de passe', { exact: true }).fill(password);
   // a wrong code is refused, the right one is accepted
   await dialog.getByLabel("Code d'installation").fill('wrong');
   await dialog.getByRole('button', { name: 'Créer le compte' }).click();
@@ -74,7 +74,7 @@ test('an account can only be created from a single-use invitation link', async (
   await page.goto('/');
   await page.getByRole('button', { name: 'Se connecter' }).click();
   await page.getByLabel("Nom d'utilisateur").fill(user);
-  await page.getByLabel('Mot de passe').fill(password);
+  await page.getByLabel('Mot de passe', { exact: true }).fill(password);
   await page.getByRole('dialog').getByRole('button', { name: 'Se connecter' }).click();
   await expect(page.locator('.who')).toContainText(user);
   await page.getByRole('button', { name: 'Inviter' }).click();
@@ -88,7 +88,7 @@ test('an account can only be created from a single-use invitation link', async (
   await expect(dialog.getByRole('heading')).toHaveText('Créer votre compte');
   expect(guest.url()).not.toContain('invite'); // the token is removed from the address bar
   await dialog.getByLabel("Nom d'utilisateur").fill('guest');
-  await dialog.getByLabel('Mot de passe').fill(password);
+  await dialog.getByLabel('Mot de passe', { exact: true }).fill(password);
   await dialog.getByRole('button', { name: 'Créer le compte' }).click();
   await expect(guest.locator('.who')).toContainText('guest');
 
@@ -97,4 +97,52 @@ test('an account can only be created from a single-use invitation link', async (
   await late.goto(link);
   await expect(late.getByRole('alert')).toContainText('invalide, expiré ou déjà utilisé');
   await expect(late.getByRole('dialog')).toHaveCount(0);
+});
+
+test('change my password, show it while typing, and reset someone else’s with a link', async ({
+  page,
+  browser,
+}) => {
+  const newPassword = 'a brand new passphrase';
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Se connecter' }).click();
+  await page.getByLabel("Nom d'utilisateur").fill(user);
+  const field = page.getByRole('dialog').getByLabel('Mot de passe', { exact: true });
+  await field.fill(password);
+  await expect(field).toHaveAttribute('type', 'password');
+  await page.getByRole('button', { name: 'Afficher le mot de passe' }).click();
+  await expect(field).toHaveAttribute('type', 'text');
+  await page.getByRole('dialog').getByRole('button', { name: 'Se connecter' }).click();
+  await expect(page.locator('.who')).toContainText(user);
+
+  // change my own password: the current one is checked
+  await page.getByRole('button', { name: 'Compte' }).click();
+  const account = page.getByRole('dialog');
+  await account.getByLabel('Mot de passe actuel').fill('not my password');
+  await account.getByLabel('Nouveau mot de passe').fill(newPassword);
+  await account.getByRole('button', { name: 'Enregistrer' }).click();
+  await expect(account.getByRole('alert').first()).toContainText('Mot de passe actuel incorrect');
+  await account.getByLabel('Mot de passe actuel').fill(password);
+  await account.getByRole('button', { name: 'Enregistrer' }).click();
+  await expect(account.getByRole('status')).toContainText('Mot de passe modifié');
+
+  // the first account generates a reset link for "guest" (created by the previous test)
+  await account.getByRole('button', { name: 'Générer le lien' }).click();
+  const link = await account.getByLabel('Lien de réinitialisation').inputValue();
+  expect(link).toContain('#reset=');
+
+  const guest = await browser.newPage({ baseURL: 'http://127.0.0.1:4200' });
+  await guest.goto(link);
+  const dialog = guest.getByRole('dialog');
+  await expect(dialog.getByRole('heading')).toHaveText('Nouveau mot de passe');
+  await expect(dialog).toContainText('Compte : guest');
+  expect(guest.url()).not.toContain('reset');
+  await dialog.getByLabel('Nouveau mot de passe').fill('guest new passphrase');
+  await dialog.getByRole('button', { name: 'Enregistrer' }).click();
+  await expect(guest.locator('.who')).toContainText('guest');
+
+  // the link is spent
+  const late = await browser.newPage({ baseURL: 'http://127.0.0.1:4200' });
+  await late.goto(link);
+  await expect(late.getByRole('alert')).toContainText('invalide, expiré ou déjà utilisé');
 });

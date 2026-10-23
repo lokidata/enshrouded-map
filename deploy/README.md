@@ -33,3 +33,9 @@ docker compose cp backup.db api:/data/app.db   # restore (stop the stack first: 
 - The API runs a single worker because the login rate limit is counted in memory.
 - Switching to PostgreSQL: add a `db` service, set `DATABASE_URL` and add `psycopg[binary]` to the image's requirements.
 - CSP allows inline *styles* (Angular injects component styles at run time); scripts are `'self'` only.
+
+## Passwords
+
+- Anyone can change their own password (**Compte** in the menu). The **first account** can also generate a single-use reset link (valid 20 minutes) for another user there.
+- If the first account itself loses its password, reset it from the server:
+  `docker compose exec -it api python -m app.cli reset-password USERNAME` (on Portainer: the `api` container's Console, command `python -m app.cli reset-password USERNAME`, with *Interactive & TTY*).

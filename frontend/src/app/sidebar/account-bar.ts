@@ -1,6 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { AuthService } from '../core/auth.service';
+import { copyText, hashLink, timeOf } from '../core/links';
 import { ProgressStore } from '../core/progress.store';
 import { SessionService } from '../core/session.service';
 
@@ -14,6 +15,9 @@ import { SessionService } from '../core/session.service';
           >👤 {{ name }} · {{ progress.done().size }} {{ 'progress' | transloco }}</span
         >
         <button type="button" (click)="invite()">{{ 'createInvite' | transloco }}</button>
+        <button type="button" (click)="auth.accountOpen.set(true)">
+          {{ 'account' | transloco }}
+        </button>
         <button type="button" (click)="session.logout()">{{ 'logout' | transloco }}</button>
       } @else {
         <button type="button" class="primary" (click)="auth.dialog.set('login')">
@@ -103,12 +107,8 @@ export class AccountBar {
   protected async invite(): Promise<void> {
     try {
       const { token, expires_at } = await this.auth.createInvitation();
-      // The token goes in the fragment: it is not sent to servers nor written in their logs.
-      const url = `${location.origin}${location.pathname}#invite=${token}`;
-      const until = new Date(expires_at + 'Z').toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit',
-      });
+      const url = hashLink('invite', token);
+      const until = timeOf(expires_at);
       this.copied.set(false);
       this.link.set({ url, until });
     } catch {
@@ -117,11 +117,6 @@ export class AccountBar {
   }
 
   protected async copy(url: string): Promise<void> {
-    try {
-      await navigator.clipboard.writeText(url);
-      this.copied.set(true);
-    } catch {
-      // clipboard blocked: the link is selected on focus, to copy by hand
-    }
+    this.copied.set(await copyText(url));
   }
 }
