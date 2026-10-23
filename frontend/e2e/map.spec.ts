@@ -283,6 +283,13 @@ test('loot items in one chest are listed in a single popup', async ({ page }) =>
   // one icon for the pair, not two
   await expect(page.locator('img.leaflet-marker-icon[src*="cosmetic"]')).toHaveCount(0);
   await expect(page.locator('img.leaflet-marker-icon[src*="unique"]')).toHaveCount(1);
+  // the tooltip says "+1" once the filters have been applied to both items
+  const icon = page.locator('img.leaflet-marker-icon[src*="unique"]');
+  await expect(async () => {
+    await page.mouse.move(0, 0);
+    await icon.hover({ force: true });
+    await expect(page.locator('.leaflet-tooltip', { hasText: '+1' })).toBeVisible({ timeout: 500 });
+  }).toPass();
   await page.locator('img.leaflet-marker-icon[src*="unique"]').click({ force: true });
   await expect(page.locator('.popup-name')).toHaveText('2 objets ici');
   await expect(page.locator('.popup-row')).toHaveCount(2);
