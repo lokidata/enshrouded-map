@@ -47,6 +47,27 @@
         {{ showPassword() ? '🙈' : '👁' }}
       </button>
     </div>
+    @if (auth.dialog() !== 'login') {
+      <div class="pw">
+        <label>
+          {{ 'confirmPassword' | transloco }}
+          <input
+            [type]="showPassword() ? 'text' : 'password'"
+            [formField]="credentials.again"
+            autocomplete="new-password"
+          />
+        </label>
+        <button
+          type="button"
+          class="toggle"
+          [attr.aria-pressed]="showPassword()"
+          [attr.aria-label]="(showPassword() ? 'hidePassword' : 'showPassword') | transloco"
+          (click)="showPassword.set(!showPassword())"
+        >
+          {{ showPassword() ? '🙈' : '👁' }}
+        </button>
+      </div>
+    }
     @if (auth.dialog() === 'setup') {
       <label>
         {{ 'setupToken' | transloco }}
@@ -55,9 +76,6 @@
     }
     <div class="error" role="alert">{{ error() ? ('errors.' + error() | transloco) : '' }}</div>
     <div class="actions">
-      @if (auth.dialog() !== 'setup') {
-        <button type="button" (click)="close()">{{ 'cancel' | transloco }}</button>
-      }
       <button type="submit" class="primary">
         {{
           (auth.dialog() === 'login'

@@ -11,7 +11,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.deps import csrf_protect
 from app.api.limiter import limiter
-from app.api.v1 import auth, health, progress, settings
+from app.api.v1 import auth, health, progress, settings, team
 from app.core.config import get_settings
 from app.core.logging import setup_logging
 from app.core.setup_token import setup_token
@@ -75,7 +75,7 @@ def create_app() -> FastAPI:
         log.error("unhandled", extra={"path": request.url.path, "error": type(exc).__name__})
         return JSONResponse({"detail": "internal"}, status_code=500)
 
-    for module in (health, auth, progress, settings):
+    for module in (health, auth, progress, settings, team):
         app.include_router(module.router, prefix="/api/v1")
     return app
 

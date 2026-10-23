@@ -1,5 +1,6 @@
 import {
   Component,
+  DestroyRef,
   ElementRef,
   ViewEncapsulation,
   afterNextRender,
@@ -17,6 +18,7 @@ import { LangService } from '../core/lang.service';
 import { MapMarker, itemKey, markId } from '../core/map-data.model';
 import { MapDataService } from '../core/map-data.service';
 import { ProgressStore } from '../core/progress.store';
+import { TeamStore } from '../core/team.store';
 
 // Icon size per zoom level, and the zoom from which each label kind shows.
 const iconSize = (zoom: number): number =>
@@ -63,6 +65,7 @@ export class MapView {
   private readonly lang = inject(LangService);
   private readonly auth = inject(AuthService);
   private readonly progress = inject(ProgressStore);
+  private readonly team = inject(TeamStore);
   private readonly host = viewChild.required<ElementRef<HTMLElement>>('host');
 
   protected readonly coords = signal('');
@@ -83,6 +86,7 @@ export class MapView {
   private openActions: HTMLElement | null = null;
 
   constructor() {
+    inject(DestroyRef).onDestroy(() => this.map?.remove());
     afterNextRender(() => {
       this.init();
       this.ready.set(true);
@@ -94,6 +98,8 @@ export class MapView {
     effect(() => {
       this.auth.user();
       this.progress.done();
+      this.team.others();
+      this.team.total();
       if (this.openActions) this.renderActions(this.openActions);
     });
   }
@@ -278,23 +284,33 @@ export class MapView {
   private applyDone(): void {
     if (!this.ready()) return;
     this.progress.done();
+    this.team.others();
+    this.team.total();
     for (const p of this.placed) this.styleMarker(p);
     for (const [r, dl] of this.dotLayers)
       dl.dots.forEach((dot, i) => this.styleDot(r, dot, r.ids[i]));
   }
 
-  // Done elements stay on the map as faint "ghosts" (see .marker-icon.done).
+  // Marked by me: a faint "ghost" (.done). The halo colour is the team's progress (.halo-some / .halo-all).
   private styleMarker(p: Placed): void {
     if (!p.id || !(p.layer instanceof L.Marker)) return;
-    p.layer.getElement()?.classList.toggle('done', this.progress.done().has(p.id));
+    const classes = p.layer.getElement()?.classList;
+    const halo = this.team.halo(p.id);
+    classes?.toggle('done', this.progress.done().has(p.id));
+    classes?.toggle('halo-some', halo === 'some');
+    classes?.toggle('halo-all', halo === 'all');
   }
 
   private styleDot(r: PlacedResource, dot: L.CircleMarker, id: string): void {
-    dot.setStyle(
-      this.progress.done().has(id)
-        ? { fillOpacity: 0.6, opacity: 1, color: '#6fe06f', weight: 2.5, fillColor: '#ccc' }
-        : { fillOpacity: 0.95, opacity: 0.8, color: '#000', weight: 1, fillColor: r.data.color },
-    );
+    const halo = this.team.halo(id);
+    const mine = this.progress.done().has(id);
+    dot.setStyle({
+      fillOpacity: mine ? 0.6 : 0.95,
+      fillColor: mine ? '#ccc' : r.data.color,
+      opacity: halo === 'none' ? 0.8 : 1,
+      color: halo === 'none' ? '#000' : halo === 'all' ? '#6fe06f' : '#ffa53a',
+      weight: halo === 'none' ? 1 : 2.5,
+    });
   }
 
   // ---- resources: one canvas for tens of thousands of dots ----
@@ -397,6 +413,12 @@ export class MapView {
       this.toggle(id);
     };
     box.append(button);
+    const names = this.team.markedBy(id);
+    if (this.team.team() && names.length) {
+      const by = el('div', 'popup-team', this.lang.t('markedBy') + ' ' + names.join(', '));
+      by.title = by.textContent ?? '';
+      box.append(by);
+    }
   }
 
   private toggle(id: string): void {

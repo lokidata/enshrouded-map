@@ -1,0 +1,95 @@
+<dialog #dialog aria-labelledby="team-title" (close)="store.dialogOpen.set(false)">
+  <button type="button" class="x" [attr.aria-label]="'close' | transloco" (click)="close()">
+    ✕
+  </button>
+  <h2 id="team-title">{{ 'team' | transloco }}</h2>
+
+  <form (submit)="save($event)">
+    <label>
+      {{ 'teamName' | transloco }}
+      <input
+        [formField]="nameForm.name"
+        [readOnly]="!!store.team() && !store.team()!.is_owner"
+        autocomplete="off"
+      />
+    </label>
+    @if (!store.team() || store.team()!.is_owner) {
+      <div class="actions">
+        <button type="submit" class="primary">
+          {{ (store.team() ? 'teamRename' : 'teamCreate') | transloco }}
+        </button>
+      </div>
+    }
+  </form>
+  <div class="error" role="alert">{{ error() ? ('errors.' + error() | transloco) : '' }}</div>
+
+  @if (store.team(); as team) {
+    <section>
+      <h3>{{ 'teamMembers' | transloco }}</h3>
+      <ul class="members">
+        @for (m of team.members; track m.id) {
+          <li>
+            <span>{{ m.username }}</span>
+            @if (m.id !== team.owner_id && m.username !== auth.user()) {
+              <button
+                type="button"
+                class="danger"
+                [attr.aria-label]="'teamRemove' | transloco: { name: m.username }"
+                (click)="remove(m.id, m.username)"
+              >
+                ✕
+              </button>
+            }
+          </li>
+        }
+      </ul>
+      <div class="add">
+        @if (players().length) {
+          <label>
+            {{ 'teamAddExisting' | transloco }}
+            <select [value]="picked()" (change)="pick($event)">
+              @for (p of players(); track p.id) {
+                <option [value]="p.id">{{ p.username }}</option>
+              }
+            </select>
+          </label>
+          <div class="actions">
+            <button type="button" (click)="add()">{{ 'teamAdd' | transloco }}</button>
+          </div>
+        }
+        <h3>{{ 'teamNewPlayer' | transloco }}</h3>
+        <div class="actions">
+          <button type="button" (click)="invite()">{{ 'teamInvite' | transloco }}</button>
+        </div>
+        @if (link(); as l) {
+          <label>
+            {{ 'teamLink' | transloco }}
+            <input readonly [value]="l.url" (focus)="$any($event.target).select()" />
+          </label>
+          <div class="actions">
+            <button type="button" (click)="copy(l.url)">
+              {{ (copied() ? 'copied' : 'copy') | transloco }}
+            </button>
+          </div>
+          <p class="hint">{{ 'inviteUntil' | transloco: { time: l.until } }}</p>
+        }
+      </div>
+    </section>
+  }
+
+  <div class="footer">
+    <div class="leaving">
+      @if (store.team(); as team) {
+        @if (team.is_owner) {
+          <button type="button" class="danger" (click)="dissolve()">
+            {{ 'teamDissolve' | transloco }}
+          </button>
+        }
+        <button type="button" class="danger" (click)="leave()">
+          {{ 'teamLeave' | transloco }}
+        </button>
+      }
+    </div>
+    <button type="button" (click)="close()">{{ 'close' | transloco }}</button>
+  </div>
+</dialog>

@@ -20,6 +20,12 @@ Migration of a working prototype into a real app. The plan (approved, in French)
 
 - Passwords: users change their own (`POST /auth/password`, current password required, other sessions revoked). The first account (`users.first_account = true`, `is_admin` in the API) generates single-use reset links for others (`/auth/password-resets*`, `#reset=<token>`, 20 min); a link replaces the previous one for the same user. If the first account is locked out: `python -m app.cli reset-password USERNAME` in the api container. Password fields have a show/hide button.
 
+## Teams, profile and access (added after the first release)
+- Without an account the page shows only the login dialog (no map, not dismissible). nginx serves the map files (`tiles`, `icons`, `biomes.png`, `overview.jpg`, `map-data.json`, `resources.json`) only with a valid session: `auth_request` -> `GET /api/v1/auth/check`. `ng serve` does not protect them. `map-data.json` is loaded after login (`SessionService.enter`).
+- Teams (`backend/app/api/v1/team.py`, `TeamStore`): one team per player, the creator is the owner (renames, disbands). Any member adds an existing player (`POST /team/members`), removes another one (not the owner) or creates an invitation link; that link is an account invitation (`invitations.team_id`) whose new account joins the team. Leaving hands the team to the longest-standing member. Halo on the map: orange = at least one member marked it, green = all of them (no team: green when I marked it); the popup lists who did. The others' marks are refetched every 60 s and when the tab comes back.
+- Profile menu (invite, team, password, delete account, logout). Deleting an account (`POST /auth/delete-account`, password required) erases its progress; the first account cannot be deleted. Password fields have a confirmation field. The left menu can be hidden and placed on the left, on top, or automatically (portrait = top), remembered per device.
+- `make e2e-stack` also checks that the map files are refused without a session (`PROTECTED_ASSETS=1`).
+
 ## Licence
 MIT (see `LICENSE`): use, fork and modify freely, the copyright notice must stay. It covers the original code only; the third-party skills in `.agents/` keep their own licences. The game's data and assets are not part of the repo and belong to their owners.
 

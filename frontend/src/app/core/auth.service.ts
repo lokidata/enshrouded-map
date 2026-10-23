@@ -43,6 +43,7 @@ export class AuthService {
   /** The first account: can generate password reset links. */
   readonly isAdmin = signal(false);
   readonly accountOpen = signal(false);
+  readonly deleteOpen = signal(false);
   /** Translation key of a message shown to the user, or null. */
   readonly notice = signal<string | null>(null);
 
@@ -86,6 +87,10 @@ export class AuthService {
     await firstValueFrom(
       this.http.post('api/v1/auth/password', { current_password: current, new_password: next }),
     );
+  }
+
+  async deleteAccount(password: string): Promise<void> {
+    await firstValueFrom(this.http.post('api/v1/auth/delete-account', { password }));
   }
 
   listUsers(): Promise<{ id: number; username: string }[]> {

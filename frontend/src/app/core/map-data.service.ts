@@ -7,13 +7,13 @@ import { MapData, ResourceData } from './map-data.model';
 export class MapDataService {
   private readonly http = inject(HttpClient);
 
-  /** Set by load(), which runs as an app initializer: always defined once the app renders. */
+  /** Set by load() when the player logs in (the file is for logged-in players only). */
   data!: MapData;
   /** Chests, plants and ores (large): loaded in the background after the first render. */
   readonly resources = signal<ResourceData>({});
 
   async load(): Promise<void> {
-    this.data = await firstValueFrom(this.http.get<MapData>('map-data.json'));
+    this.data ??= await firstValueFrom(this.http.get<MapData>('map-data.json'));
   }
 
   async loadResources(): Promise<void> {
