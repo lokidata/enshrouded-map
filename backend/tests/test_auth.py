@@ -28,9 +28,15 @@ def test_setup_is_required_until_the_first_account_exists(client: ApiClient) -> 
         "username": None,
         "setup_required": True,
         "is_admin": False,
+        "passkeys_enabled": False,
     }
     r = client.post(SETUP, json={"username": "Alice", "password": PW, "setup_token": SETUP_TOKEN})
-    assert r.json() == {"username": "Alice", "setup_required": False, "is_admin": True}
+    assert r.json() == {
+        "username": "Alice",
+        "setup_required": False,
+        "is_admin": True,
+        "passkeys_enabled": False,
+    }
     cookie = r.headers["set-cookie"].lower()
     assert "httponly" in cookie and "samesite=strict" in cookie
     assert client.get("/api/v1/auth/me").json()["username"] == "Alice"
@@ -40,6 +46,7 @@ def test_setup_is_required_until_the_first_account_exists(client: ApiClient) -> 
         "username": None,
         "setup_required": False,
         "is_admin": False,
+        "passkeys_enabled": False,
     }
 
 

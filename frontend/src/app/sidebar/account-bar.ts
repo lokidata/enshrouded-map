@@ -36,6 +36,11 @@ import { TeamStore } from '../core/team.store';
             <button type="button" role="menuitem" (click)="pick(openPassword)">
               {{ 'passwordMenu' | transloco }}
             </button>
+            @if (auth.passkeysAvailable()) {
+              <button type="button" role="menuitem" (click)="pick(openPasskeys)">
+                {{ 'passkeys' | transloco }}
+              </button>
+            }
             <button type="button" role="menuitem" class="danger" (click)="pick(openDelete)">
               {{ 'deleteAccount' | transloco }}
             </button>
@@ -159,6 +164,7 @@ export class AccountBar {
   protected readonly invite = (): Promise<void> => this.createInvite();
   protected readonly openTeam = (): void => this.team.dialogOpen.set(true);
   protected readonly openPassword = (): void => this.auth.accountOpen.set(true);
+  protected readonly openPasskeys = (): void => this.auth.passkeysOpen.set(true);
   protected readonly openDelete = (): void => this.auth.deleteOpen.set(true);
   protected readonly logout = (): Promise<void> => this.session.logout();
 

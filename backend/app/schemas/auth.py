@@ -29,6 +29,7 @@ class UserOut(BaseModel):
     username: str | None  # None when logged out: a normal state for the page
     setup_required: bool = False  # no account exists yet: the first one must be created
     is_admin: bool = False  # the first account: can generate password reset links
+    passkeys_enabled: bool = False  # the server is configured for passkeys (sent by /me only)
 
 
 class InvitationOut(BaseModel):

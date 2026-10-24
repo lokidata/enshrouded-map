@@ -18,6 +18,11 @@ class Settings(BaseSettings):
     session_days: int = 30
     invitation_minutes: int = 20  # lifetime of the link a user sends to create an account
 
+    # Passkeys (WebAuthn): bound to one https host name. Unset = the feature is off.
+    webauthn_rp_id: str = ""  # the host name players open, without scheme or port
+    webauthn_origin: str = ""  # its full origin, e.g. https://carte.example.lan
+    webauthn_rp_name: str = "Carte Enshrouded"
+
     login_rate_limit: str = "10/5 minutes"  # per client address
     register_rate_limit: str = "10/hour"  # setup and invitations
     lockout_threshold: int = 5  # failed logins before an account is locked progressively

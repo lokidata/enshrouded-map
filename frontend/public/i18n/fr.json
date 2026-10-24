@@ -41,7 +41,11 @@
     "self": "Action impossible sur soi-même.",
     "member_in_team": "Ce joueur est déjà dans une équipe.",
     "admin_cannot_delete": "Le premier compte ne peut pas être supprimé : il est le seul à pouvoir réinitialiser les mots de passe.",
-    "mismatch": "Les deux mots de passe sont différents."
+    "mismatch": "Les deux mots de passe sont différents.",
+    "passkey": "La passkey n'a pas pu être utilisée.",
+    "passkey_known": "Cette passkey est déjà enregistrée.",
+    "no_passkey": "Passkey introuvable.",
+    "passkeys_disabled": "Les passkeys ne sont pas activées sur ce serveur."
   },
   "setupTitle": "Créer le premier compte",
   "setupHint": "Aucun compte n'existe encore : créez le compte qui pourra ensuite inviter les autres. Le code d'installation est affiché dans le journal de l'API (docker compose logs api) ou défini par SETUP_TOKEN.",
@@ -102,5 +106,16 @@
   "guaranteedItems": "Objets garantis",
   "alsoGuaranteed": "Également garantis ici",
   "markAllDone": "Tout marquer comme fait",
-  "unmarkAll": "Retirer toutes les marques"
+  "unmarkAll": "Retirer toutes les marques",
+  "passkeys": "Passkeys",
+  "passkeyLogin": "Utiliser une passkey",
+  "passkeyName": "Nom de la passkey (ex. mon téléphone)",
+  "passkeyAdd": "Ajouter une passkey",
+  "passkeyNone": "Aucune passkey enregistrée.",
+  "passkeyUsed": "utilisée le {{date}}",
+  "passkeyNever": "jamais utilisée",
+  "passkeyAdded": "Passkey ajoutée.",
+  "passkeyDeleteAsk": "Supprimer la passkey « {{name}} » ?",
+  "passkeyHint": "Une passkey permet de se connecter avec l'empreinte, le visage ou le code de l'appareil, sans mot de passe. Le mot de passe reste utilisable.",
+  "delete": "Supprimer"
 }

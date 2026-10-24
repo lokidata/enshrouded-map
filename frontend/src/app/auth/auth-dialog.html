@@ -75,6 +75,13 @@
       </label>
     }
     <div class="error" role="alert">{{ error() ? ('errors.' + error() | transloco) : '' }}</div>
+    @if (auth.dialog() === 'login' && auth.passkeysAvailable()) {
+      <div class="actions start">
+        <button type="button" class="link" (click)="passkey()">
+          🔑 {{ 'passkeyLogin' | transloco }}
+        </button>
+      </div>
+    }
     <div class="actions">
       <button type="submit" class="primary">
         {{
