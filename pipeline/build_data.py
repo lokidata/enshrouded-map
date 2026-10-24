@@ -117,6 +117,8 @@ CATEGORY_LABELS = {
 RESOURCE_CATEGORIES = {"chest": "icon_chest", "plant": "icon_plants", "ore": "icon_ore"}
 # Hidden until checked: thousands of points each.
 CRYPT_NAME = re.compile(r"^Crypte des Anciens")
+# Markers of a single item (special loot), see build_resources.special_loot.
+LOOT_MARKER_CATEGORIES = ("unique", "cosmetic", "collectible")
 HIDDEN_BY_DEFAULT = {"hidden", "chest", "plant", "ore", "unique", "cosmetic", "collectible"}
 
 # Categories that do not come from map markers: category -> icon (game icon
@@ -427,6 +429,43 @@ def region_labels(src, export, locas, cells, size, scale):
     return labels
 
 
+ITEM_ICON_SIZE = 64
+
+
+def item_table_for_map(markers, resources, item_names, export, out):
+    """Items shown in the popups: {guid: {"name": [...], "icon": "items/<guid>.png" | None}}.
+
+    The pictures come from the export mod (items/<guid>.png, 256 px), shrunk.
+    """
+    from PIL import Image
+    used = set()
+    for m in markers:
+        if "item" in m:
+            used.add(m["item"])
+        used.update(e["item"] for e in m.get("loot", ()))
+    for entries in resources.values():
+        for r in entries:
+            for contents in r.get("loot", {}).values():
+                used.update(e["item"] for e in contents)
+    os.makedirs(f"{out}/items", exist_ok=True)
+    items = {}
+    for guid in sorted(used):
+        icon = None
+        src_icon = f"{export}/items/{guid}.png"
+        if os.path.exists(src_icon):
+            with Image.open(src_icon) as picture:
+                picture = picture.convert("RGBA")
+                picture = picture.crop(picture.getbbox() or (0, 0, *picture.size))
+                picture.thumbnail((ITEM_ICON_SIZE, ITEM_ICON_SIZE), Image.LANCZOS)
+                square = Image.new("RGBA", (ITEM_ICON_SIZE, ITEM_ICON_SIZE))
+                square.paste(picture, ((ITEM_ICON_SIZE - picture.width) // 2, (ITEM_ICON_SIZE - picture.height) // 2))
+                square.save(f"{out}/items/{guid}.png", optimize=True)
+            icon = f"items/{guid}.png"
+        items[guid] = {"name": item_names[guid], "icon": icon}
+    print(f"{len(items)} items in popups, {sum(1 for i in items.values() if not i['icon'])} without a picture")
+    return items
+
+
 def main(src, export, out):
     os.makedirs(f"{out}/icons", exist_ok=True)
     locas = [load_loca(f"{export}/loca/{lang}.tsv") for lang in LANGUAGES]
@@ -532,55 +571,88 @@ def main(src, export, out):
     ]
 
     markers = []
-    seen = set()
+    seen = {}  # de-duplication key -> index in markers
     unnamed = 0
     for guid, x, y, z in placed:
         t = marker_templates[guid]
-        # Same element placed twice (scene + chunk, or boss phases): keep one.
-        key = (t["cat"], tuple(t["names"]) if t["names"][0] else guid, round(x / 4), round(z / 4))
-        if key in seen or any(x0 <= x <= x1 and z0 <= z <= z1 for x0, z0, x1, z1 in dungeon_areas):
+        if any(x0 <= x <= x1 and z0 <= z <= z1 for x0, z0, x1, z1 in dungeon_areas):
             continue
-        seen.add(key)
+        # Same element placed twice (scene + chunk): keep one. The phases of a
+        # boss (Vorgoth...) have their own names but share the spot: one marker,
+        # named after the first phase (template names end with Phase1, Phase2...).
+        same = "phases" if t["cat"] == "boss" else tuple(t["names"]) if t["names"][0] else guid
+        key = (t["cat"], same, round(x / 4), round(z / 4))
         # Untranslated markers are mostly generic ones (elixir wells...), for
         # which the category name is the in-game name.
         fallback = CATEGORY_LABELS[t["cat"]]
-        if not t["names"][0]:
-            unnamed += 1
-        markers.append({
+        marker = {
             "name": [n or fb for n, fb in zip(t["names"], fallback)],
             "raw": t["raw"],
             # the Bard's crypt is a point of interest marker in the game
             "cat": "dungeonEntrance" if CRYPT_NAME.match(t["names"][0] or "") else t["cat"],
             "x": round(x, 1), "y": round(y, 1), "z": round(z, 1),
             "fastTravel": t["fastTravel"],
-        })
+        }
+        if key in seen:
+            kept = markers[seen[key]]
+            if t["cat"] == "boss" and marker["raw"] < kept["raw"]:
+                kept.update(name=marker["name"], raw=marker["raw"])
+            continue
+        seen[key] = len(markers)
+        if not t["names"][0]:
+            unnamed += 1
+        markers.append(marker)
     # Unique items and collectibles: one marker per item, at its chest. Items
     # sharing a chest are moved apart by 1 m so that each one keeps its own
     # mark id (category:x:z).
     # Collectibles lying in the world are often special loot too: keep one.
+    # The other guaranteed items of a container (materials, blocks...) are listed
+    # in the popup of what stands there: the loot marker, the chest or the enemy.
     special = []
     taken = set()
-    lying = {(tuple(m["name"]), round(m["x"]), round(m["z"])) for m in markers if m["cat"] == "collectible"}
-    for cat, names, debug, x, y, z in build_resources.special_loot(src, MAIN_SCENE, locas):
-        if any(x0 <= x <= x1 and z0 <= z <= z1 for x0, z0, x1, z1 in dungeon_areas):
+    item_names = {}  # item guid -> names, for the items table
+    container_loot = build_resources.ContainerLoot()
+    lying = {(tuple(m["name"]), round(m["x"]), round(m["z"])): m for m in markers if m["cat"] == "collectible"}
+    special_items = [s for s in build_resources.special_loot(src, MAIN_SCENE, locas)
+                     if not any(x0 <= s[5] <= x1 and z0 <= s[7] <= z1 for x0, z0, x1, z1 in dungeon_areas)]
+    for cat, names, debug, item, amount, x, y, z in special_items:
+        item_names[item] = names
+        if not cat:
+            container_loot.add(x, z, item, amount)
+    for cat, names, debug, item, amount, x, y, z in special_items:
+        if not cat:
             continue
         special.append((x, z))
-        if any((tuple(names), round(x) + dx, round(z) + dz) in lying for dx in (-1, 0, 1) for dz in (-1, 0, 1)):
-            continue
-        x, z = round(x, 1), round(z, 1)
-        # same rounding as the front end's mark ids (Math.round)
-        while (cat, math.floor(x + 0.5), math.floor(z + 0.5)) in taken:
-            x = round(x + 1, 1)
-        taken.add((cat, math.floor(x + 0.5), math.floor(z + 0.5)))
-        markers.append({"name": names, "raw": debug, "cat": cat,
-                        "x": x, "y": round(y, 1), "z": z, "fastTravel": False})
+        contents = container_loot.take(x, z)
+        same = [lying.get((tuple(names), round(x) + dx, round(z) + dz)) for dx in (-1, 0, 1) for dz in (-1, 0, 1)]
+        marker = next((m for m in same if m), None)
+        if not marker:
+            x, z = round(x, 1), round(z, 1)
+            # same rounding as the front end's mark ids (Math.round)
+            while (cat, math.floor(x + 0.5), math.floor(z + 0.5)) in taken:
+                x = round(x + 1, 1)
+            taken.add((cat, math.floor(x + 0.5), math.floor(z + 0.5)))
+            marker = {"name": names, "raw": debug, "cat": cat,
+                      "x": x, "y": round(y, 1), "z": z, "fastTravel": False}
+            markers.append(marker)
+        marker["item"] = item
+        if contents:
+            marker["loot"] = contents
 
     print(f"{len(markers)} markers ({unnamed} without translation)")
     print(collections.Counter(m["cat"] for m in markers).most_common())
     fog = render_map.assemble(export, "FogZone", [0, 1])[::8, ::8]
     void = render_map.void_mask(fog[..., 0], fog[..., 1])  # north-up, 8 m cells
     resources = build_resources.build_resources(resources_placed, resource_tpl, by_debug, export, locas,
-                                                dungeon_areas, void, special)
+                                                dungeon_areas, void, special, container_loot)
+    # Guaranteed loot still unclaimed: an enemy, a skeleton... standing on a marker.
+    for m in markers:
+        if categories[m["cat"]]["kind"] == "icon" and m["cat"] not in LOOT_MARKER_CATEGORIES:
+            contents = container_loot.take(m["x"], m["z"])
+            if contents:
+                m["loot"] = contents
+    print(f"{len(container_loot.cells)} containers of guaranteed loot without a chest or a marker")
+    items = item_table_for_map(markers, resources, item_names, export, out)
 
     # Biome layer. Biome map row 0 is the south edge, so flip it for north-up.
     biome = load(glob.glob(f"{src}/BiomeMapResource/{MAIN_SCENE}_*.json")[0])
@@ -603,6 +675,7 @@ def main(src, export, out):
         "biomes": {k: {"color": "#%02x%02x%02x" % v, "label": BIOME_LABELS[k]}
                    for k, v in BIOME_COLORS.items() if k in present},
         "categories": categories,
+        "items": items,
         "markers": markers,
     }
     for name, obj in (("map-data", data), ("resources", resources)):

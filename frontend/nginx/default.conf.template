@@ -59,6 +59,12 @@ server {
         root /srv/artifacts;
         expires 1d;
     }
+    # item pictures shown in the popups
+    location ^~ /items/ {
+        auth_request /_auth;
+        root /srv/artifacts;
+        expires 1d;
+    }
     location = /biomes.png {
         auth_request /_auth;
         root /srv/artifacts;

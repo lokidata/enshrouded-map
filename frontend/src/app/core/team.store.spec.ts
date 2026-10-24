@@ -34,22 +34,22 @@ describe('TeamStore halo', () => {
     expect(store.halo('a:1:1')).toBe('all');
   });
 
-  it('orange when some members marked it, green when all did', () => {
+  it('orange: others only, violet: me (not everyone), green: all', () => {
     team('alice', 'bob', 'carol');
     store.others.set({ 'a:1:1': [2] });
-    expect(store.halo('a:1:1')).toBe('some');
+    expect(store.halo('a:1:1')).toBe('others');
     progress.set(['a:1:1']);
-    expect(store.halo('a:1:1')).toBe('some');
+    expect(store.halo('a:1:1')).toBe('mine');
     store.others.set({ 'a:1:1': [2, 3] });
     expect(store.halo('a:1:1')).toBe('all');
     expect(store.markedBy('a:1:1')).toEqual(['alice', 'bob', 'carol']);
   });
 
-  it('a new member turns a full halo orange', () => {
+  it('a new member turns a full halo violet', () => {
     team('alice');
     progress.set(['a:1:1']);
     expect(store.halo('a:1:1')).toBe('all');
     team('alice', 'bob');
-    expect(store.halo('a:1:1')).toBe('some');
+    expect(store.halo('a:1:1')).toBe('mine');
   });
 });
