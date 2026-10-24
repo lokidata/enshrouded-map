@@ -23,6 +23,7 @@ Portainer → **Stacks → Add stack**:
 | `ARTIFACTS_DIR` | yes | Folder of the map data on the host (step 1) |
 | `SETUP_TOKEN` | recommended | 16-128 characters; asked for the very first account. Empty: a random one is printed in the `api` container log |
 | `COOKIE_SECURE` | | `true` (default) behind HTTPS; `false` only for plain-http tests |
+| `WEBAUTHN_RP_ID` / `WEBAUTHN_ORIGIN` | for passkeys | Host name players open (e.g. `carte.example.lan`) and its origin (`https://carte.example.lan`). HTTPS and a single name are required: changing it later invalidates the passkeys already registered. Empty: passkeys are off |
 | `REVERSE_PROXY_IP` | behind a proxy | Address your reverse proxy connects from (client IP is trusted only from there) |
 | `WEB_BIND` / `WEB_PORT` | | Published address and port (default `0.0.0.0:8080`) |
 | `IMAGE_TAG` | | `latest` by default |

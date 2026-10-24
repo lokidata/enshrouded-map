@@ -7,7 +7,7 @@ const db = `/tmp/enshrouded-e2e-${process.pid}.db`;
 
 export default defineConfig({
   testDir: './e2e',
-  use: { baseURL: 'http://127.0.0.1:4200', launchOptions: { args: ['--no-sandbox'] } },
+  use: { baseURL: 'http://localhost:4200', launchOptions: { args: ['--no-sandbox'] } },
   webServer: [
     {
       command: `cd ../backend && rm -f ${db}* && uv run alembic upgrade head && uv run uvicorn app.main:app --port 8000`,
@@ -18,6 +18,9 @@ export default defineConfig({
         COOKIE_SECURE: 'false',
         SETUP_TOKEN: process.env['SETUP_TOKEN'],
         REGISTER_RATE_LIMIT: '1000/minute',
+        // passkeys need a host name (not an IP): the tests open the page on localhost
+        WEBAUTHN_RP_ID: 'localhost',
+        WEBAUTHN_ORIGIN: 'http://localhost:4200',
       },
       reuseExistingServer: false,
     },

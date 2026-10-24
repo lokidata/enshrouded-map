@@ -50,6 +50,17 @@ export class AuthDialog {
     this.auth.dialog.set(null);
   }
 
+  protected async passkey(): Promise<void> {
+    this.error.set('');
+    try {
+      await this.session.passkeyLogin();
+      this.close();
+    } catch (err) {
+      const code = errorCode(err);
+      this.error.set(code === 'cancelled' ? '' : code);
+    }
+  }
+
   protected submit(event: Event): void {
     event.preventDefault();
     void submit(this.credentials, async () => {

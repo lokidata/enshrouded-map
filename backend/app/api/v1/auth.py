@@ -16,6 +16,7 @@ from app.api.deps import (
 from app.api.limiter import limiter
 from app.core.config import get_settings
 from app.core.logging import audit
+from app.core.passkeys import passkeys_enabled
 from app.core.security import (
     hash_password,
     needs_rehash,
@@ -228,9 +229,12 @@ def check(_: CurrentUser) -> None:
 @router.get("/me", response_model=UserOut)
 def me(user: Annotated[User | None, Depends(current_user)], db: DbSession) -> UserOut:
     # 200 either way: not being logged in is a normal state for the page
+    enabled = passkeys_enabled()
     if user:
-        return UserOut(username=user.username, is_admin=bool(user.first_account))
-    return UserOut(username=None, setup_required=no_users(db))
+        return UserOut(
+            username=user.username, is_admin=bool(user.first_account), passkeys_enabled=enabled
+        )
+    return UserOut(username=None, setup_required=no_users(db), passkeys_enabled=enabled)
 
 
 # ---- password: change it, or reset it with a link from the first account ----

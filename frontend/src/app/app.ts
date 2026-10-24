@@ -3,6 +3,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { AccountDialog } from './auth/account-dialog';
 import { AuthDialog } from './auth/auth-dialog';
 import { DeleteDialog } from './auth/delete-dialog';
+import { PasskeyDialog } from './auth/passkey-dialog';
 import { AuthService } from './core/auth.service';
 import { LayoutService } from './core/layout.service';
 import { ProgressStore } from './core/progress.store';
@@ -22,7 +23,16 @@ function read(): string | null {
 
 @Component({
   selector: 'app-root',
-  imports: [Sidebar, MapView, AuthDialog, AccountDialog, DeleteDialog, TeamDialog, TranslocoPipe],
+  imports: [
+    Sidebar,
+    MapView,
+    AuthDialog,
+    AccountDialog,
+    DeleteDialog,
+    PasskeyDialog,
+    TeamDialog,
+    TranslocoPipe,
+  ],
   template: `
     @if (auth.user()) {
       <aside id="sidebar" [hidden]="!menuOpen()"><app-sidebar /></aside>
@@ -42,6 +52,7 @@ function read(): string | null {
     <app-auth-dialog />
     <app-account-dialog />
     <app-delete-dialog />
+    <app-passkey-dialog />
     <app-team-dialog />
     @if (progress.saveFailed()) {
       <div class="toast" role="alert">{{ 'errors.save' | transloco }}</div>

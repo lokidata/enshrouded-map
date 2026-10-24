@@ -41,7 +41,11 @@
     "self": "You cannot do this to yourself.",
     "member_in_team": "This player is already in a team.",
     "admin_cannot_delete": "The first account cannot be deleted: it is the only one that can reset passwords.",
-    "mismatch": "The two passwords differ."
+    "mismatch": "The two passwords differ.",
+    "passkey": "The passkey could not be used.",
+    "passkey_known": "This passkey is already registered.",
+    "no_passkey": "Passkey not found.",
+    "passkeys_disabled": "Passkeys are not enabled on this server."
   },
   "setupTitle": "Create the first account",
   "setupHint": "No account exists yet: create the one that will be able to invite the others. The setup code is shown in the API log (docker compose logs api) or set by SETUP_TOKEN.",
@@ -102,5 +106,16 @@
   "guaranteedItems": "Guaranteed items",
   "alsoGuaranteed": "Also guaranteed here",
   "markAllDone": "Mark all as done",
-  "unmarkAll": "Unmark all"
+  "unmarkAll": "Unmark all",
+  "passkeys": "Passkeys",
+  "passkeyLogin": "Use a passkey",
+  "passkeyName": "Passkey name (e.g. my phone)",
+  "passkeyAdd": "Add a passkey",
+  "passkeyNone": "No passkey registered.",
+  "passkeyUsed": "used on {{date}}",
+  "passkeyNever": "never used",
+  "passkeyAdded": "Passkey added.",
+  "passkeyDeleteAsk": "Delete the passkey “{{name}}”?",
+  "passkeyHint": "A passkey signs you in with your device's fingerprint, face or code, without a password. Your password still works.",
+  "delete": "Delete"
 }

@@ -311,3 +311,49 @@ test('loot items in one chest are listed in a single popup', async ({ page }) =>
   );
   await expect(page.locator('.popup-state', { hasText: '✓' })).toHaveCount(2);
 });
+
+test('passkeys: add one from the profile menu, sign in with it, delete it', async ({ page }) => {
+  // a software authenticator that remembers the passkey and always passes the user check
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('WebAuthn.enable');
+  await cdp.send('WebAuthn.addVirtualAuthenticator', {
+    options: {
+      protocol: 'ctap2',
+      transport: 'internal',
+      hasResidentKey: true,
+      hasUserVerification: true,
+      isUserVerified: true,
+      automaticPresenceSimulation: true,
+    },
+  });
+  await page.goto('/');
+  await page.getByLabel("Nom d'utilisateur").fill(user);
+  await page
+    .getByRole('dialog')
+    .getByLabel('Mot de passe', { exact: true })
+    .fill('a brand new passphrase');
+  await page.getByRole('dialog').getByRole('button', { name: 'Se connecter' }).click();
+  await expect(page.locator('.who')).toContainText(user);
+  const me = await page.evaluate(async () => (await fetch('api/v1/auth/me')).json());
+  test.skip(!me.passkeys_enabled, 'the server has no WEBAUTHN_RP_ID');
+
+  await menu(page, 'Passkeys');
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toContainText('Aucune passkey enregistrée.');
+  await dialog.getByLabel('Nom de la passkey').fill('Mon test');
+  await dialog.getByRole('button', { name: 'Ajouter une passkey' }).click();
+  await expect(dialog.getByRole('status')).toHaveText('Passkey ajoutée.');
+  await expect(dialog.getByRole('listitem')).toContainText('Mon test');
+  await dialog.getByRole('button', { name: 'Fermer' }).first().click();
+
+  // signed out, the login screen offers the passkey: no user name or password to type
+  await menu(page, 'Déconnexion');
+  await page.getByRole('button', { name: /Utiliser une passkey/ }).click();
+  await expect(page.locator('.who')).toContainText(user);
+
+  // delete it (the browser asks first), the password still works
+  await menu(page, 'Passkeys');
+  page.once('dialog', (d) => void d.accept());
+  await page.getByRole('dialog').getByRole('button', { name: 'Supprimer' }).click();
+  await expect(page.getByRole('dialog')).toContainText('Aucune passkey enregistrée.');
+});

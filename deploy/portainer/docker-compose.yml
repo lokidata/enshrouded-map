@@ -13,6 +13,8 @@ services:
       SETUP_TOKEN: ${SETUP_TOKEN:-} # empty: generated at start and printed in the api log
       COOKIE_SECURE: ${COOKIE_SECURE:-true}
       INVITATION_MINUTES: ${INVITATION_MINUTES:-20}
+      WEBAUTHN_RP_ID: ${WEBAUTHN_RP_ID:-} # passkeys: the host name players open (no scheme, no port); empty = off
+      WEBAUTHN_ORIGIN: ${WEBAUTHN_ORIGIN:-} # and its origin, e.g. https://carte.example.lan
       FORWARDED_ALLOW_IPS: ${WEB_IP:-172.28.0.10} # the web container: the only one allowed to tell the client address
     volumes:
       - db-data:/data

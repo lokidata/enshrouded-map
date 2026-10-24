@@ -57,6 +57,7 @@ export class SessionService {
     const link = takeHashToken();
     try {
       const me = await this.auth.me();
+      this.auth.passkeysEnabled.set(!!me.passkeys_enabled);
       if (me.username) return await this.enter(me);
       if (me.setup_required) return this.auth.dialog.set('setup');
       if (link?.kind === 'invite') {
@@ -78,6 +79,10 @@ export class SessionService {
 
   async authenticate(mode: AuthMode, credentials: Credentials): Promise<void> {
     await this.enter(await this.auth.authenticate(mode, credentials));
+  }
+
+  async passkeyLogin(): Promise<void> {
+    await this.enter(await this.auth.passkeyLogin());
   }
 
   async logout(): Promise<void> {
