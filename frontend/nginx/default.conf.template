@@ -65,6 +65,11 @@ server {
         root /srv/artifacts;
         expires 1d;
     }
+    # The tab icon, asked before any login: the one public file of the map folder.
+    location = /enshrouded-icon.png {
+        root /srv/artifacts;
+        expires 1d;
+    }
     location = /biomes.png {
         auth_request /_auth;
         root /srv/artifacts;
