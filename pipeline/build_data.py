@@ -442,6 +442,7 @@ def item_table_for_map(markers, resources, item_names, export, out):
     for m in markers:
         if "item" in m:
             used.add(m["item"])
+            item_names.setdefault(m["item"], m["name"])
         used.update(e["item"] for e in m.get("loot", ()))
     for entries in resources.values():
         for r in entries:
@@ -593,6 +594,8 @@ def main(src, export, out):
             "x": round(x, 1), "y": round(y, 1), "z": round(z, 1),
             "fastTravel": t["fastTravel"],
         }
+        if "item" in t:  # collectibles lying in the world: picture in the popup
+            marker["item"] = t["item"]
         if key in seen:
             kept = markers[seen[key]]
             if t["cat"] == "boss" and marker["raw"] < kept["raw"]:

@@ -142,7 +142,7 @@ def collectible_templates(src, locas, texts, raws):
         for ref in re.findall(rf'"item": "({GUID})"', texts[guid]):
             debug, names = items.get(ref, ("", []))
             if COLLECTIBLE.match(debug) and names and all(names):
-                out[guid] = {"raw": raw, "names": names, "cat": "collectible", "fastTravel": False}
+                out[guid] = {"raw": raw, "names": names, "cat": "collectible", "fastTravel": False, "item": ref}
                 break
     print(f"{len(out)} collectible pickup templates")
     return out
