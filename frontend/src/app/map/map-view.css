@@ -63,19 +63,24 @@ app-map {
   opacity: 0.8;
   filter: grayscale(0.7) drop-shadow(0 0 1px #000);
 }
-/* halo of the team's progress: orange = at least one member, green = all of them */
-.marker-icon.halo-some {
+/* halo of a POI: violet = I marked it, orange = others did and I did not, green = everyone did */
+.marker-icon.halo-mine {
+  --halo: #b36cf0;
+}
+.marker-icon.halo-others {
   --halo: #ffa53a;
 }
 .marker-icon.halo-all {
   --halo: #6fe06f;
 }
-.marker-icon.halo-some,
+.marker-icon.halo-mine,
+.marker-icon.halo-others,
 .marker-icon.halo-all {
   filter: drop-shadow(0 0 3px var(--halo)) drop-shadow(0 0 2px var(--halo))
     drop-shadow(0 0 1px var(--halo));
 }
-.marker-icon.done.halo-some,
+.marker-icon.done.halo-mine,
+.marker-icon.done.halo-others,
 .marker-icon.done.halo-all {
   filter: grayscale(0.7) drop-shadow(0 0 3px var(--halo)) drop-shadow(0 0 2px var(--halo))
     drop-shadow(0 0 1px var(--halo));
@@ -177,15 +182,14 @@ app-map {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.popup-row .popup-actions {
-  margin-top: 0;
+.popup-state {
   flex-shrink: 0;
-}
-.popup-row .popup-team {
-  margin-top: 2px;
-  max-width: 130px;
-  text-align: right;
-  -webkit-line-clamp: 1;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #6fe06f;
+  font-size: 12px;
 }
 .popup-team {
   margin-top: 6px;
@@ -204,4 +208,65 @@ app-map {
   color: var(--accent);
   cursor: pointer;
   text-decoration: underline;
+}
+/* popups listing items with their pictures: as tall as needed, the lists scroll */
+.leaflet-popup-content:has(> .popup-tall) {
+  height: auto;
+  max-height: 360px;
+  overflow-y: auto;
+  align-items: flex-start;
+}
+.popup-tall .popup-list {
+  max-height: 210px;
+}
+.popup-picture {
+  display: block;
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 4px;
+}
+.popup-icon {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+.popup-row:has(> .popup-icon) .popup-item {
+  flex: 1;
+}
+.popup-loot {
+  margin-top: 10px;
+  text-align: left;
+}
+.popup-loot-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 2px;
+}
+.popup-loot-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0;
+  font-size: 13px;
+}
+.popup-loot-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.popup-loot-amount {
+  color: var(--muted);
+  font-size: 12px;
+  flex-shrink: 0;
+}
+/* the stack's button stays in view while the list scrolls */
+.popup-tall > .popup-actions:last-child {
+  position: sticky;
+  bottom: 0;
+  padding: 6px 0 2px;
+  background: #000;
 }

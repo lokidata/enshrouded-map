@@ -76,6 +76,39 @@ local function export_icons()
 	print("exported " .. #index .. " icons")
 end
 
+-- Item pictures: items/<item guid>.png. The game renders them ahead of time
+-- into a UiTextureResource that has the item's own guid.
+local function export_item_icons()
+	local items = {}
+	for _, res in ipairs(game.assets.get_resources_by_type("keen::ItemInfo")) do
+		items[tostring(res.guid)] = true
+	end
+	local count, skipped = 0, 0
+	for _, res in ipairs(game.assets.get_resources_by_type("keen::UiTextureResource")) do
+		local guid = tostring(res.guid)
+		---@type keen.UiTextureResource
+		local texture = res.data
+		if items[guid] then
+			-- Block formats store 4x4 pixel blocks of 8 or 16 bytes. The decoder panics on
+			-- sizes that are not a multiple of 4 (a few pictures are 374 x 388...): decode
+			-- the whole blocks instead, the picture gets a transparent margin of up to 3 px.
+			-- Textures holding less data than that are skipped (the decoder would panic too).
+			local buf = game.assets.get_content(texture.data.hash):read_data()
+			local w, h = texture.size.x, texture.size.y
+			if texture.format:find("^BC") then w, h = math.ceil(w / 4) * 4, math.ceil(h / 4) * 4 end
+			local block = (texture.format:find("^BC1") or texture.format:find("^BC4")) and 8 or 16
+			if texture.format:find("^BC") and buf:remaining() < w * h / 16 * block then
+				skipped = skipped + 1
+			else
+				local picture = image.decode_texture(buf, texture.format, w, h)
+				io.export("items/" .. guid .. ".png", image.encode(picture, "png"))
+				count = count + 1
+			end
+		end
+	end
+	print("exported " .. count .. " item icons, skipped " .. skipped)
+end
+
 -- Raw terrain voxel tiles: voxels/<level>/<x>_<y>.bin
 local WORLD_GUID = "509feadb-4c60-425f-9c7c-deeefd9b6920"
 -- Level 5 is 1 m per voxel (used by extract_surface.py); lower levels are
@@ -103,8 +136,9 @@ local function export_voxels()
 	end
 end
 
-local args = { translations = false, icons = false, map = false, voxels = true }
+local args = { translations = false, icons = false, map = false, voxels = false, items = true }
 if args.translations then export_translations() end
 if args.icons then export_icons() end
 if args.map then export_map() end
 if args.voxels then export_voxels() end
+if args.items then export_item_icons() end

@@ -15,10 +15,10 @@ import { AuthService } from '../core/auth.service';
 import { Catalog, PlacedResource } from '../core/catalog.service';
 import { FilterStore } from '../core/filter.store';
 import { LangService } from '../core/lang.service';
-import { MapMarker, itemKey, markId } from '../core/map-data.model';
+import { LootEntry, MapMarker, itemKey, markId } from '../core/map-data.model';
 import { MapDataService } from '../core/map-data.service';
 import { ProgressStore } from '../core/progress.store';
-import { TeamStore } from '../core/team.store';
+import { Halo, TeamStore } from '../core/team.store';
 
 // Icon size per zoom level, and the zoom from which each label kind shows.
 const iconSize = (zoom: number): number =>
@@ -35,6 +35,13 @@ const DOT_ICON_MIN_RADIUS = 7;
 // Loot items found in the same chest sit about a metre apart: one click lists them all.
 const STACKED_CATS = new Set(['unique', 'cosmetic', 'collectible']);
 const STACK_RADIUS = 3;
+// Halo of a POI: violet = I marked it, orange = others did and I did not, green = everyone did.
+const HALO_COLORS: Record<Halo, string> = {
+  none: '#000',
+  mine: '#b36cf0',
+  others: '#ffa53a',
+  all: '#6fe06f',
+};
 
 interface Placed {
   m: MapMarker;
@@ -399,24 +406,24 @@ export class MapView {
     for (const p of this.placed) this.styleMarker(p);
   }
 
-  // Marked by me: a faint "ghost" (.done). The halo colour is the team's progress (.halo-some / .halo-all).
-  // A stack's icon is done / green only when everything in it is, and orange as soon as one item has a mark.
+  /** One halo for several items: green only when all are, orange while an item waits on me, else violet. */
+  private stackHalo(halos: Halo[]): Halo {
+    if (halos.every((h) => h === 'all')) return 'all';
+    if (halos.every((h) => h === 'none')) return 'none';
+    return halos.includes('others') ? 'others' : 'mine';
+  }
+
+  // Marked by me: a faint "ghost" (.done). The halo colour: violet = I marked it, orange = others only, green = all.
   private styleMarker(p: Placed): void {
     if (!p.id || !(p.layer instanceof L.Marker)) return;
     const ids = this.stackAt(p).map((q) => q.id!);
-    const halos = ids.map((id) => this.team.halo(id));
-    const halo = halos.every((h) => h === 'all')
-      ? 'all'
-      : halos.every((h) => h === 'none')
-        ? 'none'
-        : 'some';
+    const halo = this.stackHalo(ids.map((id) => this.team.halo(id)));
     const classes = p.layer.getElement()?.classList;
     classes?.toggle(
       'done',
       ids.every((id) => this.progress.done().has(id)),
     );
-    classes?.toggle('halo-some', halo === 'some');
-    classes?.toggle('halo-all', halo === 'all');
+    for (const h of ['mine', 'others', 'all'] as const) classes?.toggle('halo-' + h, halo === h);
   }
 
   private styleDot(r: PlacedResource, dot: L.CircleMarker, id: string): void {
@@ -426,7 +433,7 @@ export class MapView {
       fillOpacity: mine ? 0.6 : 0.95,
       fillColor: mine ? '#ccc' : r.data.color,
       opacity: halo === 'none' ? 0.8 : 1,
-      color: halo === 'none' ? '#000' : halo === 'all' ? '#6fe06f' : '#ffa53a',
+      color: HALO_COLORS[halo],
       weight: halo === 'none' ? 1 : 2.5,
     });
   }
@@ -518,7 +525,13 @@ export class MapView {
     if (stack.length > 1) return this.stackPopup(stack);
     const i = this.lang.index();
     const fast = m.fastTravel && m.cat !== 'fastTravel' ? ' · ' + this.lang.t('fastTravel') : '';
-    return this.popup(m.name[i], this.mapData.data.categories[m.cat].label[i] + fast, id);
+    const root = this.popup(m.name[i], this.mapData.data.categories[m.cat].label[i] + fast, id);
+    const picture = m.item && this.itemPicture(m.item, 'popup-picture');
+    if (picture) root.prepend(picture);
+    const title = m.item ? 'alsoGuaranteed' : 'guaranteedItems';
+    if (m.loot?.length) root.append(this.lootList(m.loot, this.lang.t(title)));
+    if (picture || m.loot?.length) root.classList.add('popup-tall');
+    return root;
   }
 
   /** The loot markers shown together with this one, itself included. */
@@ -535,31 +548,77 @@ export class MapView {
     const list = el('div', 'popup-list');
     for (const q of stack) {
       const row = el('div', 'popup-row');
+      const picture = q.m.item && this.itemPicture(q.m.item, 'popup-icon');
+      if (picture) row.append(picture);
       const label = el('div', 'popup-item');
       label.append(
         el('div', 'popup-item-name', q.m.name[i]),
         el('div', 'popup-meta', this.mapData.data.categories[q.m.cat].label[i]),
       );
-      const actions = el('div', 'popup-actions');
-      actions.dataset['id'] = q.id!;
-      row.append(label, actions);
+      const state = el('div', 'popup-state');
+      state.dataset['id'] = q.id!;
+      row.append(label, state);
       list.append(row);
     }
     root.append(list);
+    // One button for the whole stack, at the bottom.
+    const actions = el('div', 'popup-actions');
+    actions.dataset['ids'] = stack.map((q) => q.id!).join(',');
+    const loot = stack.flatMap((q) => q.m.loot ?? []);
+    if (loot.length) root.append(this.lootList(loot, this.lang.t('alsoGuaranteed')));
+    root.append(actions);
+    root.classList.add('popup-tall');
     return root;
+  }
+
+  /** The game's picture of an item, or null when there is none. */
+  private itemPicture(item: string, className: string): HTMLImageElement | null {
+    const icon = this.mapData.data.items?.[item]?.icon;
+    if (!icon) return null;
+    const img = el('img', className);
+    img.src = icon;
+    img.alt = '';
+    img.loading = 'lazy';
+    return img;
+  }
+
+  /** Items always found here, with their picture and amount (not markable). */
+  private lootList(loot: readonly LootEntry[], title: string): HTMLElement {
+    const i = this.lang.index();
+    const box = el('div', 'popup-loot');
+    box.append(el('div', 'popup-loot-title', title));
+    for (const entry of loot) {
+      const info = this.mapData.data.items?.[entry.item];
+      if (!info) continue;
+      const row = el('div', 'popup-loot-row');
+      const picture = this.itemPicture(entry.item, 'popup-icon');
+      row.append(picture ?? el('span', 'popup-icon'));
+      const name = el('span', 'popup-loot-name', info.name[i]);
+      row.append(name, el('span', 'popup-loot-amount', `×${entry.amount}`));
+      box.append(row);
+    }
+    return box;
   }
 
   private resourcePopup(r: PlacedResource, dot: MarkedDot): HTMLElement {
     const i = this.lang.index();
     const size = r.data.sizes ? ` · ${this.lang.t('size')} ≈ ${r.data.sizes[dot.index]} m³` : '';
-    return this.popup(
+    const root = this.popup(
       r.data.name[i],
       this.mapData.data.categories[r.cat].label[i] + size,
       dot.markId,
     );
+    const loot = r.data.loot?.[dot.index];
+    if (loot?.length) {
+      root.append(this.lootList(loot, this.lang.t('guaranteedItems')));
+      root.classList.add('popup-tall');
+    }
+    return root;
   }
 
   private renderActions(box: HTMLElement): void {
+    const ids = box.dataset['ids']?.split(',');
+    if (ids) return this.renderStackActions(box, ids);
     const id = box.dataset['id']!;
     box.replaceChildren();
     // Clicks are stopped here: the button is replaced, and a click on a detached element would close the popup.
@@ -593,6 +652,33 @@ export class MapView {
       by.title = by.textContent ?? '';
       box.append(by);
     }
+  }
+
+  /** The stack popup: who marked each item, and one button that marks (or unmarks) all of them. */
+  private renderStackActions(box: HTMLElement, ids: string[]): void {
+    box.replaceChildren();
+    for (const state of box.parentElement?.querySelectorAll<HTMLElement>('.popup-state') ?? []) {
+      const id = state.dataset['id']!;
+      const names = this.team.markedBy(id);
+      state.textContent = names.length ? '✓ ' + (this.team.team() ? names.join(', ') : '') : '';
+      state.title = names.join(', ');
+    }
+    if (!this.auth.user()) return;
+    const all = ids.every((id) => this.progress.done().has(id));
+    const button = el(
+      'button',
+      all ? '' : 'primary',
+      all ? this.lang.t('unmarkAll') : '✓ ' + this.lang.t('markAllDone'),
+    );
+    button.type = 'button';
+    button.onclick = (e) => {
+      L.DomEvent.stop(e);
+      void this.progress.setAll(
+        ids.filter((id) => this.catalog.markIndex().has(id)),
+        !all,
+      );
+    };
+    box.append(button);
   }
 
   private toggle(id: string): void {

@@ -22,8 +22,8 @@ export interface Player {
   username: string;
 }
 
-/** none: nobody marked it; some: at least one member; all: every member (or me, without a team). */
-export type Halo = 'none' | 'some' | 'all';
+/** none: nobody marked it; mine: I did, not everyone; others: someone else did, I did not; all: every member (or me, without a team). */
+export type Halo = 'none' | 'mine' | 'others' | 'all';
 
 const REFRESH_MS = 60_000;
 
@@ -77,8 +77,9 @@ export class TeamStore {
   }
 
   halo(id: string): Halo {
-    const count = (this.progress.done().has(id) ? 1 : 0) + (this.others()[id]?.length ?? 0);
-    return count === 0 ? 'none' : count >= this.total() ? 'all' : 'some';
+    const mine = this.progress.done().has(id);
+    const count = (mine ? 1 : 0) + (this.others()[id]?.length ?? 0);
+    return count === 0 ? 'none' : count >= this.total() ? 'all' : mine ? 'mine' : 'others';
   }
 
   /** Names of the players who marked it, me first. */

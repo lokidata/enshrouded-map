@@ -16,6 +16,21 @@ export interface MapMarker {
   y: number;
   z: number;
   fastTravel: boolean;
+  /** Loot markers (unique, cosmetic, collectible): the item, a key of MapData.items. */
+  item?: string;
+  /** Other items the game always puts here (a chest's materials, a boss drop...). */
+  loot?: readonly LootEntry[];
+}
+
+/** An item that is always found in a container, `amount` times. */
+export interface LootEntry {
+  item: string;
+  amount: number;
+}
+
+export interface ItemInfo {
+  name: Names;
+  icon: string | null;
 }
 
 /** A group of identical resources: pts is a flat list of x, z, altitude triples. */
@@ -25,6 +40,8 @@ export interface Resource {
   pts: readonly number[];
   sizes?: readonly number[];
   color: string;
+  /** Guaranteed items of some points (chests), by point index. */
+  loot?: Record<string, readonly LootEntry[]>;
 }
 
 export interface MapData {
@@ -32,6 +49,8 @@ export interface MapData {
   languages: readonly string[];
   biomes: Record<string, { color: string; label: Names }>;
   categories: Record<string, Category>;
+  /** Items named in the loot of markers and resources, by guid. */
+  items?: Record<string, ItemInfo>;
   markers: readonly MapMarker[];
 }
 

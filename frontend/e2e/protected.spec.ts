@@ -8,6 +8,7 @@ for (const path of [
   'resources.json',
   'tiles/0/0_0.jpg',
   'icons/x.png',
+  'items/x.png',
   'biomes.png',
 ]) {
   test(`${path} is refused without a session`, async ({ request }) => {

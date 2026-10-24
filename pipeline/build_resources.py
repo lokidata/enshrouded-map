@@ -89,11 +89,13 @@ def item_table(src, locas):
 
 
 def special_loot(src, scene, locas):
-    """Unique items and collectibles placed in a given chest.
+    """Items the game puts in a given container (chest, skeleton, enemy...).
 
-    Returns [(category, names, debug name, x, y, z)]. Only items with a single
-    candidate container are kept: their position is exact (the others are
-    random among many containers, and none of them is a unique item).
+    Returns [(category, names, debug name, item guid, amount, x, y, z)], category
+    being "unique", "cosmetic", "collectible" (items that get their own marker)
+    or None (other guaranteed loot: materials, blocks, gems...). Only items with
+    a single candidate container are kept: their position is exact (the others
+    are random among many containers, and none of them is a unique item).
     """
     from build_data import fnv_guid
     infos = {}
@@ -114,14 +116,15 @@ def special_loot(src, scene, locas):
         elif info["category"] in UNIQUE_ITEM_CATEGORIES and not SPECIAL_LOOT_EXCLUDE.search(debug):
             cat = "cosmetic" if debug.startswith("Vanity_") else "unique"
         else:
-            continue
+            cat = None
         loca_id = fnv_guid(info["name"])
         names = [loca.get(loca_id) for loca in locas]
         if not all(names):
             continue
         pos = s["lootContainerBoundingBox"]["min"]
-        out.append((cat, names, debug, pos["x"], pos["y"], pos["z"]))
-    print("special loot:", {c: sum(1 for o in out if o[0] == c) for c in ("unique", "cosmetic", "collectible")})
+        out.append((cat, names, debug, info["$guid"], s["amount"], pos["x"], pos["y"], pos["z"]))
+    print("special loot:", {str(c): sum(1 for o in out if o[0] == c)
+                            for c in ("unique", "cosmetic", "collectible", None)})
     return out
 
 
@@ -223,12 +226,40 @@ def resource_templates(src, locas, texts, raws):
     return result, by_debug
 
 
-def build_resources(placed, templates, by_debug, export, locas, dungeon_areas, void, special=()):
+class ContainerLoot:
+    """Guaranteed loot (special_loot) by container position.
+
+    Each container's list is handed out once (take), to the chest or the marker
+    standing there; positions match within a metre.
+    """
+
+    def __init__(self):
+        self.cells = {}
+
+    def add(self, x, z, item, amount):
+        self.cells.setdefault((round(x), round(z)), []).append((item, amount))
+
+    def take(self, x, z):
+        """[{"item": guid, "amount": n}] of the container at x, z, or None."""
+        rx, rz = round(x), round(z)
+        for dx in (0, -1, 1):
+            for dz in (0, -1, 1):
+                found = self.cells.pop((rx + dx, rz + dz), None)
+                if found:
+                    amounts = {}
+                    for item, amount in found:
+                        amounts[item] = amounts.get(item, 0) + amount
+                    return [{"item": item, "amount": amount} for item, amount in amounts.items()]
+        return None
+
+
+def build_resources(placed, templates, by_debug, export, locas, dungeon_areas, void, special=(), loot=None):
     """Groups the placed resource templates (and voxel ore deposits) per element.
 
     void: north-up boolean grid over the world, True outside the island
     (points there are under the sea floor or out of reach).
     special: (x, z) of the special loot (special_loot); the chests there are skipped.
+    loot: ContainerLoot; a chest's guaranteed items go to {"loot": {point index: [...]}}.
     """
     groups = {}
     cell = 10240 / void.shape[0]
@@ -250,8 +281,11 @@ def build_resources(placed, templates, by_debug, export, locas, dungeon_areas, v
         if not (0 <= row < void.shape[0] and 0 <= col < void.shape[1]) or void[row, col]:
             return
         key = (cat, tuple(names))
-        g = groups.setdefault(key, {"name": list(names), "raw": set(), "pts": [], "sizes": []})
+        g = groups.setdefault(key, {"name": list(names), "raw": set(), "pts": [], "sizes": [], "loot": {}})
         g["raw"].add(raw)
+        contents = loot.take(x, z) if loot and cat == "chest" else None
+        if contents:
+            g["loot"][str(len(g["pts"]) // 3)] = contents
         g["pts"] += [round(x), round(z), round(y)]
         if size is not None:
             g["sizes"].append(size)
@@ -278,6 +312,8 @@ def build_resources(placed, templates, by_debug, export, locas, dungeon_areas, v
         item = {"name": g["name"], "raw": ", ".join(sorted(g["raw"]))[:200], "pts": g["pts"]}
         if g["sizes"] and len(g["sizes"]) * 3 == len(g["pts"]):
             item["sizes"] = g["sizes"]
+        if g["loot"]:
+            item["loot"] = g["loot"]
         out.setdefault(cat, []).append(item)
 
     # Colours: ores from their material, chests per type, plants spread over the hue wheel.

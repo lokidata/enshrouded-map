@@ -98,5 +98,9 @@
   "layout_auto": "Automatic (by screen)",
   "layout_left": "Menu on the left",
   "layout_top": "Menu on top",
-  "itemsHere": "items here"
+  "itemsHere": "items here",
+  "guaranteedItems": "Guaranteed items",
+  "alsoGuaranteed": "Also guaranteed here",
+  "markAllDone": "Mark all as done",
+  "unmarkAll": "Unmark all"
 }

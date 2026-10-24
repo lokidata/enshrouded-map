@@ -240,7 +240,7 @@ test('team: create, add a player, invite a new one, see who marked what', async 
   await carl.getByRole('dialog').getByRole('button', { name: 'Se connecter' }).click();
   await expect(carl.getByRole('dialog').getByRole('alert')).toContainText('incorrect');
 
-  // the owner already marked a boss in the first test: guest sees an orange halo and the owner's name
+  // the owner already marked a boss in the first test: guest sees an orange halo (others only) and the owner's name
   const guest = await browser.newPage(origin(page));
   await guest.goto('/');
   await guest.getByLabel("Nom d'utilisateur").fill('guest');
@@ -249,10 +249,14 @@ test('team: create, add a player, invite a new one, see who marked what', async 
   await expect(guest.locator('.who')).toContainText('guest');
   await guest.getByRole('button', { name: 'Rien', exact: true }).click();
   await guest.locator('app-category-card', { hasText: /Boss/ }).first().locator('.toggle').click();
-  const orange = guest.locator('.leaflet-marker-icon.halo-some').first();
+  const orange = guest.locator('.leaflet-marker-icon.halo-others').first();
   await expect(orange).toBeVisible();
   await orange.click({ force: true });
   await expect(guest.locator('.popup-team')).toContainText(user);
+
+  // the owner, who marked it alone, sees it violet
+  await page.reload();
+  await expect(page.locator('.leaflet-marker-icon.halo-mine').first()).toBeVisible();
 
   // once the guest marks it too, everyone has: green for both
   await guest.getByRole('button', { name: /Marquer comme fait/ }).click();
@@ -296,8 +300,14 @@ test('loot items in one chest are listed in a single popup', async ({ page }) =>
   await expect(page.locator('.popup-row').filter({ hasText: 'Chapeau de test' })).toContainText(
     'Cosmétique',
   );
-  await page.locator('.popup-row').first().getByRole('button').click();
-  await expect(page.locator('.popup-row').first().getByRole('button')).toHaveText(
-    'Retirer la marque',
+  // one button for the whole stack, at the bottom of the popup
+  await expect(page.locator('.popup-row').getByRole('button')).toHaveCount(0);
+  await page
+    .locator('.popup-actions')
+    .getByRole('button', { name: 'Tout marquer comme fait' })
+    .click();
+  await expect(page.locator('.popup-actions').getByRole('button')).toHaveText(
+    'Retirer toutes les marques',
   );
+  await expect(page.locator('.popup-state', { hasText: '✓' })).toHaveCount(2);
 });
