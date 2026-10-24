@@ -22,6 +22,8 @@ Open the site: on an empty database the first visit must create the first accoun
 
 Run the pipeline (Windows PC), copy its output into `artifacts/map/` (or `ARTIFACTS_DIR`): nothing to restart, `map-data.json` is revalidated on each load.
 
+The tab icon is `enshrouded-icon.png` in the same folder (not in git; the official site's `icon-192.png` works). It is the only file served without a session, so that the login page has an icon too; without it the tab simply has none.
+
 ## Backup / restore
 
 ```sh
