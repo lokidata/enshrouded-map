@@ -6,11 +6,12 @@ RUN npm ci --ignore-scripts
 COPY . .
 RUN npx ng build
 
-FROM nginxinc/nginx-unprivileged@sha256:b5047b9b76845eac124358373c6852377c52e4b05834a47647e955dd91cb8f1e
+# The tag keeps Dependabot on the Alpine variant (a digest alone follows `latest`, which is Debian).
+FROM nginxinc/nginx-unprivileged:1.31-alpine@sha256:b5047b9b76845eac124358373c6852377c52e4b05834a47647e955dd91cb8f1e
 COPY --from=build /build/dist/frontend/browser /usr/share/nginx/html
-# Fixed packages that the pinned base image does not have yet (zlib, musl, brotli); Dependabot moves the base forward.
+# Fixed packages that the pinned base image does not have yet (zlib, musl, brotli, curl); Dependabot moves the base forward.
 USER root
-RUN apk upgrade --no-cache zlib musl musl-utils brotli-libs
+RUN apk upgrade --no-cache zlib musl musl-utils brotli-libs curl libcurl
 # Config baked into the image: nothing to mount, so the same image runs from compose or Portainer.
 COPY nginx/default.conf.template /etc/nginx/templates/default.conf.template
 COPY nginx/security-headers.conf /etc/nginx/security-headers.conf
