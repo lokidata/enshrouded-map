@@ -6,7 +6,7 @@ RUN npm ci --ignore-scripts
 COPY . .
 RUN npx ng build
 
-FROM nginxinc/nginx-unprivileged@sha256:b5047b9b76845eac124358373c6852377c52e4b05834a47647e955dd91cb8f1e
+FROM nginxinc/nginx-unprivileged@sha256:09b0d3eda2aa592d2487f284519419015cab010d7df16cd0fe224b585fc60eb6
 COPY --from=build /build/dist/frontend/browser /usr/share/nginx/html
 # Fixed packages that the pinned base image does not have yet (zlib, musl, brotli); Dependabot moves the base forward.
 USER root
