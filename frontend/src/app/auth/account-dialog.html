@@ -94,6 +94,28 @@
         <p class="hint">{{ 'noOtherUser' | transloco }}</p>
       }
     </section>
+    @if (users().length) {
+      <section>
+        <h3>{{ 'adminDeleteSection' | transloco }}</h3>
+        <label>
+          {{ 'pickUser' | transloco }}
+          <select [value]="doomed()" (change)="pickDoomed($event)">
+            @for (u of users(); track u.id) {
+              <option [value]="u.id">{{ u.username }}</option>
+            }
+          </select>
+        </label>
+        <p class="hint">{{ 'adminDeleteHint' | transloco }}</p>
+        <div class="actions start">
+          <button type="button" class="danger" (click)="deleteUser()">
+            {{ 'adminDelete' | transloco }}
+          </button>
+        </div>
+        <div class="error" role="alert">
+          {{ deleteError() ? ('errors.' + deleteError() | transloco) : '' }}
+        </div>
+      </section>
+    }
   }
 
   <div class="actions">

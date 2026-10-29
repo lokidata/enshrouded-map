@@ -402,3 +402,45 @@ test('landmarks (fast travel, start) are bigger and stay bright when marked', as
   await expect(tower).not.toHaveClass(/done/); // a marked ordinary icon fades, this one does not
   await expect(tower).toHaveClass(/halo-alone/); // its halo still says it is marked (only me in the team)
 });
+
+test('the administrator can delete another account', async ({ page, browser }) => {
+  await page.goto('/');
+  await page.getByLabel("Nom d'utilisateur").fill(user);
+  await page
+    .getByRole('dialog')
+    .getByLabel('Mot de passe', { exact: true })
+    .fill('a brand new passphrase');
+  await page.getByRole('dialog').getByRole('button', { name: 'Se connecter' }).click();
+  await expect(page.locator('.who')).toContainText(user);
+
+  // a throwaway player joins through an invitation
+  await menu(page, 'Inviter');
+  const link = await page.getByLabel("Lien d'invitation").inputValue();
+  const temp = await browser.newPage(origin(page));
+  await temp.goto(link);
+  const dialog = temp.getByRole('dialog');
+  await dialog.getByLabel("Nom d'utilisateur").fill('temp');
+  await dialog.getByLabel('Mot de passe', { exact: true }).fill(password);
+  await dialog.getByLabel('Confirmation').fill(password);
+  await dialog.getByRole('button', { name: 'Créer le compte' }).click();
+  await expect(temp.locator('.who')).toContainText('temp');
+
+  // the administrator deletes it, after a confirmation
+  await menu(page, 'Mot de passe');
+  const admin = page.getByRole('dialog');
+  const section = admin.locator('section', { hasText: "Supprimer le compte d'un utilisateur" });
+  await section.getByLabel('Utilisateur').selectOption({ label: 'temp' });
+  page.once('dialog', (d) => void d.dismiss());
+  await section.getByRole('button', { name: 'Supprimer ce compte' }).click();
+  await expect(section.locator('option', { hasText: 'temp' })).toHaveCount(1); // refused: still there
+  page.once('dialog', (d) => void d.accept());
+  await section.getByRole('button', { name: 'Supprimer ce compte' }).click();
+  await expect(section.locator('option', { hasText: 'temp' })).toHaveCount(0);
+
+  // its session is gone and it can no longer sign in
+  await temp.reload();
+  await temp.getByLabel("Nom d'utilisateur").fill('temp');
+  await temp.getByRole('dialog').getByLabel('Mot de passe', { exact: true }).fill(password);
+  await temp.getByRole('dialog').getByRole('button', { name: 'Se connecter' }).click();
+  await expect(temp.getByRole('dialog').getByRole('alert')).toContainText('incorrect');
+});

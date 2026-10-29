@@ -57,7 +57,6 @@ CATEGORIES = {
     "593043e8-6667-4f5e-94e0-52f6e2807956": ("hiddenGrave", "icon"),
     "65ac1a61-2153-4d55-9fcf-a9994f35c2a7": ("flameAltar", "icon"),
     "fffa09d9-623a-4daa-b202-c7b35bfb178b": ("poi", "icon"),
-    "77997dbc-4c4c-4843-a616-107505e4512d": ("hidden", "icon"),
     "58c32c26-6267-4b3f-b412-01a94f40184a": ("areaName", "label"),
     "0d43c5d0-1d2c-41f0-9be1-fb214f013a82": ("areaName", "label"),  # districts and named spots
     # Biome entries ("Passage to ...") and a few area names: place names, the
@@ -99,7 +98,6 @@ CATEGORY_LABELS = {
     "hiddenGrave": ("Tombe cachée", "Hidden grave"),
     "flameAltar": ("Autel de la Flamme", "Flame altar"),
     "poi": ("Lieu d'intérêt", "Point of interest"),
-    "hidden": ("Non affiché en jeu", "Hidden in game"),
     "areaName": ("Nom de lieu", "Place name"),
     "region": ("Région", "Region"),
     "boss": ("Boss", "Boss"),
@@ -119,7 +117,7 @@ RESOURCE_CATEGORIES = {"chest": "icon_chest", "plant": "icon_plants", "ore": "ic
 CRYPT_NAME = re.compile(r"^Crypte des Anciens")
 # Markers of a single item (special loot), see build_resources.special_loot.
 LOOT_MARKER_CATEGORIES = ("unique", "cosmetic", "collectible")
-HIDDEN_BY_DEFAULT = {"hidden", "chest", "plant", "ore", "unique", "cosmetic", "collectible"}
+HIDDEN_BY_DEFAULT = {"chest", "plant", "ore", "unique", "cosmetic", "collectible"}
 
 # Categories that do not come from map markers: category -> icon (game icon
 # debug name, or an svg written by this script).

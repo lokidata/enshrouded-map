@@ -122,5 +122,9 @@
   "legend_alone": "Marked by me only",
   "legend_mine": "Me and part of the team",
   "legend_others": "Others, not me",
-  "legend_all": "Everyone"
+  "legend_all": "Everyone",
+  "adminDeleteSection": "Delete a user's account",
+  "adminDelete": "Delete this account",
+  "adminDeleteHint": "Their account and all their progress are permanently deleted; they leave their team.",
+  "adminDeleteAsk": "Permanently delete the account “{{name}}” and all its progress?"
 }

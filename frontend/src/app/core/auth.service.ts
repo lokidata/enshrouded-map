@@ -162,6 +162,10 @@ export class AuthService {
     return firstValueFrom(this.http.get<{ id: number; username: string }[]>('api/v1/auth/users'));
   }
 
+  async deleteUser(userId: number): Promise<void> {
+    await firstValueFrom(this.http.delete(`api/v1/auth/users/${userId}`));
+  }
+
   createReset(userId: number): Promise<Invitation> {
     return firstValueFrom(
       this.http.post<Invitation>('api/v1/auth/password-resets', { user_id: userId }),

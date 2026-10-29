@@ -122,5 +122,9 @@
   "legend_alone": "Marqué par moi seul",
   "legend_mine": "Moi et une partie de l'équipe",
   "legend_others": "Des autres, pas moi",
-  "legend_all": "Tout le monde"
+  "legend_all": "Tout le monde",
+  "adminDeleteSection": "Supprimer le compte d'un utilisateur",
+  "adminDelete": "Supprimer ce compte",
+  "adminDeleteHint": "Son compte et toute sa progression sont supprimés définitivement ; il quitte son équipe.",
+  "adminDeleteAsk": "Supprimer définitivement le compte « {{name}} » et toute sa progression ?"
 }
