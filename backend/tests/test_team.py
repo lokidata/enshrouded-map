@@ -131,3 +131,20 @@ def test_delete_account(user: ApiClient, bob: ApiClient) -> None:
     assert user.get(f"{T}/marks").json() == {"marks": {}}
     r = bob.post("/api/v1/auth/login", json={"username": "bob", "password": PW})
     assert r.status_code == 401
+
+
+def test_admin_deletes_another_account(user: ApiClient, bob: ApiClient) -> None:
+    U = "/api/v1/auth/users"
+    user.post(T, json={"name": "Braves"})
+    add(user, 2)
+    bob.put("/api/v1/progress", json={"ids": ["chest:1:2"]})
+    assert bob.delete(f"{U}/1").status_code == 403  # only the administrator
+    assert user.delete(f"{U}/1").status_code == 403  # not themself
+    assert user.delete(f"{U}/99").status_code == 404
+    assert user.delete(f"{U}/2").status_code == 200
+    assert bob.get("/api/v1/progress").status_code == 401  # session gone
+    assert (
+        bob.post("/api/v1/auth/login", json={"username": "bob", "password": PW}).status_code == 401
+    )
+    assert [m["username"] for m in user.get(T).json()["members"]] == ["alice"]
+    assert user.get(U).json() == []

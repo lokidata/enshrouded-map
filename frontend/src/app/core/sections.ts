@@ -43,5 +43,5 @@ export const SECTIONS: Section[] = [
   },
   { label: ['Brume', 'Shroud'], color: '#c95aa6', cats: ['shroudRoot', 'elixirWell'] },
   { label: ['Ressources', 'Resources'], color: '#5fb08c', cats: ['plant', 'ore'] },
-  { label: ['Carte', 'Map'], color: '#8592a3', cats: ['region', 'areaName', 'hidden'] },
+  { label: ['Carte', 'Map'], color: '#8592a3', cats: ['region', 'areaName'] },
 ];

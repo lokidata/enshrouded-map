@@ -1,6 +1,6 @@
 import { Component, ElementRef, effect, inject, signal, viewChild } from '@angular/core';
 import { FormField, form, maxLength, required, submit } from '@angular/forms/signals';
-import { TranslocoPipe } from '@jsverse/transloco';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { AuthService, errorCode } from '../core/auth.service';
 import { copyText, hashLink, timeOf } from '../core/links';
 
@@ -13,6 +13,7 @@ import { copyText, hashLink, timeOf } from '../core/links';
 })
 export class AccountDialog {
   protected readonly auth = inject(AuthService);
+  private readonly transloco = inject(TranslocoService);
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
 
   protected readonly model = signal({ current: '', next: '', again: '' });
@@ -30,6 +31,8 @@ export class AccountDialog {
 
   protected readonly users = signal<{ id: number; username: string }[]>([]);
   protected readonly target = signal(0);
+  protected readonly doomed = signal(0); // the account the administrator may delete
+  protected readonly deleteError = signal('');
   protected readonly link = signal<{ url: string; until: string } | null>(null);
   protected readonly copied = signal(false);
   protected readonly resetError = signal('');
@@ -98,11 +101,29 @@ export class AccountDialog {
     this.resetError.set('');
   }
 
+  protected pickDoomed(event: Event): void {
+    this.doomed.set(Number((event.target as HTMLSelectElement).value));
+  }
+
+  protected async deleteUser(): Promise<void> {
+    const name = this.users().find((u) => u.id === this.doomed())?.username ?? '';
+    if (!confirm(this.transloco.translate('adminDeleteAsk', { name }))) return;
+    this.deleteError.set('');
+    try {
+      await this.auth.deleteUser(this.doomed());
+      this.link.set(null);
+      await this.loadUsers();
+    } catch (err) {
+      this.deleteError.set(errorCode(err));
+    }
+  }
+
   private async loadUsers(): Promise<void> {
     try {
       const users = await this.auth.listUsers();
       this.users.set(users);
       this.target.set(users[0]?.id ?? 0);
+      this.doomed.set(users[0]?.id ?? 0);
     } catch {
       this.users.set([]);
     }

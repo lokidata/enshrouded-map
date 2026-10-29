@@ -307,6 +307,27 @@ def list_users(admin: Admin, db: DbSession) -> list[UserItem]:
     return [UserItem(id=u.id, username=u.username) for u in rows]
 
 
+@router.delete("/users/{user_id}")
+def delete_user(request: Request, user_id: int, admin: Admin, db: DbSession) -> dict[str, str]:
+    """The administrator erases another player's account and progress. Not their own (they have
+    "delete my account", which asks for the password) and there is only one administrator."""
+    target = db.get(User, user_id)
+    if target is None:
+        raise HTTPException(404, "user")
+    if target.id == admin.id or target.first_account:
+        raise HTTPException(403, "forbidden")
+    leave_team(db, target.id)  # their team survives without them
+    db.execute(
+        delete(User).where(User.id == target.id)
+    )  # marks, settings, sessions, passkeys cascade
+    db.commit()
+    audit.info(
+        "account_deleted_by_admin",
+        extra={"user_id": target.id, "admin_id": admin.id, "ip": _ip(request)},
+    )
+    return {}
+
+
 @router.post("/password-resets", response_model=ResetOut)
 @limiter.limit(lambda: get_settings().register_rate_limit)
 def create_password_reset(
