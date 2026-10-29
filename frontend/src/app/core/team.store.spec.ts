@@ -34,22 +34,46 @@ describe('TeamStore halo', () => {
     expect(store.halo('a:1:1')).toBe('all');
   });
 
-  it('orange: others only, violet: me (not everyone), green: all', () => {
+  it('team of 3: none, orange, blue, violet, green', () => {
     team('alice', 'bob', 'carol');
-    store.others.set({ 'a:1:1': [2] });
+    expect(store.halo('a:1:1')).toBe('none');
+    store.others.set({ 'a:1:1': [2] }); // bob only
+    expect(store.halo('a:1:1')).toBe('others');
+    store.others.set({ 'a:1:1': [2, 3] }); // bob and carol, not me
     expect(store.halo('a:1:1')).toBe('others');
     progress.set(['a:1:1']);
-    expect(store.halo('a:1:1')).toBe('mine');
-    store.others.set({ 'a:1:1': [2, 3] });
     expect(store.halo('a:1:1')).toBe('all');
-    expect(store.markedBy('a:1:1')).toEqual(['alice', 'bob', 'carol']);
+    store.others.set({ 'a:1:1': [3] }); // me and carol
+    expect(store.halo('a:1:1')).toBe('mine');
+    store.others.set({});
+    expect(store.halo('a:1:1')).toBe('alone'); // only me
+    expect(store.markedBy('a:1:1')).toEqual(['alice']);
   });
 
-  it('a new member turns a full halo violet', () => {
+  it('team of 2 has no violet: alone, then all', () => {
+    team('alice', 'bob');
+    progress.set(['a:1:1']);
+    expect(store.halo('a:1:1')).toBe('alone');
+    store.others.set({ 'a:1:1': [2] });
+    expect(store.halo('a:1:1')).toBe('all');
+  });
+
+  it('team of 4: violet covers every partial case', () => {
+    team('alice', 'bob', 'carol', 'dave');
+    progress.set(['a:1:1']);
+    store.others.set({ 'a:1:1': [2] });
+    expect(store.halo('a:1:1')).toBe('mine');
+    store.others.set({ 'a:1:1': [2, 3] });
+    expect(store.halo('a:1:1')).toBe('mine');
+    store.others.set({ 'a:1:1': [2, 3, 4] });
+    expect(store.halo('a:1:1')).toBe('all');
+  });
+
+  it('a new member turns a full halo blue (nobody else has marked it)', () => {
     team('alice');
     progress.set(['a:1:1']);
     expect(store.halo('a:1:1')).toBe('all');
     team('alice', 'bob');
-    expect(store.halo('a:1:1')).toBe('mine');
+    expect(store.halo('a:1:1')).toBe('alone');
   });
 });

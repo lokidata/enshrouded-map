@@ -73,6 +73,23 @@ test('register, mark an element, and find everything again after a reload', asyn
   ).toHaveAttribute('aria-pressed', 'false');
   await expect(page.locator('h1')).toHaveText('Enshrouded map'); // language remembered
 
+  // the colour legend can be folded, and stays folded after a reload
+  const legend = page.getByRole('button', { name: /Légende|Legend/ });
+  await expect(legend).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.locator('app-progress-legend li')).toHaveCount(1); // no team: green only
+  await legend.click();
+  await expect(legend).toHaveAttribute('aria-expanded', 'false');
+  await page.reload();
+  await expect(page.getByRole('button', { name: /Légende|Legend/ })).toHaveAttribute(
+    'aria-expanded',
+    'false',
+  );
+  await page.getByRole('button', { name: /Légende|Legend/ }).click();
+  await expect(page.getByRole('button', { name: /Légende|Legend/ })).toHaveAttribute(
+    'aria-expanded',
+    'true',
+  );
+
   // log out: back to the defaults
   await menu(page, 'Log out');
   await expect(page.getByRole('dialog').getByRole('heading')).toHaveText('Log in');
@@ -254,9 +271,9 @@ test('team: create, add a player, invite a new one, see who marked what', async 
   await orange.click({ force: true });
   await expect(guest.locator('.popup-team')).toContainText(user);
 
-  // the owner, who marked it alone, sees it violet
+  // the owner, who marked it alone, sees it blue
   await page.reload();
-  await expect(page.locator('.leaflet-marker-icon.halo-mine').first()).toBeVisible();
+  await expect(page.locator('.leaflet-marker-icon.halo-alone').first()).toBeVisible();
 
   // once the guest marks it too, everyone has: green for both
   await guest.getByRole('button', { name: /Marquer comme fait/ }).click();
@@ -356,4 +373,32 @@ test('passkeys: add one from the profile menu, sign in with it, delete it', asyn
   page.once('dialog', (d) => void d.accept());
   await page.getByRole('dialog').getByRole('button', { name: 'Supprimer' }).click();
   await expect(page.getByRole('dialog')).toContainText('Aucune passkey enregistrée.');
+});
+
+test('landmarks (fast travel, start) are bigger and stay bright when marked', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel("Nom d'utilisateur").fill(user);
+  await page
+    .getByRole('dialog')
+    .getByLabel('Mot de passe', { exact: true })
+    .fill('a brand new passphrase');
+  await page.getByRole('dialog').getByRole('button', { name: 'Se connecter' }).click();
+  await expect(page.locator('.who')).toContainText(user);
+  const fixture = await page.evaluate(async () =>
+    (await (await fetch('map-data.json')).text()).includes('fixture_tower'),
+  );
+  test.skip(!fixture, 'needs the fixture map');
+
+  await page.getByRole('button', { name: 'Tout', exact: true }).click(); // this profile shows only bosses
+  const tower = page.locator('img.leaflet-marker-icon[src*="tower"]');
+  const boss = page.locator('img.leaflet-marker-icon[src*="boss"]').first();
+  await expect(tower).toBeVisible();
+  const size = async (icon: typeof tower) => (await icon.boundingBox())!.width;
+  expect(await size(tower)).toBeGreaterThan(await size(boss));
+
+  await tower.click({ force: true });
+  await page.getByRole('button', { name: /Marquer comme fait/ }).click();
+  await expect(page.getByRole('button', { name: 'Retirer la marque' })).toBeVisible();
+  await expect(tower).not.toHaveClass(/done/); // a marked ordinary icon fades, this one does not
+  await expect(tower).toHaveClass(/halo-alone/); // its halo still says it is marked (only me in the team)
 });

@@ -117,5 +117,10 @@
   "passkeyAdded": "Passkey ajoutée.",
   "passkeyDeleteAsk": "Supprimer la passkey « {{name}} » ?",
   "passkeyHint": "Une passkey permet de se connecter avec l'empreinte, le visage ou le code de l'appareil, sans mot de passe. Le mot de passe reste utilisable.",
-  "delete": "Supprimer"
+  "delete": "Supprimer",
+  "legendTitle": "Légende",
+  "legend_alone": "Marqué par moi seul",
+  "legend_mine": "Moi et une partie de l'équipe",
+  "legend_others": "Des autres, pas moi",
+  "legend_all": "Tout le monde"
 }
