@@ -63,7 +63,10 @@ app-map {
   opacity: 0.8;
   filter: grayscale(0.7) drop-shadow(0 0 1px #000);
 }
-/* halo of a POI: violet = I marked it, orange = others did and I did not, green = everyone did */
+/* halo of a POI: blue = only I marked it, violet = me and some others, orange = others did and I did not, green = everyone did */
+.marker-icon.halo-alone {
+  --halo: #3b82f6;
+}
 .marker-icon.halo-mine {
   --halo: #b36cf0;
 }
@@ -73,12 +76,14 @@ app-map {
 .marker-icon.halo-all {
   --halo: #6fe06f;
 }
+.marker-icon.halo-alone,
 .marker-icon.halo-mine,
 .marker-icon.halo-others,
 .marker-icon.halo-all {
   filter: drop-shadow(0 0 3px var(--halo)) drop-shadow(0 0 2px var(--halo))
     drop-shadow(0 0 1px var(--halo));
 }
+.marker-icon.done.halo-alone,
 .marker-icon.done.halo-mine,
 .marker-icon.done.halo-others,
 .marker-icon.done.halo-all {

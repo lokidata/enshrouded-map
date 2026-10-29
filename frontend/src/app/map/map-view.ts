@@ -19,10 +19,16 @@ import { LootEntry, MapMarker, itemKey, markId } from '../core/map-data.model';
 import { MapDataService } from '../core/map-data.service';
 import { ProgressStore } from '../core/progress.store';
 import { Halo, TeamStore } from '../core/team.store';
+import { ProgressLegend } from './progress-legend';
 
 // Icon size per zoom level, and the zoom from which each label kind shows.
 const iconSize = (zoom: number): number =>
   zoom <= -4 ? 14 : zoom <= -3 ? 20 : zoom <= -2 ? 26 : 32;
+// Landmarks to find your way: bigger than the other icons, and never greyed out once marked.
+const LANDMARK_CATS = new Set(['start', 'fastTravel']);
+const LANDMARK_SCALE = 1.4;
+const pixels = (cat: string, size: number): number =>
+  LANDMARK_CATS.has(cat) ? Math.round(size * LANDMARK_SCALE) : size;
 // Fixed popup size: the largest the content ever got (longest names, wrapped) was 301 x 106 px.
 const POPUP_SIZE = { minWidth: 300, maxWidth: 300 };
 const LABEL_MIN_ZOOM: Record<string, number> = { region: -5, areaName: -2.5 };
@@ -35,9 +41,10 @@ const DOT_ICON_MIN_RADIUS = 7;
 // Loot items found in the same chest sit about a metre apart: one click lists them all.
 const STACKED_CATS = new Set(['unique', 'cosmetic', 'collectible']);
 const STACK_RADIUS = 3;
-// Halo of a POI: violet = I marked it, orange = others did and I did not, green = everyone did.
+// Halo of a POI: blue = only I marked it, violet = me and some others, orange = others did and I did not, green = everyone did.
 const HALO_COLORS: Record<Halo, string> = {
   none: '#000',
+  alone: '#3b82f6', // not the light blue glow of fast-travel icons (#7cc4ff)
   mine: '#b36cf0',
   others: '#ffa53a',
   all: '#6fe06f',
@@ -132,6 +139,7 @@ function el<K extends keyof HTMLElementTagNameMap>(
 @Component({
   selector: 'app-map',
   encapsulation: ViewEncapsulation.None, // styles reach the elements Leaflet creates
+  imports: [ProgressLegend],
   templateUrl: './map-view.html',
   styleUrl: './map-view.css',
 })
@@ -269,6 +277,7 @@ export class MapView {
       layer = L.marker(at, {
         icon: this.iconFor(m, iconSize(this.map.getZoom())),
         riseOnHover: true,
+        zIndexOffset: LANDMARK_CATS.has(m.cat) ? 500 : 0, // above the icons around them
       });
     else
       layer = L.circleMarker(at, {
@@ -288,7 +297,7 @@ export class MapView {
           const more = this.stackAt(p).length - 1;
           return el('span', '', m.name[this.lang.index()] + (more > 0 ? ` +${more}` : ''));
         },
-        { direction: 'top', offset: [0, -iconSize(this.map.getZoom()) / 2] },
+        { direction: 'top', offset: [0, -pixels(m.cat, iconSize(this.map.getZoom())) / 2] },
       );
     }
     layer.bindPopup(() => this.markerPopup(p), POPUP_SIZE);
@@ -305,9 +314,10 @@ export class MapView {
     const key = `${m.cat}|${m.fastTravel}|${size}`;
     let icon = this.icons.get(key);
     if (!icon) {
+      const px = pixels(m.cat, size);
       icon = L.icon({
         iconUrl: this.mapData.data.categories[m.cat].icon!,
-        iconSize: [size, size],
+        iconSize: [px, px],
         className: 'marker-icon' + (m.fastTravel ? ' fast-travel' : ''),
       });
       this.icons.set(key, icon);
@@ -335,7 +345,7 @@ export class MapView {
       if (cat.kind === 'icon' && cat.icon && p.layer instanceof L.Marker) {
         p.layer.setIcon(this.iconFor(p.m, size)); // builds a new element: ghost style again below
         const tooltip = p.layer.getTooltip();
-        if (tooltip) tooltip.options.offset = L.point(0, -size / 2);
+        if (tooltip) tooltip.options.offset = L.point(0, -pixels(p.m.cat, size) / 2);
       }
     }
     this.applyDone();
@@ -406,14 +416,15 @@ export class MapView {
     for (const p of this.placed) this.styleMarker(p);
   }
 
-  /** One halo for several items: green only when all are, orange while an item waits on me, else violet. */
+  /** One halo for several items: green only when all are, orange while an item waits on me, blue when I am alone on all that are marked, else violet. */
   private stackHalo(halos: Halo[]): Halo {
     if (halos.every((h) => h === 'all')) return 'all';
     if (halos.every((h) => h === 'none')) return 'none';
-    return halos.includes('others') ? 'others' : 'mine';
+    if (halos.includes('others')) return 'others';
+    return halos.filter((h) => h !== 'none').every((h) => h === 'alone') ? 'alone' : 'mine';
   }
 
-  // Marked by me: a faint "ghost" (.done). The halo colour: violet = I marked it, orange = others only, green = all.
+  // Marked by me: a faint "ghost" (.done). The halo colour: blue = only me, violet = me and some others, orange = others only, green = all.
   private styleMarker(p: Placed): void {
     if (!p.id || !(p.layer instanceof L.Marker)) return;
     const ids = this.stackAt(p).map((q) => q.id!);
@@ -421,9 +432,10 @@ export class MapView {
     const classes = p.layer.getElement()?.classList;
     classes?.toggle(
       'done',
-      ids.every((id) => this.progress.done().has(id)),
+      !LANDMARK_CATS.has(p.m.cat) && ids.every((id) => this.progress.done().has(id)),
     );
-    for (const h of ['mine', 'others', 'all'] as const) classes?.toggle('halo-' + h, halo === h);
+    for (const h of ['alone', 'mine', 'others', 'all'] as const)
+      classes?.toggle('halo-' + h, halo === h);
   }
 
   private styleDot(r: PlacedResource, dot: L.CircleMarker, id: string): void {

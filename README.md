@@ -54,13 +54,16 @@ Each POI has a halo that depends on who marked it:
 | Halo | Meaning |
 |---|---|
 | none | nobody marked it |
-| **violet** | **I** marked it, but not every member of my team did |
+| **blue** | **only I** marked it (a team of at least 2) |
+| **violet** | **I** marked it **and some** of the others, but not all of them (needs a team of 3 or more) |
 | **orange** | other members marked it and **I did not** |
 | **green** | **every** member marked it |
 
-Without a team, a POI I marked is green (I am the whole team). A POI I marked also appears as a faint ghost. Chests, plants and ores (dots) use the same colours for their outline.
+A **legend** of these colours sits at the bottom right of the map (it only lists the colours the team size can produce); it can be folded, and the choice is remembered in the browser.
 
-Loot items (unique, cosmetic, collectible) lying within 3 m share **one icon**: green only when all of them are green, orange as soon as one of them is waiting on me, violet otherwise. Its popup lists the items with who marked each one, and has a **single button** that marks (or unmarks) all of them.
+Without a team, a POI I marked is green (I am the whole team). A POI I marked also appears as a faint ghost, except the **landmarks** (starting point and fast-travel points): their icons are 40 % bigger than the others and are never greyed out, so you can always find your way (their halo still shows who marked them). Chests, plants and ores (dots) use the same colours for their outline.
+
+Loot items (unique, cosmetic, collectible) lying within 3 m share **one icon**: green only when all of them are green, orange as soon as one of them is waiting on me, blue when I am the only one on everything that is marked, violet otherwise. Its popup lists the items with who marked each one, and has a **single button** that marks (or unmarks) all of them.
 
 ## Security
 

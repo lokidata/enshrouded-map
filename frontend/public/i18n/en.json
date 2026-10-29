@@ -117,5 +117,10 @@
   "passkeyAdded": "Passkey added.",
   "passkeyDeleteAsk": "Delete the passkey “{{name}}”?",
   "passkeyHint": "A passkey signs you in with your device's fingerprint, face or code, without a password. Your password still works.",
-  "delete": "Delete"
+  "delete": "Delete",
+  "legendTitle": "Legend",
+  "legend_alone": "Marked by me only",
+  "legend_mine": "Me and part of the team",
+  "legend_others": "Others, not me",
+  "legend_all": "Everyone"
 }
