@@ -32,8 +32,18 @@ export class MapFocus {
         this.filters.setShown(m.cat, itemKey(m.name), true);
       }
     }
-    if (sources.groups?.length) {
+    // chests and other dotted places are resources, not markers
+    if (wanted.size || sources.groups?.length) {
       if (!Object.keys(this.mapData.resources()).length) await this.mapData.loadResources();
+      for (const r of this.catalog.resources()) {
+        r.ids.forEach((id, i) => {
+          if (!wanted.has(id)) return;
+          points.push({ x: r.data.pts[i * 3], z: r.data.pts[i * 3 + 1] });
+          this.filters.setShown(r.cat, r.key, true);
+        });
+      }
+    }
+    if (sources.groups?.length) {
       for (const group of sources.groups) {
         const key = itemKey(group.name);
         for (const r of this.catalog.resources()) {
