@@ -2,6 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { AccountDialog } from './auth/account-dialog';
 import { AuthDialog } from './auth/auth-dialog';
+import { AdminDialog } from './auth/admin-dialog';
 import { DeleteDialog } from './auth/delete-dialog';
 import { PasskeyDialog } from './auth/passkey-dialog';
 import { AuthService } from './core/auth.service';
@@ -29,6 +30,7 @@ function read(): string | null {
     AuthDialog,
     AccountDialog,
     DeleteDialog,
+    AdminDialog,
     PasskeyDialog,
     TeamDialog,
     TranslocoPipe,
@@ -52,6 +54,7 @@ function read(): string | null {
     <app-auth-dialog />
     <app-account-dialog />
     <app-delete-dialog />
+    <app-admin-dialog />
     <app-passkey-dialog />
     <app-team-dialog />
     @if (progress.saveFailed()) {

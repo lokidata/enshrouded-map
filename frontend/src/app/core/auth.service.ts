@@ -52,6 +52,7 @@ export class AuthService {
   /** The first account: can generate password reset links. */
   readonly isAdmin = signal(false);
   readonly accountOpen = signal(false);
+  readonly adminOpen = signal(false);
   readonly deleteOpen = signal(false);
   readonly passkeysOpen = signal(false);
   /** The server is set up for passkeys (WEBAUTHN_*). */

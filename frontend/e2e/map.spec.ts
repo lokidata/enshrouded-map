@@ -173,8 +173,11 @@ test('change my password, show it while typing, and reset someone else’s with 
   await expect(account.getByRole('status')).toContainText('Mot de passe modifié');
 
   // the first account generates a reset link for "guest" (created by the previous test)
-  await account.getByRole('button', { name: 'Générer le lien' }).click();
-  const link = await account.getByLabel('Lien de réinitialisation').inputValue();
+  await account.getByRole('button', { name: 'Fermer' }).last().click();
+  await menu(page, 'Administration');
+  const tools = page.getByRole('dialog');
+  await tools.getByRole('button', { name: 'Générer le lien' }).click();
+  const link = await tools.getByLabel('Lien de réinitialisation').inputValue();
   expect(link).toContain('#reset=');
 
   const guest = await browser.newPage(origin(page));
@@ -281,6 +284,25 @@ test('team: create, add a player, invite a new one, see who marked what', async 
   await expect(guest.locator('.popup-team')).toContainText(`guest, ${user}`);
   await page.reload();
   await expect(page.locator('.leaflet-marker-icon.halo-all').first()).toBeVisible();
+
+  // the owner hands the team to guest (after a confirmation), who can now rename it; guest hands it back
+  await menu(page, 'Équipe');
+  const mine = page.getByRole('dialog');
+  page.once('dialog', (d) => void d.dismiss());
+  await mine.getByRole('button', { name: 'Transférer le rôle de créateur à guest' }).click();
+  await expect(mine.getByRole('button', { name: 'Renommer' })).toBeVisible(); // refused: still owner
+  page.once('dialog', (d) => void d.accept());
+  await mine.getByRole('button', { name: 'Transférer le rôle de créateur à guest' }).click();
+  await expect(mine.getByRole('button', { name: 'Renommer' })).toHaveCount(0);
+  await expect(mine.getByRole('button', { name: "Dissoudre l'équipe" })).toHaveCount(0);
+
+  await guest.reload();
+  await menu(guest, 'Équipe');
+  const theirs = guest.getByRole('dialog');
+  await expect(theirs.getByRole('button', { name: 'Renommer' })).toBeVisible();
+  guest.once('dialog', (d) => void d.accept());
+  await theirs.getByRole('button', { name: `Transférer le rôle de créateur à ${user}` }).click();
+  await expect(theirs.getByRole('button', { name: 'Renommer' })).toHaveCount(0);
 });
 
 test('loot items in one chest are listed in a single popup', async ({ page }) => {
@@ -426,7 +448,7 @@ test('the administrator can delete another account', async ({ page, browser }) =
   await expect(temp.locator('.who')).toContainText('temp');
 
   // the administrator deletes it, after a confirmation
-  await menu(page, 'Mot de passe');
+  await menu(page, 'Administration');
   const admin = page.getByRole('dialog');
   const section = admin.locator('section', { hasText: "Supprimer le compte d'un utilisateur" });
   await section.getByLabel('Utilisateur').selectOption({ label: 'temp' });

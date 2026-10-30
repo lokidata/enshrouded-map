@@ -129,6 +129,18 @@ def remove_member(user_id: int, user: CurrentUser, db: DbSession) -> dict[str, s
     return {}
 
 
+@router.post("/owner", response_model=TeamOut)
+def transfer_ownership(body: MemberIn, user: CurrentUser, db: DbSession) -> TeamOut:
+    """The owner hands the team to another member, who becomes the owner."""
+    team = _own_team(db, user)
+    target = db.get(TeamMember, body.user_id)
+    if body.user_id == user.id or target is None or target.team_id != team.id:
+        raise HTTPException(404, "no_member")
+    team.owner_id = body.user_id
+    db.commit()
+    return _out(db, team, user)
+
+
 @router.post("/invitations", response_model=InvitationOut)
 @limiter.limit(lambda: get_settings().register_rate_limit)
 def create_invitation(request: Request, user: CurrentUser, db: DbSession) -> InvitationOut:
