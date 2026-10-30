@@ -172,6 +172,7 @@ export class MapView {
   private readonly dotIcons = new Map<string, DotIcon>();
   private readonly dotRenderer = L.canvas({ padding: 0.3, tolerance: 3 });
   private openActions: HTMLElement[] = [];
+  private readonly pings = L.layerGroup();
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.map?.remove());
@@ -208,6 +209,15 @@ export class MapView {
   private frame(points: readonly { x: number; z: number }[]): void {
     const bounds = L.latLngBounds(points.map((p) => this.latLng(p.x, p.z)));
     this.map.fitBounds(bounds.pad(0.1), { maxZoom: 0 });
+    // shortcut: a pulsing marker on the first 60 points only, raise it if a group needs more
+    this.pings.clearLayers();
+    for (const p of points.slice(0, 60))
+      L.marker(this.latLng(p.x, p.z), {
+        icon: L.divIcon({ className: '', iconSize: [0, 0], html: '<span class="ping"></span>' }),
+        interactive: false,
+        keyboard: false,
+        zIndexOffset: 10000,
+      }).addTo(this.pings);
   }
 
   // The world is placed at lat = z - size (all negative) so that tile rows
@@ -230,6 +240,8 @@ export class MapView {
       maxBounds: bounds.pad(0.15),
     });
     this.map.fitBounds(bounds);
+    this.pings.addTo(this.map);
+    this.map.on('click', () => this.pings.clearLayers()); // a click on the map dismisses the pings
     L.tileLayer('tiles/{z}/{x}_{y}.jpg', {
       minNativeZoom: -5,
       maxNativeZoom: 0,
