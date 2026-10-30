@@ -1,3 +1,4 @@
+import AxeBuilder from '@axe-core/playwright';
 import { type Page, expect, test } from '@playwright/test';
 
 /** Context options for a second visitor on the same server (dev server or compose stack). */
@@ -550,4 +551,31 @@ test('workshop: recipes, unlock tick, show on the map, altar, calculator', async
   await expect(raw).toContainText('Planche de test× 6');
   await page.getByRole('button', { name: 'Vider le projet' }).click();
   await expect(page.getByText('Le projet est vide')).toBeVisible();
+});
+
+test('workshop: every tab passes the AXE checks (WCAG A and AA)', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel("Nom d'utilisateur").fill(user);
+  await page
+    .getByRole('dialog')
+    .getByLabel('Mot de passe', { exact: true })
+    .fill('a brand new passphrase');
+  await page.getByRole('dialog').getByRole('button', { name: 'Se connecter' }).click();
+  await expect(page.locator('.who')).toContainText(user);
+  await page.getByRole('button', { name: 'Atelier', exact: true }).click();
+
+  const violations = async () =>
+    (
+      await new AxeBuilder({ page })
+        .include('app-workshop')
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+        .analyze()
+    ).violations.map((v) => `${v.id}: ${v.nodes[0].html.slice(0, 120)}`);
+
+  for (const tab of ['Recettes', 'Autel', 'Construction', 'Calculateur']) {
+    await page.getByRole('tab', { name: tab }).click();
+    await expect(page.getByRole('tab', { name: tab })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.locator('app-workshop h2, app-workshop article').first()).toBeVisible();
+    expect(await violations(), tab).toEqual([]);
+  }
 });

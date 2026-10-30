@@ -1,0 +1,5 @@
+# Only for `make e2e-stack`: the tests log in more often than the production limit allows.
+services:
+  api:
+    environment:
+      LOGIN_RATE_LIMIT: 1000/minute
