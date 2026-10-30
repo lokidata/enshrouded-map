@@ -131,6 +131,11 @@ export class TeamStore {
     await this.load();
   }
 
+  async transfer(userId: number): Promise<void> {
+    await firstValueFrom(this.http.post('api/v1/team/owner', { user_id: userId }));
+    await this.load();
+  }
+
   async dissolve(): Promise<void> {
     await firstValueFrom(this.http.delete('api/v1/team'));
     await this.load();

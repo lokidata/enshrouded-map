@@ -118,6 +118,18 @@ def test_member_adds_and_removes(user: ApiClient, bob: ApiClient) -> None:
         assert carl.get(T).json() is None
 
 
+def test_owner_hands_the_team_over(user: ApiClient, bob: ApiClient) -> None:
+    user.post(T, json={"name": "Braves"})
+    assert user.post(f"{T}/owner", json={"user_id": 2}).status_code == 404  # not a member yet
+    add(user, 2)
+    assert bob.post(f"{T}/owner", json={"user_id": 2}).status_code == 403  # only the owner
+    assert user.post(f"{T}/owner", json={"user_id": 1}).status_code == 404  # not themself
+    assert user.post(f"{T}/owner", json={"user_id": 2}).status_code == 200
+    assert bob.get(T).json()["is_owner"] is True
+    assert user.get(T).json()["is_owner"] is False
+    assert bob.delete(f"{T}/members/1").status_code == 200  # the new owner removes the old one
+
+
 def test_delete_account(user: ApiClient, bob: ApiClient) -> None:
     D = "/api/v1/auth/delete-account"
     bob.put("/api/v1/progress", json={"ids": ["chest:1:2"]})

@@ -41,10 +41,10 @@ Backend: `cd backend && uv sync && uv run pytest`. Frontend: `cd frontend && npm
 - Without an account the page shows only the login dialog (no map, no way to dismiss it); the map files are refused by nginx without a session.
 - Passwords: a player changes their own (current password required, their other sessions are closed). The administrator can generate a single-use, 20-minute **reset link** for another player; if the administrator themself is locked out, use `python -m app.cli reset-password USERNAME` in the api container. Optional **passkeys** (profile menu) sign in without a password; the password keeps working.
 - A player can delete their own account (password required): their progress is erased. The first account cannot be deleted.
-- The administrator can delete **another** player's account (profile menu > Password, "Delete a user's account", after a confirmation): the account, its progress and its sessions are erased and the player leaves their team (an owner hands the team over). The administrator cannot delete themself this way, and there is only one administrator.
+- The administrator can delete **another** player's account (profile menu > Administration, "Delete a user's account", after a confirmation): the account, its progress and its sessions are erased and the player leaves their team (an owner hands the team over). The administrator cannot delete themself this way, and there is only one administrator.
 
 ### Teams
-- A player is in **at most one team**. Whoever creates it is its **owner**: only the owner renames or disbands it.
+- A player is in **at most one team**. Whoever creates it is its **owner**: only the owner renames it, disbands it or **hands the ownership** to another member (who then becomes the owner; the former owner stays a member).
 - **Any member** can add an existing player who has no team (immediately, no confirmation from them), create an **invitation link** that makes a new account directly inside the team (same rules as above: single-use, 20 minutes), or remove another member. Nobody can remove the owner or themself.
 - Leaving is always possible. If the owner leaves, the longest-standing member becomes the owner; the last member to leave closes the team. Disbanding makes everybody leave. Each player keeps their own marks in every case.
 - Marks stay personal. The team only shares **who marked what**: the popup of a POI lists the players who did, and the halo reflects the team (refreshed every minute and when the tab is shown again).

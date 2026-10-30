@@ -5,7 +5,7 @@ import { AuthService, errorCode } from '../core/auth.service';
 import { copyText, hashLink, timeOf } from '../core/links';
 import { Player, TeamStore } from '../core/team.store';
 
-/** Create, join, rename and leave the team; any member adds and removes players, the owner renames or disbands. */
+/** Create, join, rename and leave the team; any member adds and removes players, the owner renames, disbands or hands the team over. */
 @Component({
   selector: 'app-team-dialog',
   imports: [FormField, TranslocoPipe],
@@ -108,6 +108,11 @@ export class TeamDialog {
   protected remove(id: number, name: string): Promise<void> | void {
     if (confirm(this.transloco.translate('teamRemoveAsk', { name })))
       return this.run(() => this.store.remove(id));
+  }
+
+  protected transfer(id: number, name: string): Promise<void> | void {
+    if (confirm(this.transloco.translate('teamTransferAsk', { name })))
+      return this.run(() => this.store.transfer(id));
   }
 
   protected leave(): Promise<void> | void {

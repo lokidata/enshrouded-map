@@ -30,6 +30,18 @@
         @for (m of team.members; track m.id) {
           <li>
             <span>{{ m.username }}</span>
+            @if (m.id === team.owner_id) {
+              <span class="hint">{{ 'teamOwner' | transloco }}</span>
+            }
+            @if (team.is_owner && m.id !== team.owner_id) {
+              <button
+                type="button"
+                [attr.aria-label]="'teamTransfer' | transloco: { name: m.username }"
+                (click)="transfer(m.id, m.username)"
+              >
+                {{ 'teamTransferShort' | transloco }}
+              </button>
+            }
             @if (m.id !== team.owner_id && m.username !== auth.user()) {
               <button
                 type="button"
