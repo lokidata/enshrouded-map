@@ -1,4 +1,5 @@
 E2E_SETUP_TOKEN = e2e-setup-token-0123
+E2E_COMPOSE = docker compose -f docker-compose.yml -f compose.e2e.yml
 
 .PHONY: check check-backend check-frontend check-security lock stack e2e-stack scan
 
@@ -27,7 +28,7 @@ stack:
 
 # Same Playwright tests as `check-frontend`, against the compose stack on an empty database.
 e2e-stack:
-	cd deploy && SETUP_TOKEN=$(E2E_SETUP_TOKEN) docker compose down -v && SETUP_TOKEN=$(E2E_SETUP_TOKEN) docker compose up -d --build --wait
+	cd deploy && SETUP_TOKEN=$(E2E_SETUP_TOKEN) $(E2E_COMPOSE) down -v && SETUP_TOKEN=$(E2E_SETUP_TOKEN) $(E2E_COMPOSE) up -d --build --wait
 	cd frontend && PROTECTED_ASSETS=1 SETUP_TOKEN=$(E2E_SETUP_TOKEN) npx playwright test -c playwright.stack.config.ts
 
 scan:
