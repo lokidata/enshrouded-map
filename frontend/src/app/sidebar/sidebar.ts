@@ -4,6 +4,8 @@ import { Catalog } from '../core/catalog.service';
 import { FilterStore } from '../core/filter.store';
 import { LAYOUTS, LayoutService } from '../core/layout.service';
 import { LangService } from '../core/lang.service';
+import { CraftService } from '../core/craft.service';
+import { ViewStore } from '../core/view.store';
 import { MapDataService } from '../core/map-data.service';
 import { SECTIONS } from '../core/sections';
 import { AccountBar } from './account-bar';
@@ -22,6 +24,8 @@ export class Sidebar {
   protected readonly layouts = LAYOUTS;
   protected readonly layoutIcon = { auto: 'A', left: '◧', top: '⬒' };
   protected readonly mapData = inject(MapDataService);
+  protected readonly craft = inject(CraftService);
+  protected readonly views = inject(ViewStore);
   private readonly catalog = inject(Catalog);
 
   protected readonly languages = this.mapData.data.languages;

@@ -41,6 +41,15 @@
   <div class="toggles">
     <button type="button" (click)="filters.showAll()">{{ 'all' | transloco }}</button>
     <button type="button" (click)="filters.hideAll()">{{ 'none' | transloco }}</button>
+    @if (craft.data()) {
+      <button
+        type="button"
+        class="view"
+        (click)="views.set(views.view() === 'map' ? 'workshop' : 'map')"
+      >
+        {{ (views.view() === 'map' ? 'workshop' : 'map') | transloco }}
+      </button>
+    }
   </div>
   <app-account-bar />
 </header>

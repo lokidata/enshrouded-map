@@ -466,3 +466,88 @@ test('the administrator can delete another account', async ({ page, browser }) =
   await temp.getByRole('dialog').getByRole('button', { name: 'Se connecter' }).click();
   await expect(temp.getByRole('dialog').getByRole('alert')).toContainText('incorrect');
 });
+
+test('workshop: recipes, unlock tick, show on the map, altar, calculator', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel("Nom d'utilisateur").fill(user);
+  await page
+    .getByRole('dialog')
+    .getByLabel('Mot de passe', { exact: true })
+    .fill('a brand new passphrase');
+  await page.getByRole('dialog').getByRole('button', { name: 'Se connecter' }).click();
+  await expect(page.locator('.who')).toContainText(user);
+  // only the CI fixture has this craft.json (see e2e/fixtures/map); the real one is not predictable
+  const fixture = await page.evaluate(async () =>
+    (await (await fetch('craft.json')).text()).includes('fixture_workshop'),
+  );
+  test.skip(!fixture, 'needs the fixture map');
+
+  const search = async (text: string) => {
+    const box = page.locator('app-workshop').getByRole('searchbox');
+    await box.click(); // focus first: a fill on a field that was just drawn can be lost
+    await box.fill(text);
+  };
+  const plank = () =>
+    page
+      .locator('app-entry-card')
+      .filter({ has: page.getByRole('heading', { name: 'Planche de test × 2' }) });
+  const open = () => page.getByRole('button', { name: 'Atelier', exact: true }).click();
+  await open();
+  await search('planche');
+  const card = plank();
+  await expect(card).toContainText('Établi de test');
+  await expect(card).toContainText('Bois de test');
+  const who = await page.locator('.who').textContent();
+  await card.getByLabel('Débloquée').check();
+  await expect(page.locator('.who')).toHaveText(who!); // a known recipe is not a marked map element
+
+  // the tick is saved: still there after a reload
+  await expect(async () => {
+    await page.reload();
+    await open();
+    await search('planche');
+    await expect(plank().getByLabel('Débloquée')).toBeChecked({ timeout: 1000 });
+  }).toPass();
+
+  // "show on the map" goes back to the map and frames the places
+  await page
+    .locator('app-entry-card', { hasText: 'Planche de test' })
+    .getByRole('button', { name: 'Voir sur la carte' })
+    .click();
+  await expect(page.locator('app-workshop')).toBeHidden();
+  await expect(page.locator('img.leaflet-marker-icon[src*="unique"]').first()).toBeVisible();
+
+  // the altar: cost and what it opens
+  await open();
+  await page.getByRole('tab', { name: 'Autel' }).click();
+  const altar = page.locator('article', { hasText: 'Autel de test niveau 2' });
+  await expect(altar).toContainText('Ouvre le niveau 2');
+  await altar.getByText('1 recette(s) ouvertes').click();
+  await expect(altar).toContainText('Hache de test');
+
+  // building pieces
+  await page.getByRole('tab', { name: 'Construction' }).click();
+  const cards = page.locator('app-entry-card');
+  await expect(cards.filter({ hasText: 'Mur de test' })).toContainText('Planche');
+  await expect(cards.filter({ hasText: 'Bloc de test' })).toContainText('Planche');
+  await expect(cards.first()).toContainText('Bloc de test'); // by name
+  await page.getByLabel('Tri', { exact: true }).selectOption('tier');
+  await expect(cards.first()).toContainText('Mur de test'); // T1 before T2
+  await page.getByLabel('Palier').selectOption('T2');
+  await expect(cards).toHaveCount(1);
+  await expect(cards.first()).toContainText('Bloc de test');
+
+  // the calculator: the axe needs 3 planks (2 crafts of 2 = 2 wood) and 1 wood of the category
+  await page.getByRole('tab', { name: 'Calculateur' }).click();
+  await search('hache');
+  await page.getByRole('button', { name: /Hache de test/ }).click();
+  const raw = page.locator('section', { hasText: 'Ressources totales' });
+  await expect(raw).toContainText('Bois de test× 3');
+  await page.getByLabel('Quantité de Hache de test').fill('2');
+  await page.getByLabel('Quantité de Hache de test').dispatchEvent('change');
+  await expect(raw).toContainText('Bois de test× 5'); // 6 planks = 3 crafts, plus 2 from the category
+  await page.getByLabel(/Décomposer/).uncheck();
+  await expect(raw).toContainText('Planche de test× 6');
+  await page.getByRole('button', { name: 'Vider le projet' }).click();
+  await expect(page.getByText('Le projet est vide')).toBeVisible();
+});

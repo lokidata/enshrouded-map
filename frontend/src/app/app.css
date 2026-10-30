@@ -71,3 +71,9 @@ aside[hidden] {
   border-bottom: 0;
   border-radius: 6px 6px 0 0;
 }
+app-map[hidden] {
+  display: none;
+}
+app-workshop[hidden] {
+  display: none;
+}

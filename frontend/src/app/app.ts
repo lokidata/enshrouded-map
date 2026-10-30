@@ -8,9 +8,11 @@ import { PasskeyDialog } from './auth/passkey-dialog';
 import { AuthService } from './core/auth.service';
 import { LayoutService } from './core/layout.service';
 import { ProgressStore } from './core/progress.store';
+import { ViewStore } from './core/view.store';
 import { MapView } from './map/map-view';
 import { Sidebar } from './sidebar/sidebar';
 import { TeamDialog } from './team/team-dialog';
+import { Workshop } from './workshop/workshop';
 
 const KEY = 'menu';
 
@@ -33,6 +35,7 @@ function read(): string | null {
     AdminDialog,
     PasskeyDialog,
     TeamDialog,
+    Workshop,
     TranslocoPipe,
   ],
   template: `
@@ -49,7 +52,10 @@ function read(): string | null {
       >
         {{ menuOpen() ? (layout.top() ? '˄' : '‹') : layout.top() ? '˅' : '›' }}
       </button>
-      <app-map />
+      <app-map [hidden]="views.view() !== 'map'" />
+      @defer (when views.view() === 'workshop') {
+        <app-workshop [hidden]="views.view() !== 'workshop'" />
+      }
     }
     <app-auth-dialog />
     <app-account-dialog />
@@ -73,6 +79,7 @@ export class App {
   protected readonly progress = inject(ProgressStore);
   protected readonly auth = inject(AuthService);
   protected readonly layout = inject(LayoutService);
+  protected readonly views = inject(ViewStore);
   protected readonly menuOpen = signal(read() !== 'closed');
 
   protected toggleMenu(): void {

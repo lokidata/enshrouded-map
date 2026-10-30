@@ -17,6 +17,7 @@ import { FilterStore } from '../core/filter.store';
 import { LangService } from '../core/lang.service';
 import { LootEntry, MapMarker, itemKey, markId } from '../core/map-data.model';
 import { MapDataService } from '../core/map-data.service';
+import { MapFocus } from '../core/map-focus.service';
 import { ProgressStore } from '../core/progress.store';
 import { Halo, TeamStore } from '../core/team.store';
 import { ProgressLegend } from './progress-legend';
@@ -151,6 +152,7 @@ export class MapView {
   private readonly auth = inject(AuthService);
   private readonly progress = inject(ProgressStore);
   private readonly team = inject(TeamStore);
+  private readonly focus = inject(MapFocus);
   private readonly host = viewChild.required<ElementRef<HTMLElement>>('host');
 
   protected readonly coords = signal('');
@@ -178,6 +180,18 @@ export class MapView {
       this.ready.set(true);
       void this.mapData.loadResources();
     });
+    effect(() => {
+      const points = this.focus.points();
+      if (!points || !this.ready()) return;
+      untracked(() => {
+        this.focus.points.set(null);
+        // the map may have just been un-hidden: measure it again before framing
+        setTimeout(() => {
+          this.map.invalidateSize();
+          this.frame(points);
+        });
+      });
+    });
     effect(() => this.applyVisibility());
     effect(() => this.applyLanguage());
     effect(() => this.applyDone());
@@ -188,6 +202,12 @@ export class MapView {
       this.team.total();
       for (const box of this.openActions) this.renderActions(box);
     });
+  }
+
+  /** Zooms on the points (one point: a close view of it). */
+  private frame(points: readonly { x: number; z: number }[]): void {
+    const bounds = L.latLngBounds(points.map((p) => this.latLng(p.x, p.z)));
+    this.map.fitBounds(bounds.pad(0.1), { maxZoom: 0 });
   }
 
   // The world is placed at lat = z - size (all negative) so that tile rows

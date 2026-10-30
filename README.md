@@ -66,6 +66,14 @@ Without a team, a POI I marked is green (I am the whole team). A POI I marked al
 
 Loot items (unique, cosmetic, collectible) lying within 3 m share **one icon**: green only when all of them are green, orange as soon as one of them is waiting on me, blue when I am the only one on everything that is marked, violet otherwise. Its popup lists the items with who marked each one, and has a **single button** that marks (or unmarks) all of them.
 
+### Workshop
+
+The **Workshop** button of the menu (shown when the server has `craft.json`, see `pipeline/README.md`) replaces the map with four tabs: **Recipes** (search, filter by station, how each one unlocks, a *show on the map* button when the game tells where to find it), **Altar** (what each Flame Altar upgrade and Flame level costs and which recipes it opens), **Building** (the building pieces: filter by category and tier, sort by name or tier) and the **Calculator**.
+
+- Each player ticks the recipes they have **unlocked**; the ticks are saved with their progress (ids `recipe:<guid>`), are never shared with the team and are not counted with the map marks.
+- The calculator adds up the ingredients of a **project** (kept in this browser only). It can break craftable ingredients down to raw materials; when several recipes make an item it takes one without a quest and with the fewest ingredients, and you can pick another (or keep the item raw). A cycle stays raw where it closes. For ingredients that several items can fill, the first item of the list is used unless you choose. The `scaling` of those categories is **not applied**: its meaning in the game data is not confirmed.
+- The game does not say a workshop for every recipe or a precise unlock for every entry: those show as *Unknown station* or *Quest progress*.
+
 ## Security
 
 Argon2id passwords, server-side sessions, CSRF protection, rate limiting, invitation-only registration, hardened containers, signed images, CodeQL / Trivy / gitleaks / dependency review in CI. See [SECURITY.md](SECURITY.md) to report a vulnerability.

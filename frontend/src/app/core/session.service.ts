@@ -2,11 +2,13 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, effect, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { AuthMode, AuthService, Credentials, UserInfo } from './auth.service';
+import { CraftService } from './craft.service';
 import { FilterStore } from './filter.store';
 import { takeHashToken } from './links';
 import { MapDataService } from './map-data.service';
 import { ProgressStore } from './progress.store';
 import { TeamStore } from './team.store';
+import { ViewStore } from './view.store';
 
 const SAVE_DELAY = 700;
 
@@ -18,7 +20,9 @@ export class SessionService {
   private readonly progress = inject(ProgressStore);
   private readonly filters = inject(FilterStore);
   private readonly team = inject(TeamStore);
+  private readonly views = inject(ViewStore);
   private readonly mapData = inject(MapDataService);
+  private readonly craft = inject(CraftService);
 
   private saved: string | null = null;
   private pending: string | null = null;
@@ -102,14 +106,17 @@ export class SessionService {
     this.auth.isAdmin.set(false);
     this.progress.set([]);
     this.team.clear();
+    this.craft.clear();
+    this.views.set('map');
     this.filters.reset();
     this.saved = this.pending = null;
     this.auth.dialog.set('login');
   }
 
   private async enter(info: UserInfo): Promise<void> {
-    const [, marks, settings] = await Promise.all([
+    const [, , marks, settings] = await Promise.all([
       this.mapData.load(),
+      this.craft.load(), // never fails: a server without craft.json just has no workshop
       firstValueFrom(this.http.get<{ marks: string[] }>('api/v1/progress')),
       firstValueFrom(
         this.http.get<{ settings: { filters?: Record<string, boolean> } | null }>(

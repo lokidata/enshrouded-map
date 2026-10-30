@@ -4,7 +4,14 @@ from pydantic import BaseModel, Field, StringConstraints
 
 from app.schemas.common import StrictModel
 
-MarkId = Annotated[str, StringConstraints(pattern=r"^[A-Za-z]+:-?\d+:-?\d+$", max_length=64)]
+# A map element ("category:x:z") or a workshop recipe ("recipe:<guid>").
+MarkId = Annotated[
+    str,
+    StringConstraints(
+        pattern=r"^([A-Za-z]+:-?\d+:-?\d+|recipe:[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12})$",
+        max_length=64,
+    ),
+]
 
 
 class ProgressIn(StrictModel):

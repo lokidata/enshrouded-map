@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
@@ -7,6 +7,12 @@ export class ProgressStore {
   private readonly http = inject(HttpClient);
 
   readonly done = signal<ReadonlySet<string>>(new Set());
+  /** Marked map elements (the known recipes, "recipe:<guid>", are counted apart). */
+  readonly mapCount = computed(() => {
+    let n = 0;
+    for (const id of this.done()) if (!id.startsWith('recipe:')) n++;
+    return n;
+  });
   /** True after a save failed (the change was reverted). */
   readonly saveFailed = signal(false);
 

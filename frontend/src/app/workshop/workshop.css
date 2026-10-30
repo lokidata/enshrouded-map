@@ -1,0 +1,219 @@
+:host(.workshop) {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  background: var(--bg);
+}
+.tabs {
+  display: flex;
+  gap: 4px;
+  padding: 10px 16px 0;
+  border-bottom: 1px solid var(--border);
+}
+.tabs button {
+  padding: 7px 14px;
+  border: 1px solid var(--border);
+  border-bottom: 0;
+  border-radius: 6px 6px 0 0;
+  background: var(--panel);
+  color: var(--muted);
+  cursor: pointer;
+}
+.tabs button.active {
+  background: var(--bg);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.panel {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+h2 {
+  margin: 18px 0 8px;
+  font-size: 15px;
+}
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.filters input[type='search'] {
+  flex: 1 1 240px;
+}
+input[type='search'],
+input[type='number'],
+select {
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+}
+input[type='number'] {
+  width: 70px;
+}
+.check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.count,
+.meta,
+.hint,
+.empty {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 8px 0;
+}
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 10px;
+}
+.entry {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+}
+.entry.known {
+  border-color: #3a7d44;
+}
+.entry header {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.entry .head {
+  flex: 1;
+  min-width: 0;
+}
+.entry h3 {
+  margin: 0;
+  font-size: 14px;
+}
+.entry .meta {
+  margin: 2px 0 0;
+}
+.entry img {
+  border-radius: 4px;
+  background: var(--bg);
+}
+.known-box {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.inputs,
+.names,
+.picks,
+.lines,
+.choices {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.inputs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px 2px 4px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg);
+  font-size: 12px;
+}
+.any {
+  font-size: 12px;
+  color: var(--muted);
+}
+.unlock {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: auto;
+}
+button {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 12px;
+}
+button:hover {
+  border-color: var(--accent);
+}
+button.danger {
+  color: #ff7b72;
+}
+.more {
+  display: block;
+  margin: 14px auto 0;
+  padding: 7px 16px;
+}
+.picks button {
+  width: 100%;
+  text-align: left;
+  margin-top: 3px;
+}
+.lines li,
+.choices li {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin: 4px 0;
+}
+.lines li span,
+.choices li > span:not(.chip) {
+  flex: 1;
+}
+.choices select {
+  max-width: 55%;
+}
+.names {
+  columns: 2;
+  font-size: 12px;
+  color: var(--muted);
+}
+details {
+  font-size: 12px;
+}
+summary {
+  cursor: pointer;
+  color: var(--accent);
+}
+section {
+  margin-bottom: 8px;
+}
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}

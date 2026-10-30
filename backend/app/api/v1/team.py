@@ -197,7 +197,11 @@ def team_marks(user: CurrentUser, db: DbSession) -> TeamMarks:
         rows = db.execute(
             select(Mark.mark_id, Mark.user_id)
             .join(TeamMember, TeamMember.user_id == Mark.user_id)
-            .where(TeamMember.team_id == member.team_id, Mark.user_id != user.id)
+            .where(
+                TeamMember.team_id == member.team_id,
+                Mark.user_id != user.id,
+                Mark.mark_id.not_like("recipe:%"),  # known recipes are personal, not map halos
+            )
         )
         for mark_id, user_id in rows:
             marks[mark_id].append(user_id)

@@ -81,10 +81,14 @@ def test_invitation_creates_a_member(user: ApiClient) -> None:
 
 def test_team_marks_show_the_others_only(user: ApiClient, bob: ApiClient) -> None:
     user.put("/api/v1/progress", json={"ids": ["chest:1:2", "boss:3:4"]})
-    bob.put("/api/v1/progress", json={"ids": ["chest:1:2"]})
+    bob.put(
+        "/api/v1/progress",
+        json={"ids": ["chest:1:2", f"recipe:{'a' * 8}-aaaa-aaaa-aaaa-{'a' * 12}"]},
+    )
     assert bob.get(f"{T}/marks").json() == {"marks": {}}  # no team: nothing shared
     user.post(T, json={"name": "Braves"})
     add(user, 2)  # joining takes effect on the existing marks
+    # known recipes are personal: they never reach the team
     assert user.get(f"{T}/marks").json() == {"marks": {"chest:1:2": [2]}}
     assert bob.get(f"{T}/marks").json() == {"marks": {"chest:1:2": [1], "boss:3:4": [1]}}
 
