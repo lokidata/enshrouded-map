@@ -18,6 +18,7 @@ export default defineConfig({
         COOKIE_SECURE: 'false',
         SETUP_TOKEN: process.env['SETUP_TOKEN'],
         REGISTER_RATE_LIMIT: '1000/minute',
+        LOGIN_RATE_LIMIT: '1000/minute', // one login per test
         // passkeys need a host name (not an IP): the tests open the page on localhost
         WEBAUTHN_RP_ID: 'localhost',
         WEBAUTHN_ORIGIN: 'http://localhost:4200',

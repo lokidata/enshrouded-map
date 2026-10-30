@@ -31,6 +31,19 @@ def test_invalid_ids(user: ApiClient) -> None:
     assert user.put(URL, json={"ids": ["chest:1:2"], "done": "yes"}).status_code == 422
 
 
+def test_recipe_ids(user: ApiClient) -> None:
+    good = "recipe:f3bedfba-bea3-45d4-9ca1-a4019f93c4a7"
+    assert user.put(URL, json={"ids": [good]}).status_code == 200
+    assert user.get(URL).json() == {"marks": [good]}
+    for bad in [
+        "recipe:1:2x",
+        "recipe:F3BEDFBA-bea3-45d4-9ca1-a4019f93c4a7",
+        "recipe:abc",
+        good + "0",
+    ]:
+        assert user.put(URL, json={"ids": [bad]}).status_code == 422, bad
+
+
 def test_mark_limit(user: ApiClient, settings) -> None:  # type: ignore[no-untyped-def]
     settings.max_marks = 2
     assert user.put(URL, json={"ids": ["a:1:1", "a:1:2"]}).status_code == 200

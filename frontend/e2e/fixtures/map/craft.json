@@ -1,0 +1,218 @@
+{
+  "items": {
+    "w": {
+      "name": [
+        "Bois de test",
+        "Test wood"
+      ],
+      "icon": null
+    },
+    "p": {
+      "name": [
+        "Planche de test",
+        "Test plank"
+      ],
+      "icon": null
+    },
+    "a": {
+      "name": [
+        "Hache de test",
+        "Test axe"
+      ],
+      "icon": null
+    },
+    "m": {
+      "name": [
+        "Mur de test",
+        "Test wall"
+      ],
+      "icon": null
+    },
+    "b": {
+      "name": [
+        "Bloc de test",
+        "Test block"
+      ],
+      "icon": null
+    }
+  },
+  "stations": {
+    "bench": {
+      "name": [
+        "Établi de test",
+        "Test bench"
+      ],
+      "npc": false
+    }
+  },
+  "categories": {
+    "tools": [
+      {
+        "item": "w",
+        "scaling": 1.0
+      }
+    ]
+  },
+  "groups": {
+    "Blocks": [
+      "Blocs",
+      "Blocks"
+    ]
+  },
+  "recipes": [
+    {
+      "id": "11111111-1111-4111-8111-111111111111",
+      "name": [
+        "Planche de test",
+        "Test plank"
+      ],
+      "output": {
+        "item": "p",
+        "count": 2
+      },
+      "station": "bench",
+      "inputs": [
+        {
+          "item": "w",
+          "count": 1
+        }
+      ],
+      "seconds": 3,
+      "unlock": {
+        "type": "none",
+        "text": [
+          "Sans condition",
+          "No condition"
+        ]
+      },
+      "sources": {
+        "markers": [
+          "unique:500:800"
+        ]
+      },
+      "fixture_workshop": true
+    },
+    {
+      "id": "22222222-2222-4222-8222-222222222222",
+      "name": [
+        "Hache de test",
+        "Test axe"
+      ],
+      "output": {
+        "item": "a",
+        "count": 1
+      },
+      "station": "bench",
+      "inputs": [
+        {
+          "item": "p",
+          "count": 3
+        },
+        {
+          "category": "tools",
+          "count": 1
+        }
+      ],
+      "seconds": 0,
+      "unlock": {
+        "type": "flame",
+        "text": [
+          "Flamme niveau 2",
+          "Flame level 2"
+        ]
+      }
+    }
+  ],
+  "blocks": [
+    {
+      "id": "33333333-3333-4333-8333-333333333333",
+      "name": [
+        "Mur de test",
+        "Test wall"
+      ],
+      "output": {
+        "item": "m",
+        "count": 1
+      },
+      "station": null,
+      "inputs": [
+        {
+          "item": "p",
+          "count": 4
+        }
+      ],
+      "seconds": 0,
+      "unlock": {
+        "type": "none",
+        "text": [
+          "Sans condition",
+          "No condition"
+        ]
+      },
+      "group": "Blocks",
+      "tier": "T1",
+      "sources": {
+        "groups": [
+          {
+            "cat": "chest",
+            "name": [
+              "Coffre de test",
+              "Test chest"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "55555555-5555-4555-8555-555555555555",
+      "name": [
+        "Bloc de test",
+        "Test block"
+      ],
+      "output": {
+        "item": "b",
+        "count": 1
+      },
+      "station": null,
+      "inputs": [
+        {
+          "item": "p",
+          "count": 1
+        }
+      ],
+      "seconds": 0,
+      "unlock": {
+        "type": "none",
+        "text": [
+          "Sans condition",
+          "No condition"
+        ]
+      },
+      "group": "Blocks",
+      "tier": "T2"
+    }
+  ],
+  "altar": [
+    {
+      "id": "44444444-4444-4444-8444-444444444444",
+      "name": [
+        "Autel de test niveau 2",
+        "Test altar level 2"
+      ],
+      "output": null,
+      "station": "bench",
+      "inputs": [
+        {
+          "item": "p",
+          "count": 2
+        }
+      ],
+      "seconds": 0,
+      "kind": "altar",
+      "level": 1,
+      "unlocks": [
+        "22222222-2222-4222-8222-222222222222"
+      ]
+    }
+  ]
+}

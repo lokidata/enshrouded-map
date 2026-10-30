@@ -17,6 +17,7 @@ export class MapDataService {
   }
 
   async loadResources(): Promise<void> {
+    if (Object.keys(this.resources()).length) return; // the map is created once per page, the workshop may load them first
     this.resources.set(await firstValueFrom(this.http.get<ResourceData>('resources.json')));
   }
 }

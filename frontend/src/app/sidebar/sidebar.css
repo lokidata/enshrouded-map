@@ -87,3 +87,7 @@ h1 {
   display: flex;
   gap: 6px;
 }
+.toggles button.view {
+  border-color: var(--accent);
+  color: var(--accent);
+}

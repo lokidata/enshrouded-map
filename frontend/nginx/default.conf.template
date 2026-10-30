@@ -81,7 +81,7 @@ server {
         expires 1d;
     }
     # Revalidated on each load (ETag): a new pipeline run shows up right away.
-    location ~ ^/(map-data|resources)\.json$ {
+    location ~ ^/(map-data|resources|craft)\.json$ {
         auth_request /_auth;
         root /srv/artifacts;
         expires -1;

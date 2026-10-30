@@ -23,7 +23,7 @@ import { TeamStore } from '../core/team.store';
           [attr.aria-expanded]="open()"
           (click)="open.set(!open())"
         >
-          👤 {{ name }} · {{ progress.done().size }} {{ 'progress' | transloco }} ▾
+          👤 {{ name }} · {{ progress.mapCount() }} {{ 'progress' | transloco }} ▾
         </button>
         @if (open()) {
           <div class="menu" role="menu">

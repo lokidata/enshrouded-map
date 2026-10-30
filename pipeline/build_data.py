@@ -8,6 +8,7 @@ Usage: python build_data.py <unpacked_dir> <export_dir> <out_dir>
 Produces in out_dir:
   map-data.json   map markers, categories, biomes
   resources.json  chests, plants, ores (loaded on demand)
+  craft.json      recipes, Flame Altar levels, building pieces
   biomes.png    biome map (optional background layer)
   icons/        map marker icons used by the markers
 """
@@ -28,6 +29,7 @@ import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import render_map  # noqa: E402  (FogZone tiles and void mask)
 import build_resources  # noqa: E402  (chests, plants, ores)
+import build_craft  # noqa: E402  (recipes, altar, building)
 
 MAIN_SCENE = "509feadb-4c60-425f-9c7c-deeefd9b6920"
 LANGUAGES = ("Fr_Fr", "En_Us")
@@ -430,12 +432,28 @@ def region_labels(src, export, locas, cells, size, scale):
 ITEM_ICON_SIZE = 64
 
 
+def write_item_picture(export, out, guid):
+    """Shrinks an item picture into out/items; returns its path, None if the game has none."""
+    from PIL import Image
+    src_icon = f"{export}/items/{guid}.png"
+    if not os.path.exists(src_icon):
+        return None
+    os.makedirs(f"{out}/items", exist_ok=True)
+    with Image.open(src_icon) as picture:
+        picture = picture.convert("RGBA")
+        picture = picture.crop(picture.getbbox() or (0, 0, *picture.size))
+        picture.thumbnail((ITEM_ICON_SIZE, ITEM_ICON_SIZE), Image.LANCZOS)
+        square = Image.new("RGBA", (ITEM_ICON_SIZE, ITEM_ICON_SIZE))
+        square.paste(picture, ((ITEM_ICON_SIZE - picture.width) // 2, (ITEM_ICON_SIZE - picture.height) // 2))
+        square.save(f"{out}/items/{guid}.png", optimize=True)
+    return f"items/{guid}.png"
+
+
 def item_table_for_map(markers, resources, item_names, export, out):
     """Items shown in the popups: {guid: {"name": [...], "icon": "items/<guid>.png" | None}}.
 
     The pictures come from the export mod (items/<guid>.png, 256 px), shrunk.
     """
-    from PIL import Image
     used = set()
     for m in markers:
         if "item" in m:
@@ -446,21 +464,7 @@ def item_table_for_map(markers, resources, item_names, export, out):
         for r in entries:
             for contents in r.get("loot", {}).values():
                 used.update(e["item"] for e in contents)
-    os.makedirs(f"{out}/items", exist_ok=True)
-    items = {}
-    for guid in sorted(used):
-        icon = None
-        src_icon = f"{export}/items/{guid}.png"
-        if os.path.exists(src_icon):
-            with Image.open(src_icon) as picture:
-                picture = picture.convert("RGBA")
-                picture = picture.crop(picture.getbbox() or (0, 0, *picture.size))
-                picture.thumbnail((ITEM_ICON_SIZE, ITEM_ICON_SIZE), Image.LANCZOS)
-                square = Image.new("RGBA", (ITEM_ICON_SIZE, ITEM_ICON_SIZE))
-                square.paste(picture, ((ITEM_ICON_SIZE - picture.width) // 2, (ITEM_ICON_SIZE - picture.height) // 2))
-                square.save(f"{out}/items/{guid}.png", optimize=True)
-            icon = f"items/{guid}.png"
-        items[guid] = {"name": item_names[guid], "icon": icon}
+    items = {guid: {"name": item_names[guid], "icon": write_item_picture(export, out, guid)} for guid in sorted(used)}
     print(f"{len(items)} items in popups, {sum(1 for i in items.values() if not i['icon'])} without a picture")
     return items
 
@@ -654,6 +658,7 @@ def main(src, export, out):
                 m["loot"] = contents
     print(f"{len(container_loot.cells)} containers of guaranteed loot without a chest or a marker")
     items = item_table_for_map(markers, resources, item_names, export, out)
+    craft = build_craft.build_craft(src, locas, markers, resources, categories, export, out)
 
     # Biome layer. Biome map row 0 is the south edge, so flip it for north-up.
     biome = load(glob.glob(f"{src}/BiomeMapResource/{MAIN_SCENE}_*.json")[0])
@@ -679,7 +684,7 @@ def main(src, export, out):
         "items": items,
         "markers": markers,
     }
-    for name, obj in (("map-data", data), ("resources", resources)):
+    for name, obj in (("map-data", data), ("resources", resources), ("craft", craft)):
         with open(f"{out}/{name}.json", "w", encoding="utf-8") as f:
             json.dump(obj, f, ensure_ascii=False, separators=(",", ":"))
 
