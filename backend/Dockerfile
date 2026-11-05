@@ -8,6 +8,9 @@ RUN python -m venv /opt/venv \
 
 FROM python@sha256:f17ec845ebdd4f3347431579e1c22eaeec82913f039f2a54b937c7ff870bacdb
 ENV PATH=/opt/venv/bin:$PATH PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
+# Fixed packages that the pinned base image does not have yet (apt); Dependabot moves the base forward.
+RUN apt-get update && apt-get install -y --no-install-recommends --only-upgrade apt libapt-pkg7.0 \
+ && rm -rf /var/lib/apt/lists/*
 RUN useradd --uid 10001 --no-create-home --shell /usr/sbin/nologin app \
  && mkdir /data && chown app /data
 COPY --from=build /opt/venv /opt/venv
