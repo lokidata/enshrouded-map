@@ -1,5 +1,6 @@
 # syntax=docker/dockerfile:1
-FROM node@sha256:6a1c190e17215d844926b0677f4bf87273ff7d5e54db06d3b5b5863ab0b09a3d AS build
+# The tag keeps Dependabot on Node 24 Alpine (a digest alone follows `latest`, which moved to Node 26).
+FROM node:24-alpine@sha256:8a32c8cf649a49915a66e81e7a609223c708d0adabf288ee3f4077d765542f85 AS build
 WORKDIR /build
 COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts
@@ -9,9 +10,9 @@ RUN npx ng build
 # The tag keeps Dependabot on the Alpine variant (a digest alone follows `latest`, which is Debian).
 FROM nginxinc/nginx-unprivileged:1.31-alpine@sha256:b5047b9b76845eac124358373c6852377c52e4b05834a47647e955dd91cb8f1e
 COPY --from=build /build/dist/frontend/browser /usr/share/nginx/html
-# Fixed packages that the pinned base image does not have yet (zlib, musl, brotli, curl); Dependabot moves the base forward.
+# Fixed packages that the pinned base image does not have yet (zlib, musl, brotli, curl, libexpat); Dependabot moves the base forward.
 USER root
-RUN apk upgrade --no-cache zlib musl musl-utils brotli-libs curl libcurl
+RUN apk upgrade --no-cache zlib musl musl-utils brotli-libs curl libcurl libexpat
 # Config baked into the image: nothing to mount, so the same image runs from compose or Portainer.
 COPY nginx/default.conf.template /etc/nginx/templates/default.conf.template
 COPY nginx/security-headers.conf /etc/nginx/security-headers.conf
