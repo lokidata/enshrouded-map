@@ -19,6 +19,7 @@ the chests: those items get their own markers.
 import colorsys
 import glob
 import json
+import math
 import os
 import re
 
@@ -89,13 +90,18 @@ def item_table(src, locas):
 
 
 def special_loot(src, scene, locas):
-    """Items the game puts in a given container (chest, skeleton, enemy...).
+    """Items the game puts at a given place: in a chest, on a skeleton or an enemy, or lying on the ground.
 
     Returns [(category, names, debug name, item guid, amount, x, y, z)], category
     being "unique", "cosmetic", "collectible" (items that get their own marker)
-    or None (other guaranteed loot: materials, blocks, gems...). Only items with
-    a single candidate container are kept: their position is exact (the others
-    are random among many containers, and none of them is a unique item).
+    or None (other guaranteed loot: materials, blocks, gems...). Two sources:
+
+    - SceneRandomLootResource.specialItems with a single candidate container:
+      their position is exact (the others are random among many containers,
+      and none of them is a unique item);
+    - SceneResource.questItems: items placed in the scene (some cosmetics and
+      unique weapons are only there). Most of them are also special items: the
+      same item within 3 m is kept once.
     """
     from build_data import fnv_guid
     infos = {}
@@ -105,10 +111,23 @@ def special_loot(src, scene, locas):
         infos[fnv_guid(d["$guid"])] = d
     with open(glob.glob(f"{src}/SceneRandomLootResource/{scene}_*.json")[0], encoding="utf-8") as f:
         loot = json.load(f)
+    with open(glob.glob(f"{src}/SceneResource/{scene}_*.json")[0], encoding="utf-8") as f:
+        placed = json.load(f)["questItems"]
+
+    places = [(s["itemId"]["value"], s["amount"], s["lootContainerBoundingBox"]["min"])
+              for s in loot["specialItems"] if len(s["lootContainerCandidates"]) == 1]
+    from_scene = 0
+    for q in placed:
+        pos = {k: v / 2**32 for k, v in q["transform"]["position"].items()}
+        if not any(item == q["itemId"]["value"] and math.hypot(at["x"] - pos["x"], at["z"] - pos["z"]) < 3
+                   for item, _, at in places):
+            places.append((q["itemId"]["value"], 1, pos))
+            from_scene += 1
+
     out = []
-    for s in loot["specialItems"]:
-        info = infos.get(s["itemId"]["value"])
-        if not info or len(s["lootContainerCandidates"]) != 1 or not info.get("name"):
+    for item_id, amount, pos in places:
+        info = infos.get(item_id)
+        if not info or not info.get("name"):
             continue
         debug = info["debugName"]
         if info["category"] == "Collectibles" or COLLECTIBLE.match(debug):
@@ -121,10 +140,9 @@ def special_loot(src, scene, locas):
         names = [loca.get(loca_id) for loca in locas]
         if not all(names):
             continue
-        pos = s["lootContainerBoundingBox"]["min"]
-        out.append((cat, names, debug, info["$guid"], s["amount"], pos["x"], pos["y"], pos["z"]))
-    print("special loot:", {str(c): sum(1 for o in out if o[0] == c)
-                            for c in ("unique", "cosmetic", "collectible", None)})
+        out.append((cat, names, debug, info["$guid"], amount, pos["x"], pos["y"], pos["z"]))
+    print(f"special loot ({from_scene} from the scene's placed items):",
+          {str(c): sum(1 for o in out if o[0] == c) for c in ("unique", "cosmetic", "collectible", None)})
     return out
 
 

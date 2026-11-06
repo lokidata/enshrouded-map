@@ -134,9 +134,9 @@ Writes, in `artifacts/map/`:
 | `items/`         | pictures of the items shown in the popups (64 px)                                           |
 
 It prints counts at the end; compare them with the previous run to spot a
-change in the game data. Current reference: 1215 markers (74 unique items,
-105 cosmetics, 107 collectibles), 2579 chests, 6632 ores, 76,742 plants,
-1198 recipes, 1324 building pieces, 14 altar levels, 2881 item
+change in the game data. Current reference: 1225 markers (79 unique items,
+110 cosmetics, 107 collectibles), 2578 chests, 6632 ores, 76,742 plants,
+1198 recipes, 1324 building pieces, 14 altar levels, 2882 item
 pictures.
 
 `build_resources.py` (chests, plants, ores, special loot) and `build_craft.py`

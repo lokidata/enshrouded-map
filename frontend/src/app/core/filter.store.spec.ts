@@ -48,6 +48,31 @@ describe('FilterStore', () => {
     expect(f.cardState('boss')).toBe('none');
   });
 
+  it('keeps a category choice for the elements added later', () => {
+    const f = setup();
+    f.setCategory('chest', true);
+    expect(f.overrides()).toEqual({ 'chest|*': true });
+    expect(f.isShown('chest', 'new element')).toBe(true);
+    f.setShown('chest', 'old element', false);
+    expect(f.overrides()).toEqual({ 'chest|*': true, 'chest|old element': false });
+    f.setShown('chest', 'old element', true);
+    expect(f.overrides()).toEqual({ 'chest|*': true }); // same as its category: nothing stored
+    f.setCategory('chest', false); // back to the default: the exceptions go too
+    expect(f.overrides()).toEqual({});
+    f.showAll();
+    expect(f.isShown('chest', 'another one')).toBe(true);
+    f.hideAll();
+    expect(f.isShown('boss', 'AlphaAlpha')).toBe(false);
+    expect(f.overrides()).toEqual({ 'boss|*': false });
+  });
+
+  it('reads profiles saved before the category choices', () => {
+    const f = setup();
+    f.restore({ filters: { 'chest|old element': true } });
+    expect(f.isShown('chest', 'old element')).toBe(true);
+    expect(f.isShown('chest', 'new element')).toBe(false);
+  });
+
   it('restores the saved format and ignores accents and case when searching', () => {
     const f = setup();
     f.restore({ filters: { 'boss|Alpha\u0001Alpha': false } });
