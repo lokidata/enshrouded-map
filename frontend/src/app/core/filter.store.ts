@@ -8,10 +8,15 @@ export type CardState = 'all' | 'some' | 'none';
 export const normalize = (s: string): string =>
   s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 
+/** Key of a category's own choice in the overrides ("category|*"); an element key is never "*". */
+const WHOLE = '*';
+
 /**
- * Which elements are shown. Only the differences with each category's default
- * visibility are stored ("category|element" -> shown), which is also the format
- * saved in the profile: elements added to the map later follow their default.
+ * Which elements are shown. Only the differences are stored, which is also the
+ * format saved in the profile: "category|*" -> shown when the whole category was
+ * switched away from its default, "category|element" -> shown for an element
+ * that differs from its category. Elements added to the map later follow their
+ * category, so a category shown in full stays in full.
  */
 @Injectable({ providedIn: 'root' })
 export class FilterStore {
@@ -23,28 +28,28 @@ export class FilterStore {
   private readonly normalizedQuery = computed(() => normalize(this.query().trim()));
 
   isShown(cat: string, key: string): boolean {
-    return this.overrides()[`${cat}|${key}`] ?? this.mapData.data.categories[cat].visible;
+    const overrides = this.overrides();
+    return overrides[`${cat}|${key}`] ?? this.categoryShown(overrides, cat);
   }
 
   setShown(cat: string, key: string, shown: boolean): void {
     this.apply([[cat, key]], shown);
   }
 
+  /** The whole category, elements to come included: its element exceptions are dropped. */
   setCategory(cat: string, shown: boolean): void {
-    this.apply(
-      this.keysOf(cat).map((key) => [cat, key]),
-      shown,
-    );
+    const next = { ...this.overrides() };
+    for (const key of Object.keys(next)) if (key.startsWith(`${cat}|`)) delete next[key];
+    if (shown !== this.mapData.data.categories[cat].visible) next[`${cat}|${WHOLE}`] = shown;
+    this.overrides.set(next);
   }
 
   showAll(): void {
-    this.overrides.set({});
-    this.apply(this.allItems(), true);
+    this.setEverything(true);
   }
 
   hideAll(): void {
-    this.overrides.set({});
-    this.apply(this.allItems(), false);
+    this.setEverything(false);
   }
 
   /** Back to the defaults (logged out). */
@@ -77,17 +82,22 @@ export class FilterStore {
     return [...(this.catalog.items().get(cat)?.keys() ?? [])];
   }
 
-  private allItems(): [string, string][] {
-    return [...this.catalog.items()].flatMap(([cat, list]) =>
-      [...list.keys()].map((key): [string, string] => [cat, key]),
-    );
+  private categoryShown(overrides: Readonly<Record<string, boolean>>, cat: string): boolean {
+    return overrides[`${cat}|${WHOLE}`] ?? this.mapData.data.categories[cat].visible;
+  }
+
+  private setEverything(shown: boolean): void {
+    const next: Record<string, boolean> = {};
+    for (const [cat, category] of Object.entries(this.mapData.data.categories))
+      if (shown !== category.visible) next[`${cat}|${WHOLE}`] = shown;
+    this.overrides.set(next);
   }
 
   private apply(targets: [string, string][], shown: boolean): void {
     const next = { ...this.overrides() };
     for (const [cat, key] of targets) {
       const full = `${cat}|${key}`;
-      if (shown === this.mapData.data.categories[cat].visible) delete next[full];
+      if (shown === this.categoryShown(next, cat)) delete next[full];
       else next[full] = shown;
     }
     this.overrides.set(next);
