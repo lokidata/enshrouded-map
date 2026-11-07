@@ -107,12 +107,12 @@ test('an account can only be created from a single-use invitation link', async (
   await expect(page.locator('.who')).toContainText(user);
   // the menu goes on top of the map, or back to the left
   await page.getByRole('button', { name: 'Menu en haut' }).click();
-  await expect(page.locator('app-root')).toHaveClass(/top/);
+  await expect(page.locator('.body')).toHaveClass(/top/);
   await expect
     .poll(async () => (await page.locator('aside').boundingBox())!.width)
     .toBe(page.viewportSize()!.width);
   await page.getByRole('button', { name: 'Menu à gauche' }).click();
-  await expect(page.locator('app-root')).not.toHaveClass(/top/);
+  await expect(page.locator('.body')).not.toHaveClass(/top/);
   // the left menu can be hidden (the map takes its room) and shown again
   await page.getByRole('button', { name: 'Masquer le menu' }).click();
   await expect(page.locator('aside')).toBeHidden();
@@ -511,10 +511,7 @@ test('workshop: recipes, unlock tick, show on the map, altar, calculator', async
   }).toPass();
 
   // "show on the map" goes back to the map and frames the places
-  await page
-    .locator('app-entry-card', { hasText: 'Planche de test' })
-    .getByRole('button', { name: 'Voir sur la carte' })
-    .click();
+  await plank().getByRole('button', { name: 'Voir sur la carte' }).click();
   await expect(page.locator('app-workshop')).toBeHidden();
   await expect(page.locator('img.leaflet-marker-icon[src*="unique"]').first()).toBeVisible();
 
@@ -526,13 +523,61 @@ test('workshop: recipes, unlock tick, show on the map, altar, calculator', async
   await altar.getByText('1 recette(s) ouvertes').click();
   await expect(altar).toContainText('Hache de test');
 
+  await expect(page.locator('fieldset.planner').first()).toContainText('Coût total');
+
+  // items: made by, used in; stations; the table view
+  await page.getByRole('tab', { name: 'Objets' }).click();
+  await search('planche');
+  await page.getByRole('button', { name: 'Planche de test' }).click();
+  await expect(page.getByRole('heading', { name: 'Fabriqué par' })).toBeVisible();
+  await expect(page.locator('app-entry-card', { hasText: 'Planche de test × 2' })).toBeVisible();
+  await expect(page.locator('app-entry-card', { hasText: 'Hache de test' })).toBeVisible(); // used in
+  await page.getByRole('button', { name: 'Retour' }).click();
+  // armour sets: grouped in one card, the page lists the pieces and how to get them
+  await search('tenue');
+  await expect(page.locator('.item-grid li')).toHaveCount(1);
+  await page.getByRole('button', { name: /Tenue de test/ }).click();
+  await expect(page.getByRole('heading', { name: 'Tenue de test' })).toBeVisible();
+  await expect(page.locator('app-entry-card', { hasText: 'Casque de test' })).toContainText(
+    'Flamme niveau 3',
+  );
+  await expect(page.getByRole('button', { name: 'Voir sur la carte' }).first()).toBeVisible();
+  await page.getByRole('button', { name: 'Casque de test' }).first().click(); // a piece, then back to the set
+  await expect(page.getByRole('button', { name: /Set : Tenue de test/ })).toBeVisible();
+  await page.getByRole('button', { name: 'Retour' }).click();
+  await expect(page.getByRole('heading', { name: 'Tenue de test' })).toBeVisible();
+  await page.getByRole('button', { name: 'Retour' }).click();
+  await page.getByRole('button', { name: "Regrouper les sets d'armure" }).click(); // ungrouped: the pieces
+  await search('casque');
+  await expect(page.locator('.item-card', { hasText: 'Casque de test' })).toHaveCount(1);
+  await expect(page.locator('.item-card', { hasText: 'Tenue' })).toHaveCount(0);
+  await page.getByRole('button', { name: "Regrouper les sets d'armure" }).click();
+  await search('');
+  await page.getByLabel('Rareté').selectOption('Rare'); // only the axe is rare
+  await expect(page.locator('.item-grid li')).toHaveCount(1);
+  await expect(page.locator('.item-grid')).toContainText('Hache de test');
+  await page.getByLabel('Rareté').selectOption('');
+  await page.getByRole('button', { name: /^Armes/ }).click();
+  await expect(page.locator('.item-grid li')).toHaveCount(1);
+  await page.getByRole('button', { name: /^Tous les objets/ }).click();
+  await page.getByLabel('Type', { exact: true }).selectOption('OneHandedAxe');
+  await expect(page.locator('.item-grid')).toContainText('Hache de test');
+  await page.getByLabel('Type', { exact: true }).selectOption('');
+  await page.getByRole('tab', { name: 'Établis' }).click();
+  await page.getByRole('button', { name: /Établi de test/ }).click();
+  await expect(page.locator('app-entry-card', { hasText: 'Hache de test' })).toBeVisible();
+  await page.getByRole('tab', { name: 'Recettes' }).click();
+  await page.getByRole('button', { name: 'Tableau' }).click();
+  await expect(page.getByRole('row', { name: /Hache de test/ })).toContainText('Établi de test');
+  await page.getByRole('button', { name: 'Grille' }).click();
+
   // building pieces
   await page.getByRole('tab', { name: 'Construction' }).click();
   const cards = page.locator('app-entry-card');
   await expect(cards.filter({ hasText: 'Mur de test' })).toContainText('Planche');
   await expect(cards.filter({ hasText: 'Bloc de test' })).toContainText('Planche');
   await expect(cards.first()).toContainText('Bloc de test'); // by name
-  await page.getByLabel('Tri', { exact: true }).selectOption('tier');
+  await page.getByRole('button', { name: 'Palier', exact: true }).click();
   await expect(cards.first()).toContainText('Mur de test'); // T1 before T2
   await page.getByLabel('Palier').selectOption('T2');
   await expect(cards).toHaveCount(1);
@@ -547,6 +592,16 @@ test('workshop: recipes, unlock tick, show on the map, altar, calculator', async
   await page.getByLabel('Quantité de Hache de test').fill('2');
   await page.getByLabel('Quantité de Hache de test').dispatchEvent('change');
   await expect(raw).toContainText('Bois de test× 5'); // 6 planks = 3 crafts, plus 2 from the category
+  // the tree, and what is already owned stops the breakdown
+  const tree = page.locator('section', { hasText: 'Arbre de fabrication' });
+  await expect(tree).toContainText('Planche de test');
+  await page.getByLabel('Quantité de Planche de test déjà possédée').fill('6');
+  await page.getByLabel('Quantité de Planche de test déjà possédée').dispatchEvent('change');
+  await expect(raw).toContainText('Bois de test× 2'); // only the category wood is left
+  await expect(raw).not.toContainText('Planche de test');
+  await page.getByLabel('Quantité de Planche de test déjà possédée').fill('0');
+  await page.getByLabel('Quantité de Planche de test déjà possédée').dispatchEvent('change');
+  await expect(raw).toContainText('Bois de test× 5');
   await page.getByLabel(/Décomposer/).uncheck();
   await expect(raw).toContainText('Planche de test× 6');
   await page.getByRole('button', { name: 'Vider le projet' }).click();
@@ -572,10 +627,12 @@ test('workshop: every tab passes the AXE checks (WCAG A and AA)', async ({ page 
         .analyze()
     ).violations.map((v) => `${v.id}: ${v.nodes[0].html.slice(0, 120)}`);
 
-  for (const tab of ['Recettes', 'Autel', 'Construction', 'Calculateur']) {
+  for (const tab of ['Recettes', 'Objets', 'Construction', 'Établis', 'Autel', 'Calculateur']) {
     await page.getByRole('tab', { name: tab }).click();
     await expect(page.getByRole('tab', { name: tab })).toHaveAttribute('aria-selected', 'true');
-    await expect(page.locator('app-workshop h2, app-workshop article').first()).toBeVisible();
+    await expect(
+      page.locator('#ws-panel').locator('h2, article, input, button').first(),
+    ).toBeVisible();
     expect(await violations(), tab).toEqual([]);
   }
 });

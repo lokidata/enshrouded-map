@@ -1,5 +1,6 @@
-import { Component, computed, inject, input } from '@angular/core';
+import { Component, computed, inject, input, signal } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { calculate } from '../core/craft.calc';
 import { CraftService } from '../core/craft.service';
 import { BlockEntry, Entry, Input } from '../core/craft.model';
 import { LangService } from '../core/lang.service';
@@ -53,6 +54,17 @@ import { ItemChip } from './item-chip';
           </li>
         }
       </ul>
+      <details (toggle)="open.set($any($event.target).open)">
+        <summary>{{ 'wsBreakdown' | transloco }}</summary>
+        @if (open()) {
+          <ul class="inputs">
+            @for (r of breakdown().raw; track r.item) {
+              <li><app-item-chip [item]="r.item" [count]="r.count" /></li>
+            }
+          </ul>
+          <p class="meta">{{ 'wsSteps' | transloco: { n: breakdown().steps } }}</p>
+        }
+      </details>
       <p class="unlock">{{ craft.text(entry().unlock.text) }}</p>
       <div class="actions">
         @if (entry().sources; as sources) {
@@ -66,7 +78,6 @@ import { ItemChip } from './item-chip';
       </div>
     </article>
   `,
-  styleUrl: './workshop.css',
 })
 export class EntryCard {
   readonly entry = input.required<Entry | BlockEntry>();
@@ -76,6 +87,18 @@ export class EntryCard {
   protected readonly project = inject(ProjectStore);
   protected readonly focus = inject(MapFocus);
   private readonly lang = inject(LangService);
+
+  protected readonly open = signal(false);
+  /** Raw materials and number of crafts for one craft of this entry, down to the raw materials. */
+  protected readonly breakdown = computed(() => {
+    const r = calculate(
+      [{ recipe: this.entry().id, qty: this.entry().output?.count ?? 1 }],
+      this.craft.context(),
+      this.project.choices(),
+      true,
+    );
+    return { steps: r.steps, raw: [...r.raw].map(([item, count]) => ({ item, count })) };
+  });
 
   protected readonly markId = computed(() => `recipe:${this.entry().id}`);
   protected readonly known = computed(() => this.progress.done().has(this.markId()));

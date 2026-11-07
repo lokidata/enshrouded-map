@@ -11,6 +11,8 @@ export interface CalcContext {
 export interface Choices {
   recipe: Readonly<Record<string, string>>;
   category: Readonly<Record<string, string>>;
+  /** Items the player already owns: they are subtracted and, when craftable, not broken down. */
+  have?: Readonly<Record<string, number>>;
 }
 
 export const RAW = 'raw';
@@ -25,6 +27,8 @@ export interface Crafted {
   item: string;
   need: number;
   crafts: number;
+  /** Items left over once the whole crafts are made. */
+  spare: number;
   recipe: Entry;
 }
 
@@ -32,6 +36,20 @@ export interface Result {
   raw: Map<string, number>;
   crafted: Crafted[];
   stations: Set<string | null>;
+  /** Whole crafts to make, all recipes together. */
+  steps: number;
+}
+
+/** One node of the breakdown shown as a tree. */
+export interface TreeNode {
+  item: string;
+  qty: number;
+  /** Quantity already owned (taken off before breaking the item down). */
+  have: number;
+  /** Null for a raw material (or an owned item, or the point where a cycle would close). */
+  recipe: Entry | null;
+  crafts: number;
+  children: TreeNode[];
 }
 
 /** Without a choice: a recipe that needs no quest, then the one with the fewest ingredients, then the id. */
@@ -49,6 +67,47 @@ export function resolveInput(input: Input, ctx: CalcContext, choices: Choices): 
 }
 
 const perCraft = (e: Entry): number => e.output?.count || 1;
+
+/** The recipe an item is made with: the chosen one, else defaultRecipe; null for RAW or no recipe. */
+function pickRecipe(item: string, ctx: CalcContext, choices: Choices): Entry | null {
+  const pick = choices.recipe[item];
+  const options = ctx.byOutput.get(item) ?? [];
+  if (pick === RAW || !options.length) return null;
+  return options.find((o) => o.id === pick) ?? defaultRecipe(options);
+}
+
+/** The breakdown of each project line, as the tree the calculator draws. */
+export function tree(lines: readonly Line[], ctx: CalcContext, choices: Choices): TreeNode[] {
+  const node = (item: string, qty: number, path: ReadonlySet<string>): TreeNode => {
+    const have = Math.min(qty, choices.have?.[item] ?? 0);
+    const recipe = path.has(item) ? null : pickRecipe(item, ctx, choices);
+    const need = qty - have;
+    if (!recipe || !need) return { item, qty, have, recipe: null, crafts: 0, children: [] };
+    const crafts = Math.ceil(need / perCraft(recipe));
+    const next = new Set(path).add(item);
+    const children = recipe.inputs.map((i) =>
+      node(resolveInput(i, ctx, choices), i.count * crafts, next),
+    );
+    return { item, qty, have, recipe, crafts, children };
+  };
+  const roots: TreeNode[] = [];
+  for (const line of lines) {
+    const recipe = ctx.recipes.get(line.recipe);
+    if (!recipe?.output) continue;
+    const crafts = Math.ceil(line.qty / perCraft(recipe));
+    roots.push({
+      item: recipe.output.item,
+      qty: line.qty,
+      have: 0,
+      recipe,
+      crafts,
+      children: recipe.inputs.map((i) =>
+        node(resolveInput(i, ctx, choices), i.count * crafts, new Set([recipe.output!.item])),
+      ),
+    });
+  }
+  return roots;
+}
 
 /**
  * Totals of a project. With `expand`, ingredients that can be crafted are broken down
@@ -73,11 +132,7 @@ export function calculate(
   const choose = (item: string): Entry | null => {
     if (!expand) return null;
     if (chosen.has(item)) return chosen.get(item)!;
-    const pick = choices.recipe[item];
-    const options = ctx.byOutput.get(item) ?? [];
-    let recipe: Entry | null = null;
-    if (pick !== RAW && options.length)
-      recipe = options.find((o) => o.id === pick) ?? defaultRecipe(options);
+    const recipe = pickRecipe(item, ctx, choices);
     chosen.set(item, recipe);
     return recipe;
   };
@@ -118,14 +173,21 @@ export function calculate(
   // consumers before producers, so an item's whole demand is known when it is reached
   const crafted: Crafted[] = [];
   for (const item of [...order].reverse()) {
-    const need = demand.get(item) ?? 0;
+    const need = Math.max(0, (demand.get(item) ?? 0) - (choices.have?.[item] ?? 0));
     const recipe = choose(item)!;
     const crafts = Math.ceil(need / perCraft(recipe));
     if (!need) continue;
-    crafted.push({ item, need, crafts, recipe });
+    crafted.push({ item, need, crafts, spare: crafts * perCraft(recipe) - need, recipe });
     stations.add(recipe.station);
     for (const input of recipe.inputs)
       give(resolveInput(input, ctx, choices), input.count * crafts, item);
   }
-  return { raw, crafted, stations };
+  for (const [item, n] of raw) {
+    const left = n - (choices.have?.[item] ?? 0);
+    if (left > 0) raw.set(item, left);
+    else raw.delete(item);
+  }
+  const steps =
+    crafted.reduce((sum, c) => sum + c.crafts, 0) + roots.reduce((sum, [, c]) => sum + c, 0);
+  return { raw, crafted, stations, steps };
 }

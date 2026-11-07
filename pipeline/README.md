@@ -128,7 +128,7 @@ Writes, in `artifacts/map/`:
 | ---------------- | ------------------------------------------------------------------------------------------- |
 | `map-data.json`  | categories, markers (with the guaranteed loot of each one), biomes, item names and pictures |
 | `resources.json` | chests, plants and ores, grouped per element (loaded after the first render)                |
-| `craft.json`     | recipes, Flame Altar levels, building pieces, stations, how each one unlocks                |
+| `craft.json`     | recipes, Flame Altar levels, building pieces, stations, how each one unlocks, item category / type / food type / rarity / class / level |
 | `biomes.png`     | biome layer                                                                                 |
 | `icons/`         | category icons (game icons and the SVGs written by the script)                              |
 | `items/`         | pictures of the items shown in the popups (64 px)                                           |

@@ -76,12 +76,11 @@ import { TeamStore } from '../core/team.store';
   styles: `
     .account {
       position: relative;
-      margin-top: 8px;
       font-size: 13px;
       color: var(--muted);
     }
     .who {
-      width: 100%;
+      max-width: 300px;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -91,9 +90,9 @@ import { TeamStore } from '../core/team.store';
     .menu {
       position: absolute;
       z-index: 10;
-      left: 0;
       right: 0;
       top: calc(100% + 4px);
+      min-width: 240px;
       display: flex;
       flex-direction: column;
       gap: 2px;
@@ -129,11 +128,19 @@ import { TeamStore } from '../core/team.store';
       color: #1a1a1a;
     }
     .invite {
+      position: absolute;
+      z-index: 10;
+      right: 0;
+      top: calc(100% + 4px);
+      width: 320px;
       display: grid;
       grid-template-columns: 1fr auto;
       gap: 4px 6px;
       align-items: end;
-      margin-top: 8px;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--panel);
       font-size: 12px;
       color: var(--muted);
     }

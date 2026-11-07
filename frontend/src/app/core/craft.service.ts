@@ -46,6 +46,21 @@ export class CraftService {
     return index;
   });
 
+  /** Entries that use an item as an ingredient, directly or through an ingredient category. */
+  readonly usedIn = computed(() => {
+    const categories = this.data()?.categories ?? {};
+    const index = new Map<string, Entry[]>();
+    for (const e of this.entries().values()) {
+      const items = new Set<string>();
+      for (const i of e.inputs) {
+        if (i.item) items.add(i.item);
+        else for (const c of categories[i.category!] ?? []) items.add(c.item);
+      }
+      for (const item of items) index.set(item, [...(index.get(item) ?? []), e]);
+    }
+    return index;
+  });
+
   readonly context = computed<CalcContext>(() => ({
     recipes: this.entries(),
     byOutput: this.byOutput(),
@@ -63,6 +78,13 @@ export class CraftService {
 
   icon(guid: string): string | null {
     return this.data()?.items[guid]?.icon ?? null;
+  }
+
+  /** Translated label of a game value (category, type, food, rarity, class); the raw value when unknown. */
+  label(prefix: 'cat' | 'type' | 'food' | 'rarity' | 'cls', value: string): string {
+    const key = `${prefix}_${value}`;
+    const text = this.lang.t(key);
+    return text === key ? value : text;
   }
 
   stationName(id: string | null): string {

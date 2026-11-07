@@ -1,47 +1,54 @@
 {
   "items": {
     "w": {
-      "name": [
-        "Bois de test",
-        "Test wood"
-      ],
-      "icon": null
+      "name": ["Bois de test", "Test wood"],
+      "icon": null,
+      "cat": "materials",
+      "rarity": "Common"
     },
     "p": {
-      "name": [
-        "Planche de test",
-        "Test plank"
-      ],
-      "icon": null
+      "name": ["Planche de test", "Test plank"],
+      "icon": null,
+      "cat": "materials",
+      "rarity": "Common"
     },
     "a": {
-      "name": [
-        "Hache de test",
-        "Test axe"
-      ],
-      "icon": null
+      "name": ["Hache de test", "Test axe"],
+      "icon": null,
+      "cat": "weapons",
+      "rarity": "Rare",
+      "cls": "Warrior",
+      "lvl": 5,
+      "type": "OneHandedAxe"
     },
     "m": {
-      "name": [
-        "Mur de test",
-        "Test wall"
-      ],
+      "name": ["Mur de test", "Test wall"],
       "icon": null
     },
     "b": {
-      "name": [
-        "Bloc de test",
-        "Test block"
-      ],
+      "name": ["Bloc de test", "Test block"],
       "icon": null
+    },
+    "h": {
+      "name": ["Casque de test", "Test helmet"],
+      "icon": null,
+      "cat": "armor",
+      "type": "Head",
+      "rarity": "Rare",
+      "set": "Armor_T1_Test"
+    },
+    "k": {
+      "name": ["Plastron de test", "Test chestplate"],
+      "icon": null,
+      "cat": "armor",
+      "type": "Chest",
+      "rarity": "Rare",
+      "set": "Armor_T1_Test"
     }
   },
   "stations": {
     "bench": {
-      "name": [
-        "Établi de test",
-        "Test bench"
-      ],
+      "name": ["Établi de test", "Test bench"],
       "npc": false
     }
   },
@@ -54,18 +61,12 @@
     ]
   },
   "groups": {
-    "Blocks": [
-      "Blocs",
-      "Blocks"
-    ]
+    "Blocks": ["Blocs", "Blocks"]
   },
   "recipes": [
     {
       "id": "11111111-1111-4111-8111-111111111111",
-      "name": [
-        "Planche de test",
-        "Test plank"
-      ],
+      "name": ["Planche de test", "Test plank"],
       "output": {
         "item": "p",
         "count": 2
@@ -80,24 +81,16 @@
       "seconds": 3,
       "unlock": {
         "type": "none",
-        "text": [
-          "Sans condition",
-          "No condition"
-        ]
+        "text": ["Sans condition", "No condition"]
       },
       "sources": {
-        "markers": [
-          "unique:500:800"
-        ]
+        "markers": ["unique:500:800"]
       },
       "fixture_workshop": true
     },
     {
       "id": "22222222-2222-4222-8222-222222222222",
-      "name": [
-        "Hache de test",
-        "Test axe"
-      ],
+      "name": ["Hache de test", "Test axe"],
       "output": {
         "item": "a",
         "count": 1
@@ -116,20 +109,57 @@
       "seconds": 0,
       "unlock": {
         "type": "flame",
-        "text": [
-          "Flamme niveau 2",
-          "Flame level 2"
-        ]
+        "text": ["Flamme niveau 2", "Flame level 2"]
+      }
+    },
+    {
+      "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "name": ["Casque de test", "Test helmet"],
+      "output": {
+        "item": "h",
+        "count": 1
+      },
+      "station": "bench",
+      "inputs": [
+        {
+          "item": "p",
+          "count": 2
+        }
+      ],
+      "seconds": 5,
+      "unlock": {
+        "type": "flame",
+        "text": ["Flamme niveau 3", "Flame level 3"]
+      },
+      "sources": {
+        "markers": ["unique:500:800"]
+      }
+    },
+    {
+      "id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "name": ["Plastron de test", "Test chestplate"],
+      "output": {
+        "item": "k",
+        "count": 1
+      },
+      "station": "bench",
+      "inputs": [
+        {
+          "item": "p",
+          "count": 4
+        }
+      ],
+      "seconds": 5,
+      "unlock": {
+        "type": "flame",
+        "text": ["Flamme niveau 3", "Flame level 3"]
       }
     }
   ],
   "blocks": [
     {
       "id": "33333333-3333-4333-8333-333333333333",
-      "name": [
-        "Mur de test",
-        "Test wall"
-      ],
+      "name": ["Mur de test", "Test wall"],
       "output": {
         "item": "m",
         "count": 1
@@ -144,10 +174,7 @@
       "seconds": 0,
       "unlock": {
         "type": "none",
-        "text": [
-          "Sans condition",
-          "No condition"
-        ]
+        "text": ["Sans condition", "No condition"]
       },
       "group": "Blocks",
       "tier": "T1",
@@ -155,20 +182,14 @@
         "groups": [
           {
             "cat": "chest",
-            "name": [
-              "Coffre de test",
-              "Test chest"
-            ]
+            "name": ["Coffre de test", "Test chest"]
           }
         ]
       }
     },
     {
       "id": "55555555-5555-4555-8555-555555555555",
-      "name": [
-        "Bloc de test",
-        "Test block"
-      ],
+      "name": ["Bloc de test", "Test block"],
       "output": {
         "item": "b",
         "count": 1
@@ -183,10 +204,7 @@
       "seconds": 0,
       "unlock": {
         "type": "none",
-        "text": [
-          "Sans condition",
-          "No condition"
-        ]
+        "text": ["Sans condition", "No condition"]
       },
       "group": "Blocks",
       "tier": "T2"
@@ -195,10 +213,7 @@
   "altar": [
     {
       "id": "44444444-4444-4444-8444-444444444444",
-      "name": [
-        "Autel de test niveau 2",
-        "Test altar level 2"
-      ],
+      "name": ["Autel de test niveau 2", "Test altar level 2"],
       "output": null,
       "station": "bench",
       "inputs": [
@@ -210,9 +225,13 @@
       "seconds": 0,
       "kind": "altar",
       "level": 1,
-      "unlocks": [
-        "22222222-2222-4222-8222-222222222222"
-      ]
+      "unlocks": ["22222222-2222-4222-8222-222222222222"]
     }
-  ]
+  ],
+  "sets": {
+    "Armor_T1_Test": {
+      "name": ["Tenue de test", "Test outfit"],
+      "pieces": ["h", "k"]
+    }
+  }
 }

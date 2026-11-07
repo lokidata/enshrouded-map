@@ -4,6 +4,15 @@ import { Names } from './map-data.model';
 export interface CraftItem {
   name: Names;
   icon: string | null;
+  /** From ItemInfo (pipeline/build_craft.py); absent in a craft.json made before. */
+  cat?: string;
+  type?: string;
+  food?: string;
+  rarity?: string;
+  cls?: string;
+  lvl?: number;
+  /** Key of CraftData.sets: the armour set this piece belongs to. */
+  set?: string;
 }
 
 export interface Station {
@@ -57,6 +66,8 @@ export interface AltarEntry extends Omit<Entry, 'unlock' | 'output'> {
 
 export interface CraftData {
   items: Record<string, CraftItem>;
+  /** Armour sets, pieces ordered head to feet; absent in an older craft.json. */
+  sets?: Record<string, { name: Names; pieces: readonly string[] }>;
   stations: Record<string, Station>;
   categories: Record<string, readonly { item: string; scaling: number }[]>;
   groups: Record<string, Names>;
