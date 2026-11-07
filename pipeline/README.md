@@ -128,6 +128,7 @@ Writes, in `artifacts/map/`:
 | ---------------- | ------------------------------------------------------------------------------------------- |
 | `map-data.json`  | categories, markers (with the guaranteed loot of each one), biomes, item names and pictures |
 | `resources.json` | chests, plants and ores, grouped per element (loaded after the first render)                |
+| `lore.json`      | the journal: lore notes (with their pages), their categories, quests with steps, givers and rewards |
 | `craft.json`     | recipes, Flame Altar levels, building pieces, stations, how each one unlocks, item category / type / food type / rarity / class / level |
 | `biomes.png`     | biome layer                                                                                 |
 | `icons/`         | category icons (game icons and the SVGs written by the script)                              |
@@ -136,10 +137,10 @@ Writes, in `artifacts/map/`:
 It prints counts at the end; compare them with the previous run to spot a
 change in the game data. Current reference: 1225 markers (79 unique items,
 110 cosmetics, 107 collectibles), 2578 chests, 6632 ores, 76,742 plants,
-1198 recipes, 1324 building pieces, 14 altar levels, 2882 item
-pictures.
+1198 recipes, 1324 building pieces, 14 altar levels, 78 armour sets,
+320 lore notes (564 pages), 186 quests, 2912 item pictures.
 
-`build_resources.py` (chests, plants, ores, special loot) and `build_craft.py`
+`build_resources.py` (chests, plants, ores, special loot), `build_lore.py` (the journal) and `build_craft.py`
 (recipes, altar, building; its docstring describes `craft.json`) are used by
 `build_data.py` and are not run on their own.
 
@@ -158,7 +159,7 @@ long as an element does not move or change category.
 | Change                                                                                | Steps                    |
 | ------------------------------------------------------------------------------------- | ------------------------ |
 | Game update                                                                           | all of them (1 to 6)     |
-| Marker, loot or craft logic (`build_data.py`, `build_resources.py`, `build_craft.py`) | 5 and 6                  |
+| Marker, loot, craft or lore logic (`build_data.py`, `build_resources.py`, `build_craft.py`, `build_lore.py`) | 5 and 6                  |
 | Map look (`render_map.py`)                                                            | 4 and 6                  |
 | Terrain extraction (`extract_*.py`, `voxels.py`)                                      | 3, 4, 5 and 6            |
 | New mod export (`eml_mod/`)                                                           | 2, then whatever uses it |

@@ -200,7 +200,8 @@ def team_marks(user: CurrentUser, db: DbSession) -> TeamMarks:
             .where(
                 TeamMember.team_id == member.team_id,
                 Mark.user_id != user.id,
-                Mark.mark_id.not_like("recipe:%"),  # known recipes are personal, not map halos
+                Mark.mark_id.not_like("recipe:%"),  # known recipes and found notes are personal,
+                Mark.mark_id.not_like("lore:%"),  # not map halos
             )
         )
         for mark_id, user_id in rows:

@@ -1,4 +1,4 @@
-import { Component, ViewEncapsulation, inject } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { AltarTab } from './altar-tab';
 import { CalculatorTab } from './calculator-tab';
@@ -52,9 +52,7 @@ const TABS: readonly Tab[] = ['recipes', 'items', 'blocks', 'stations', 'altar',
       }
     </div>
   `,
-  encapsulation: ViewEncapsulation.None, // the one stylesheet reaches the tab components too
   host: { class: 'workshop' },
-  styleUrl: './workshop.css',
 })
 export class Workshop {
   protected readonly tabs = TABS;

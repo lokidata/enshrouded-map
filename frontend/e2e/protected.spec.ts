@@ -7,6 +7,7 @@ for (const path of [
   'map-data.json',
   'resources.json',
   'craft.json',
+  'lore.json',
   'tiles/0/0_0.jpg',
   'icons/x.png',
   'items/x.png',

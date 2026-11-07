@@ -634,6 +634,75 @@ test('workshop: recipes, unlock tick, show on the map, altar, calculator', async
   await expect(page.getByText('Le projet est vide')).toBeVisible();
 });
 
+test('lore: notes found per player, quests, AXE', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel("Nom d'utilisateur").fill(user);
+  await page
+    .getByRole('dialog')
+    .getByLabel('Mot de passe', { exact: true })
+    .fill('a brand new passphrase');
+  await page.getByRole('dialog').getByRole('button', { name: 'Se connecter' }).click();
+  await expect(page.locator('.who')).toContainText(user);
+  const fixture = await page.evaluate(async () =>
+    (await (await fetch('lore.json')).text()).includes('fixture_lore'),
+  );
+  test.skip(!fixture, 'needs the fixture map');
+
+  const violations = async () =>
+    (
+      await new AxeBuilder({ page })
+        .include('app-lore')
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+        .analyze()
+    ).violations.map((v) => `${v.id}: ${v.nodes[0].html.slice(0, 120)}`);
+  const who = await page.locator('.who').textContent();
+  const search = page.locator('app-lore').getByRole('searchbox');
+  const open = () => page.getByRole('button', { name: 'Lore', exact: true }).click();
+  await open();
+  await expect(page.locator('app-lore .entry')).toHaveCount(2);
+  expect(await violations(), 'notes').toEqual([]);
+
+  // search and categories
+  await search.click();
+  await search.fill('sans région');
+  await expect(page.locator('app-lore .entry')).toHaveCount(1);
+  await search.fill('');
+  await page.getByRole('button', { name: /^Région de test/ }).click();
+  await expect(page.locator('app-lore .entry')).toHaveCount(1);
+  await page
+    .getByRole('button', { name: /^Toutes/ })
+    .first()
+    .click();
+
+  // a note's pages keep their paragraphs; it is marked found, and remembered
+  await page.getByRole('button', { name: 'Note de test' }).click();
+  await expect(page.locator('app-lore .note-page p')).toHaveCount(3);
+  expect(await violations(), 'note').toEqual([]);
+  await page.locator('app-lore header').getByLabel('Trouvée').check();
+  await expect(page.locator('.who')).toHaveText(who!); // a found note is not a marked map element
+  await expect(async () => {
+    await page.reload();
+    await open();
+    await expect(page.locator('app-lore')).toContainText('1 trouvée(s) sur 2', { timeout: 1000 });
+  }).toPass();
+  await page.getByRole('button', { name: 'À trouver' }).click();
+  await expect(page.locator('app-lore .entry')).toHaveCount(1);
+  await expect(page.locator('app-lore .entry')).toContainText('Lettre sans région');
+  await page.getByRole('button', { name: 'Trouvées' }).click();
+  await expect(page.locator('app-lore .entry')).toContainText('Note de test');
+
+  // quests: by giver, steps and rewards
+  await page.getByRole('tab', { name: 'Quêtes' }).click();
+  await expect(page.locator('app-lore .entry')).toHaveCount(2);
+  expect(await violations(), 'quests').toEqual([]);
+  await page.getByRole('button', { name: /^Alchimiste/ }).click();
+  await expect(page.locator('app-lore .entry')).toHaveCount(1);
+  await page.getByRole('button', { name: 'Quête de test' }).click();
+  await expect(page.locator('app-lore .note-page')).toHaveCount(2);
+  await expect(page.locator('app-lore')).toContainText('Bois de test'); // the reward
+  expect(await violations(), 'quest').toEqual([]);
+});
+
 test('workshop: every tab passes the AXE checks (WCAG A and AA)', async ({ page }) => {
   await page.goto('/');
   await page.getByLabel("Nom d'utilisateur").fill(user);
@@ -660,5 +729,25 @@ test('workshop: every tab passes the AXE checks (WCAG A and AA)', async ({ page 
       page.locator('#ws-panel').locator('h2, article, input, button').first(),
     ).toBeVisible();
     expect(await violations(), tab).toEqual([]);
+  }
+
+  // the lore (when the server has lore.json): both tabs, and a note opened
+  if (await page.getByRole('button', { name: 'Lore', exact: true }).count()) {
+    await page.getByRole('button', { name: 'Lore', exact: true }).click();
+    const lore = async (name: string) =>
+      (
+        await new AxeBuilder({ page })
+          .include('app-lore')
+          .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+          .analyze()
+      ).violations.map((v) => `${name} ${v.id}: ${v.nodes[0].html.slice(0, 120)}`);
+    await expect(page.locator('app-lore .entry').first()).toBeVisible();
+    expect(await lore('notes')).toEqual([]);
+    await page.locator('app-lore .entry .chip-link').first().click();
+    await expect(page.locator('app-lore .note-page').first()).toBeVisible();
+    expect(await lore('note')).toEqual([]);
+    await page.getByRole('tab', { name: 'Quêtes' }).click();
+    await expect(page.locator('app-lore .entry').first()).toBeVisible();
+    expect(await lore('quests')).toEqual([]);
   }
 });

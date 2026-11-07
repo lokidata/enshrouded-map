@@ -1,6 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 
-export type View = 'map' | 'workshop';
+export type View = 'map' | 'workshop' | 'lore';
 
 /** What fills the main area next to the menu. */
 @Injectable({ providedIn: 'root' })
