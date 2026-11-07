@@ -681,7 +681,7 @@ test('skills: take nodes, budget, save several builds, share link, AXE', async (
   // a node is taken from a root or from a node already taken
   await node(/Tir précis/).click();
   await expect(points).toContainText(/Disponible\s*6$/); // locked: nothing next to it
-  await expect(popup).toContainText('Verrouillé');
+  await expect(popup).toContainText('Verrouillée');
   for (let i = 0; i < 4; i++) await node(/Endurance/).click(); // 3 levels, then no more
   await expect(points).toContainText(/Disponible\s*3$/);
   await expect(node(/Endurance/)).toContainText('3/3');

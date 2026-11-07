@@ -112,7 +112,7 @@ const POPUP_HEIGHT = 380;
               />
             }
             @if (n.node.type !== 'Root') {
-              <text class="lvl" [attr.y]="radius(n.node) + 62" text-anchor="middle">
+              <text class="lvl" [attr.y]="radius(n.node) + 44" text-anchor="middle">
                 {{ badge(n.node) }}
               </text>
             }
