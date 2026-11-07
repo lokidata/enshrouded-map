@@ -35,11 +35,11 @@ const tierRank = (tier: string): number => (tier === NO_TIER ? 99 : Number(tier.
           [value]="query()"
           (input)="setQuery($any($event.target).value)"
         />
-        @if (catFacet(); as cat) {
-          <h3 class="side-title">{{ cat.title | transloco }}</h3>
+        @if (categories(); as cat) {
+          <h3 class="side-title">{{ 'wsCategory' | transloco }}</h3>
           <ul class="cat-list">
             <li>
-              <button type="button" [class.active]="!sel().cat" (click)="setFacet('cat', '')">
+              <button type="button" [class.active]="!cat.current" (click)="pickCategory('')">
                 <span>{{ 'wsAllItems' | transloco }}</span
                 ><b>{{ source().length }}</b>
               </button>
@@ -48,9 +48,9 @@ const tierRank = (tier: string): number => (tier === NO_TIER ? 99 : Number(tier.
               <li>
                 <button
                   type="button"
-                  [class.active]="sel().cat === o.value"
-                  [attr.aria-pressed]="sel().cat === o.value"
-                  (click)="setFacet('cat', o.value)"
+                  [class.active]="cat.current === o.value"
+                  [attr.aria-pressed]="cat.current === o.value"
+                  (click)="pickCategory(o.value)"
                 >
                   <span>{{ o.label }}</span
                   ><b>{{ o.n }}</b>
@@ -73,18 +73,6 @@ const tierRank = (tier: string): number => (tier === NO_TIER ? 99 : Number(tier.
             </select>
           </label>
         } @else {
-          <label class="side-select">
-            <span class="side-title">{{ 'wsGroup' | transloco }}</span>
-            <select
-              [attr.aria-label]="'wsGroup' | transloco"
-              (change)="setGroup($any($event.target).value)"
-            >
-              <option value="">{{ 'wsAllGroups' | transloco }}</option>
-              @for (g of groups(); track g.id) {
-                <option [value]="g.id" [selected]="g.id === group()">{{ g.label }}</option>
-              }
-            </select>
-          </label>
           <label class="side-select">
             <span class="side-title">{{ 'wsTier' | transloco }}</span>
             <select
@@ -277,7 +265,22 @@ export class EntriesTab {
     }).filter((f) => f.options.length),
   );
 
-  protected readonly catFacet = computed(() => this.facets().find((f) => f.key === 'cat'));
+  /** The category list: the groups of the building pieces (decoration, comfort...), else the item categories. */
+  protected readonly categories = computed(() => {
+    if (this.kind() === 'blocks') {
+      const n = new Map<string, number>();
+      for (const e of this.source()) {
+        const id = (e as BlockEntry).group;
+        n.set(id, (n.get(id) ?? 0) + 1);
+      }
+      const options = this.groups()
+        .map((g) => ({ value: g.id, label: g.label, n: n.get(g.id) ?? 0 }))
+        .filter((o) => o.n);
+      return options.length ? { current: this.group(), options } : null;
+    }
+    const cat = this.facets().find((f) => f.key === 'cat');
+    return cat ? { current: this.sel().cat, options: cat.options } : null;
+  });
   protected readonly rarityFacet = computed(() => this.facets().find((f) => f.key === 'rarity'));
 
   protected readonly stations = computed(() => {
@@ -353,6 +356,11 @@ export class EntriesTab {
   protected setTier(value: string): void {
     this.tier.set(value);
     this.limit.set(PAGE);
+  }
+
+  protected pickCategory(value: string): void {
+    if (this.kind() === 'blocks') this.setGroup(value);
+    else this.setFacet('cat', value);
   }
 
   protected setGroup(value: string): void {

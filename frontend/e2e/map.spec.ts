@@ -553,9 +553,9 @@ test('workshop: recipes, unlock tick, show on the map, altar, calculator', async
   await expect(page.locator('.item-card', { hasText: 'Tenue' })).toHaveCount(0);
   await page.getByRole('button', { name: "Regrouper les sets d'armure" }).click();
   await search('');
-  await page.getByLabel('Rareté').selectOption('Rare'); // only the axe is rare
-  await expect(page.locator('.item-grid li')).toHaveCount(1);
+  await page.getByLabel('Rareté').selectOption('Rare'); // the axe and the set are rare, the plank is not
   await expect(page.locator('.item-grid')).toContainText('Hache de test');
+  await expect(page.locator('.item-grid')).not.toContainText('Planche');
   await page.getByLabel('Rareté').selectOption('');
   await page.getByRole('button', { name: /^Armes/ }).click();
   await expect(page.locator('.item-grid li')).toHaveCount(1);
@@ -577,6 +577,14 @@ test('workshop: recipes, unlock tick, show on the map, altar, calculator', async
   await expect(cards.filter({ hasText: 'Mur de test' })).toContainText('Planche');
   await expect(cards.filter({ hasText: 'Bloc de test' })).toContainText('Planche');
   await expect(cards.first()).toContainText('Bloc de test'); // by name
+  // the groups are the category list (no separate group menu)
+  await expect(page.getByLabel('Groupe')).toHaveCount(0);
+  await page.getByRole('button', { name: /^Décoration/ }).click();
+  await expect(cards).toHaveCount(1);
+  await expect(cards.first()).toContainText('Statue de test');
+  await page.getByRole('button', { name: /^Blocs/ }).click();
+  await expect(cards).toHaveCount(2);
+  await page.getByRole('button', { name: /^Tous les objets/ }).click();
   await page.getByRole('button', { name: 'Palier', exact: true }).click();
   await expect(cards.first()).toContainText('Mur de test'); // T1 before T2
   await page.getByLabel('Palier').selectOption('T2');

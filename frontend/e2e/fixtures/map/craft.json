@@ -61,7 +61,8 @@
     ]
   },
   "groups": {
-    "Blocks": ["Blocs", "Blocks"]
+    "Blocks": ["Blocs", "Blocks"],
+    "Deco": ["Décoration", "Decoration"]
   },
   "recipes": [
     {
@@ -208,6 +209,36 @@
       },
       "group": "Blocks",
       "tier": "T2"
+    },
+    {
+      "id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "name": ["Statue de test", "Test statue"],
+      "output": {
+        "item": "m",
+        "count": 1
+      },
+      "station": null,
+      "inputs": [
+        {
+          "item": "p",
+          "count": 4
+        }
+      ],
+      "seconds": 0,
+      "unlock": {
+        "type": "none",
+        "text": ["Sans condition", "No condition"]
+      },
+      "group": "Deco",
+      "tier": "T3",
+      "sources": {
+        "groups": [
+          {
+            "cat": "chest",
+            "name": ["Coffre de test", "Test chest"]
+          }
+        ]
+      }
     }
   ],
   "altar": [
