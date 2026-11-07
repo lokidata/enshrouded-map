@@ -51,6 +51,15 @@ def test_lore_ids(user: ApiClient) -> None:
         assert user.put(URL, json={"ids": [bad]}).status_code == 422, bad
 
 
+def test_page_and_quest_ids(user: ApiClient) -> None:
+    good = ["lore:2913625784:0", "lore:2913625784:12", "quest:4029693112"]
+    assert user.put(URL, json={"ids": good}).status_code == 200
+    assert sorted(user.get(URL).json()["marks"]) == sorted(good)
+    for bad in ["quest:", "quest:12345678901", "quest:-1", "quest:1:2x", "quest:abc", "Quest:1x"]:
+        assert user.put(URL, json={"ids": [bad]}).status_code == 422, bad
+    assert user.put(URL, json={"ids": ["quest:4029693112"], "done": False}).status_code == 200
+
+
 def test_mark_limit(user: ApiClient, settings) -> None:  # type: ignore[no-untyped-def]
     settings.max_marks = 2
     assert user.put(URL, json={"ids": ["a:1:1", "a:1:2"]}).status_code == 200

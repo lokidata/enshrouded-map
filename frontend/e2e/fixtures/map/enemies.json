@@ -1,0 +1,41 @@
+{
+  "fixture_enemies": true,
+  "factions": {
+    "Fogger": ["Déchus", "The Fell"],
+    "Skeleton": ["Creux", "The Hollow"]
+  },
+  "regions": {
+    "Grassland": ["Hautes pâtures", "Springlands"]
+  },
+  "enemies": [
+    {
+      "id": "test-cyclops",
+      "name": ["Cyclope de test", "Test cyclops"],
+      "boss": true,
+      "faction": "Fogger",
+      "xp": 8.0,
+      "scaling": 0.6,
+      "regions": ["Grassland"],
+      "spots": 1,
+      "sources": {
+        "markers": ["unique:500:800"]
+      },
+      "image": "enemies/test-cyclops.png",
+      "places": [["Pic Hurlant", "Howling Peak"]],
+      "trophy": ["Tête de cyclope de test", "Test cyclops head"]
+    },
+    {
+      "id": "test-skeleton",
+      "name": ["Squelette de test", "Test skeleton"],
+      "boss": false,
+      "faction": "Skeleton",
+      "xp": 2.0,
+      "scaling": null,
+      "regions": [],
+      "spots": 0,
+      "image": null,
+      "places": [],
+      "trophy": null
+    }
+  ]
+}

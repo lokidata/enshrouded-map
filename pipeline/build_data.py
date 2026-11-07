@@ -10,6 +10,7 @@ Produces in out_dir:
   resources.json  chests, plants, ores (loaded on demand)
   craft.json      recipes, Flame Altar levels, building pieces
   lore.json       lore notes and quests of the journal
+  enemies.json    bosses and elite enemies
   biomes.png    biome map (optional background layer)
   icons/        map marker icons used by the markers
 """
@@ -31,6 +32,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import render_map  # noqa: E402  (FogZone tiles and void mask)
 import build_resources  # noqa: E402  (chests, plants, ores)
 import build_craft  # noqa: E402  (recipes, altar, building)
+import build_enemies  # noqa: E402  (bosses and elites)
 import build_lore  # noqa: E402  (journal: lore notes and quests)
 
 MAIN_SCENE = "509feadb-4c60-425f-9c7c-deeefd9b6920"
@@ -285,17 +287,8 @@ def load_templates(src):
     return texts
 
 
-def boss_templates(src, locas, all_texts):
-    """Templates whose placement means a boss or an elite: the enemies and their spawners.
-
-    Enemies with the keen::ecs::Boss component are bosses when they have a
-    displayName (the named boss fights), elites otherwise (generic heavy
-    enemies). Elites take the name of the named variant of the same enemy, or
-    ELITE_NAMES. Spawners reference the enemy template (possibly through an
-    intermediate template), so references are followed transitively; a
-    spawner referencing both kinds counts as a boss.
-    """
-    texts = all_texts
+def classify_enemies(texts, locas):
+    """The boss and elite enemy templates: guid -> {raw, names, cat, fastTravel} (boss_templates adds their spawners); and enemy_names(raw), the name of an enemy template."""
     named = {}       # enemy key -> names, any enemy with a displayName
     unnamed = {}     # guid -> raw name, Boss component without displayName
     bosses = {}
@@ -332,6 +325,22 @@ def boss_templates(src, locas, all_texts):
         if names and all(names):
             elites[guid] = {"raw": raw, "names": names, "cat": "elite", "fastTravel": False}
 
+    return bosses, elites, enemy_names
+
+
+def boss_templates(src, locas, all_texts):
+    """Templates whose placement means a boss or an elite: the enemies and their spawners.
+
+    Enemies with the keen::ecs::Boss component are bosses when they have a
+    displayName (the named boss fights), elites otherwise (generic heavy
+    enemies). Elites take the name of the named variant of the same enemy, or
+    ELITE_NAMES. Spawners reference the enemy template (possibly through an
+    intermediate template), so references are followed transitively; a
+    spawner referencing both kinds counts as a boss.
+    """
+    texts = all_texts
+    bosses, elites, enemy_names = classify_enemies(texts, locas)
+    raws = {g: re.search(r'"name": "([^"]*)"', t[:300]).group(1) for g, t in texts.items()}
     found = {**elites, **bosses}
     for _ in range(3):
         added = False
@@ -669,6 +678,16 @@ def main(src, export, out):
     cells = biome["biomeMap"]
 
     markers += region_labels(src, export, locas, cells, w, biome["mapScale"])
+    region_titles = region_names(src, locas)
+    grid = np.array(cells).reshape(w, w)  # [z][x], row 0 = south
+    scale = biome["mapScale"]
+
+    def region_of(x, z):
+        row, col = int(z / scale), int(x / scale)
+        return grid[row][col] if 0 <= row < w and 0 <= col < w and grid[row][col] in region_titles else None
+
+    enemies = build_enemies.build_enemies(texts, *classify_enemies(texts, locas)[:2], markers, region_of, region_titles,
+                                          src, export, out, locas)
     rows = []
     for row in range(h - 1, -1, -1):
         line = bytearray()
@@ -687,7 +706,7 @@ def main(src, export, out):
         "items": items,
         "markers": markers,
     }
-    for name, obj in (("map-data", data), ("resources", resources), ("craft", craft), ("lore", lore)):
+    for name, obj in (("map-data", data), ("resources", resources), ("craft", craft), ("lore", lore), ("enemies", enemies)):
         with open(f"{out}/{name}.json", "w", encoding="utf-8") as f:
             json.dump(obj, f, ensure_ascii=False, separators=(",", ":"))
 

@@ -4,6 +4,14 @@ import { normalize } from '../core/filter.store';
 import { LangService } from '../core/lang.service';
 import { LoreNote } from '../core/lore.model';
 import { LoreService } from '../core/lore.service';
+import {
+  foundPages,
+  noteFound,
+  pageFound,
+  togglePagePlan,
+  toggleNotePlan,
+  Plan,
+} from '../core/lore-progress';
 import { ProgressStore } from '../core/progress.store';
 
 const NO_CAT = 'none'; // the filter value of the notes the game puts in no category
@@ -24,7 +32,8 @@ type Status = 'all' | 'todo' | 'done';
           (input)="query.set($any($event.target).value); open.set(null)"
         />
         <p class="count" role="status">
-          {{ 'loreCountFound' | transloco: { found: foundCount(), total: notes().length } }}
+          {{ 'loreCountFound' | transloco: { found: foundCount(), total: notes().length } }}<br />
+          {{ 'loreCountPages' | transloco: { found: pagesFound(), total: pagesTotal() } }}
         </p>
         <div class="side-pills" role="group" [attr.aria-label]="'loreStatus' | transloco">
           @for (s of statuses; track s) {
@@ -77,7 +86,15 @@ type Status = 'all' | 'todo' | 'done';
             {{ categoryOf(note) }} · {{ 'lorePages' | transloco: { n: note.pages.length } }}
           </p>
           @for (page of note.pages; track $index) {
-            <article class="note-page">
+            <article class="note-page" [class.known]="pageDone(note, $index)">
+              <label class="known-box">
+                <input
+                  type="checkbox"
+                  [checked]="pageDone(note, $index)"
+                  (change)="togglePage(note, $index)"
+                />
+                {{ 'lorePageFound' | transloco }}
+              </label>
               @if (note.pages.length > 1 || lore.text(page.name) !== lore.text(note.name)) {
                 <h3>{{ lore.text(page.name) }}</h3>
               }
@@ -144,7 +161,13 @@ export class NotesTab {
   protected readonly notes = computed(() => this.lore.data()?.notes ?? []);
   protected readonly current = computed(() => this.notes().find((n) => n.id === this.open()));
   protected readonly foundCount = computed(
-    () => this.notes().filter((n) => this.progress.done().has(`lore:${n.id}`)).length,
+    () => this.notes().filter((n) => noteFound(this.progress.done(), n)).length,
+  );
+  protected readonly pagesTotal = computed(() =>
+    this.notes().reduce((n, x) => n + x.pages.length, 0),
+  );
+  protected readonly pagesFound = computed(() =>
+    this.notes().reduce((n, x) => n + foundPages(this.progress.done(), x), 0),
   );
 
   /** What each note says, to search in: names and texts of both languages. */
@@ -185,18 +208,42 @@ export class NotesTab {
       (n) =>
         (!q || haystack.get(n.id)!.includes(q)) &&
         (!cat || (n.cat ?? NO_CAT) === cat) &&
-        (status === 'all' || done.has(`lore:${n.id}`) === (status === 'done')),
+        (status === 'all' || noteFound(done, n) === (status === 'done')),
     );
   });
 
   protected readonly shown = computed(() => this.list().slice(0, this.limit()));
 
   protected found(note: LoreNote): boolean {
-    return this.progress.done().has(`lore:${note.id}`);
+    return noteFound(this.progress.done(), note);
   }
 
-  protected toggle(note: LoreNote): void {
-    this.progress.toggle(`lore:${note.id}`);
+  protected pageDone(note: LoreNote, page: number): boolean {
+    return pageFound(this.progress.done(), note, page);
+  }
+
+  protected pagesOf(note: LoreNote): number {
+    return foundPages(this.progress.done(), note);
+  }
+
+  /** Some pages found, not all: the card says how many. */
+  protected partial(note: LoreNote): boolean {
+    const n = this.pagesOf(note);
+    return n > 0 && n < note.pages.length;
+  }
+
+  protected async toggle(note: LoreNote): Promise<void> {
+    await this.apply(toggleNotePlan(this.progress.done(), note));
+  }
+
+  protected async togglePage(note: LoreNote, page: number): Promise<void> {
+    await this.apply(togglePagePlan(this.progress.done(), note, page));
+  }
+
+  /** Marks first, then unmarks: a failure in between never loses what was found. */
+  private async apply(plan: Plan): Promise<void> {
+    await this.progress.setAll(plan.mark, true);
+    await this.progress.setAll(plan.unmark, false);
   }
 
   protected categoryOf(note: LoreNote): string {

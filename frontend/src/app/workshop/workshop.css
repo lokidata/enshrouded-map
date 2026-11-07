@@ -1,6 +1,7 @@
 /* A global stylesheet (angular.json), shared by the workshop and the lore: everything is scoped by this rule. */
 app-workshop,
-app-lore {
+app-lore,
+app-enemies {
   & {
     display: flex;
     flex-direction: column;
@@ -697,5 +698,30 @@ app-lore {
   .note-page p {
     margin: 0 0 10px;
     line-height: 1.6;
+  }
+
+  .facts {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 8px 20px;
+    margin: 18px 0;
+  }
+  .facts dt {
+    color: var(--muted);
+    font-size: 12px;
+    font-stretch: condensed;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .facts dd {
+    margin: 0;
+  }
+
+  .portrait {
+    width: 144px;
+    height: 144px;
+    object-fit: contain;
+    border-radius: 6px;
+    background: #0f1115;
   }
 }

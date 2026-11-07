@@ -9,6 +9,7 @@ import { AuthService } from './core/auth.service';
 import { LayoutService } from './core/layout.service';
 import { ProgressStore } from './core/progress.store';
 import { ViewStore } from './core/view.store';
+import { Enemies } from './enemies/enemies';
 import { Lore } from './lore/lore';
 import { MapView } from './map/map-view';
 import { Sidebar } from './sidebar/sidebar';
@@ -39,6 +40,7 @@ function read(): string | null {
     TeamDialog,
     Workshop,
     Lore,
+    Enemies,
     TopBar,
     TranslocoPipe,
   ],
@@ -63,6 +65,9 @@ function read(): string | null {
         <app-map [hidden]="views.view() !== 'map'" />
         @defer (when views.view() === 'workshop') {
           <app-workshop [hidden]="views.view() !== 'workshop'" />
+        }
+        @defer (when views.view() === 'enemies') {
+          <app-enemies [hidden]="views.view() !== 'enemies'" />
         }
         @defer (when views.view() === 'lore') {
           <app-lore [hidden]="views.view() !== 'lore'" />

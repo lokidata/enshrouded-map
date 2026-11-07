@@ -3,6 +3,7 @@ import { Injectable, effect, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { AuthMode, AuthService, Credentials, UserInfo } from './auth.service';
 import { CraftService } from './craft.service';
+import { EnemiesService } from './enemies.service';
 import { LoreService } from './lore.service';
 import { FilterStore } from './filter.store';
 import { takeHashToken } from './links';
@@ -25,6 +26,7 @@ export class SessionService {
   private readonly mapData = inject(MapDataService);
   private readonly craft = inject(CraftService);
   private readonly lore = inject(LoreService);
+  private readonly enemies = inject(EnemiesService);
 
   private saved: string | null = null;
   private pending: string | null = null;
@@ -110,6 +112,7 @@ export class SessionService {
     this.team.clear();
     this.craft.clear();
     this.lore.clear();
+    this.enemies.clear();
     this.views.set('map');
     this.filters.reset();
     this.saved = this.pending = null;
@@ -117,10 +120,11 @@ export class SessionService {
   }
 
   private async enter(info: UserInfo): Promise<void> {
-    const [, , , marks, settings] = await Promise.all([
+    const [, , , , marks, settings] = await Promise.all([
       this.mapData.load(),
       this.craft.load(), // never fails: a server without craft.json just has no workshop
       this.lore.load(), // same for lore.json
+      this.enemies.load(), // and enemies.json
       firstValueFrom(this.http.get<{ marks: string[] }>('api/v1/progress')),
       firstValueFrom(
         this.http.get<{ settings: { filters?: Record<string, boolean> } | null }>(
@@ -137,6 +141,7 @@ export class SessionService {
     this.auth.isAdmin.set(info.is_admin);
     this.auth.user.set(info.username);
     await this.team.load();
+    if (this.enemies.openFromHash()) this.views.set('enemies');
   }
 
   private async flush(): Promise<void> {

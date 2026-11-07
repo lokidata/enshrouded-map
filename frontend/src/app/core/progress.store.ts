@@ -7,10 +7,10 @@ export class ProgressStore {
   private readonly http = inject(HttpClient);
 
   readonly done = signal<ReadonlySet<string>>(new Set());
-  /** Marked map elements (known recipes "recipe:<guid>" and found notes "lore:<id>" are counted apart). */
+  /** Marked map elements (recipes, lore pages and quests are counted apart). */
   readonly mapCount = computed(() => {
     let n = 0;
-    for (const id of this.done()) if (!id.startsWith('recipe:') && !id.startsWith('lore:')) n++;
+    for (const id of this.done()) if (!/^(recipe|lore|quest):/.test(id)) n++;
     return n;
   });
   /** True after a save failed (the change was reverted). */
