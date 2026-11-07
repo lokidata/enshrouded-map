@@ -10,7 +10,7 @@ import { TeamStore } from '../core/team.store';
   selector: 'app-account-bar',
   host: {
     '(document:click)': 'outside($event)',
-    '(keydown.escape)': 'open.set(false)',
+    '(keydown.escape)': 'dismiss()',
   },
   imports: [TranslocoPipe],
   template: `
@@ -200,7 +200,13 @@ export class AccountBar {
   }
 
   protected outside(event: Event): void {
-    if (!this.host.nativeElement.contains(event.target as Node)) this.open.set(false);
+    if (!this.host.nativeElement.contains(event.target as Node)) this.dismiss();
+  }
+
+  /** Closes the menu and the invitation link: both float over the map. */
+  protected dismiss(): void {
+    this.open.set(false);
+    this.link.set(null);
   }
 
   protected async copy(url: string): Promise<void> {

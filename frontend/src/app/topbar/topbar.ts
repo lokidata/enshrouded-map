@@ -67,6 +67,10 @@ import { AccountBar } from '../sidebar/account-bar';
   host: { class: 'topbar' },
   styles: `
     :host {
+      /* above the map's own layers and controls (Leaflet goes up to 1000), under the toasts (2000):
+         the profile menu and the invitation link open downwards, over the map */
+      position: relative;
+      z-index: 1500;
       display: flex;
       align-items: center;
       gap: 14px;

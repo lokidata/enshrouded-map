@@ -1,12 +1,26 @@
 import AxeBuilder from '@axe-core/playwright';
-import { type Page, expect, test } from '@playwright/test';
+import { type Locator, type Page, expect, test } from '@playwright/test';
 
 /** Context options for a second visitor on the same server (dev server or compose stack). */
 const origin = (page: Page) => ({ baseURL: new URL(page.url()).origin });
 
-/** Opens the profile menu and picks an entry. */
+/** True when nothing covers the middle of the element: what the player can really click. */
+async function onTop(locator: Locator): Promise<void> {
+  await expect
+    .poll(() =>
+      locator.evaluate((el) => {
+        const r = el.getBoundingClientRect();
+        const top = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+        return !!top && el.contains(top);
+      }),
+    )
+    .toBe(true);
+}
+
+/** Opens the profile menu, checks that every entry can be reached, and picks one. */
 async function menu(page: Page, item: string): Promise<void> {
   await page.locator('button.who').click();
+  for (const entry of await page.getByRole('menuitem').all()) await onTop(entry);
   await page.getByRole('menuitem', { name: item }).click();
 }
 
@@ -123,6 +137,10 @@ test('an account can only be created from a single-use invitation link', async (
   await menu(page, 'Inviter');
   const link = await page.getByLabel("Lien d'invitation").inputValue();
   await expect(page.getByText(/Lien à usage unique, valable jusqu'à/)).toBeVisible();
+  await onTop(page.getByLabel("Lien d'invitation")); // the panel is not hidden under the map
+  // a click outside closes the floating panel
+  await page.locator('app-map').click({ position: { x: 400, y: 300 } });
+  await expect(page.getByLabel("Lien d'invitation")).toHaveCount(0);
 
   // someone else opens the link
   const guest = await browser.newPage(origin(page));
