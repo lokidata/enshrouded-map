@@ -35,6 +35,16 @@ import { AccountBar } from '../sidebar/account-bar';
           {{ 'workshop' | transloco }}
         </button>
       }
+      @if (lore.data()) {
+        <button
+          type="button"
+          [class.active]="views.view() === 'lore'"
+          [attr.aria-current]="views.view() === 'lore' ? 'page' : null"
+          (click)="views.set('lore')"
+        >
+          {{ 'lore' | transloco }}
+        </button>
+      }
       @if (enemies.data()) {
         <button
           type="button"
@@ -53,16 +63,6 @@ import { AccountBar } from '../sidebar/account-bar';
           (click)="views.set('skills')"
         >
           {{ 'skills' | transloco }}
-        </button>
-      }
-      @if (lore.data()) {
-        <button
-          type="button"
-          [class.active]="views.view() === 'lore'"
-          [attr.aria-current]="views.view() === 'lore' ? 'page' : null"
-          (click)="views.set('lore')"
-        >
-          {{ 'lore' | transloco }}
         </button>
       }
     </nav>
