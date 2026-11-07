@@ -1,5 +1,6 @@
-/* Loaded once, by app-workshop (no view encapsulation): everything is scoped by this rule. */
-app-workshop {
+/* A global stylesheet (angular.json), shared by the workshop and the lore: everything is scoped by this rule. */
+app-workshop,
+app-lore {
   & {
     display: flex;
     flex-direction: column;
@@ -668,5 +669,33 @@ app-workshop {
       overflow: visible;
       padding: 12px;
     }
+  }
+
+  app-notes-tab,
+  app-quests-tab {
+    display: contents;
+  }
+  .side-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .preview {
+    margin: 0;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .note-page {
+    max-width: 70ch;
+    margin-top: 18px;
+  }
+  .note-page h3 {
+    margin: 0 0 6px;
+    color: var(--gold);
+    font-size: 15px;
+  }
+  .note-page p {
+    margin: 0 0 10px;
+    line-height: 1.6;
   }
 }

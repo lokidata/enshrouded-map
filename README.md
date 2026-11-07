@@ -81,3 +81,8 @@ Argon2id passwords, server-side sessions, CSRF protection, rate limiting, invita
 ## License
 
 [MIT](LICENSE). Third-party skills under `.agents/` keep their own licenses.
+
+
+### Lore
+
+When the server has `lore.json` (see `pipeline/README.md`), the top bar has a **Lore** entry with the same look as the Workshop: **Notes** (the 320 lore notes of the game's journal, with their pages and paragraphs; filter by category and by *found* / *to find*, search in the texts; each player marks the notes found, remembered with the account like the known recipes) and **Quests** (the journal's quests: filter by who gives them, a character or a region, and main or side; steps and rewards). The game gives no map position for a note, so there is no *show on the map* button here.

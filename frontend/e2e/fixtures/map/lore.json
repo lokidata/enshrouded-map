@@ -1,0 +1,87 @@
+{
+  "fixture_lore": true,
+  "categories": {
+    "100": ["Région de test", "Test region"]
+  },
+  "notes": [
+    {
+      "id": "111",
+      "name": ["Note de test", "Test note"],
+      "cat": "100",
+      "priority": 10,
+      "pages": [
+        {
+          "name": ["Première page", "First page"],
+          "text": [
+            "Premier paragraphe.\nDeuxième paragraphe.",
+            "First paragraph.\nSecond paragraph."
+          ]
+        },
+        {
+          "name": ["Seconde page", "Second page"],
+          "text": ["Une suite.", "A sequel."]
+        }
+      ]
+    },
+    {
+      "id": "222",
+      "name": ["Lettre sans région", "Letter without region"],
+      "cat": null,
+      "priority": 5,
+      "pages": [
+        {
+          "name": ["Lettre sans région", "Letter without region"],
+          "text": ["Un seul mot.", "One word."]
+        }
+      ]
+    }
+  ],
+  "quests": [
+    {
+      "id": "333",
+      "name": ["Quête de test", "Test quest"],
+      "giver": "Alchemist",
+      "main": true,
+      "steps": [
+        {
+          "name": ["Aller voir", "Go and see"],
+          "text": ["Va voir l'alchimiste.", "Go and see the alchemist."]
+        },
+        {
+          "name": ["Revenir", "Come back"],
+          "text": ["Reviens.", "Come back."]
+        }
+      ],
+      "rewards": ["w"]
+    },
+    {
+      "id": "444",
+      "name": ["Quête de région", "Region quest"],
+      "giver": "Deepforest",
+      "main": false,
+      "steps": [
+        {
+          "name": ["Explorer", "Explore"],
+          "text": ["Explore la forêt.", "Explore the forest."]
+        }
+      ],
+      "rewards": []
+    }
+  ],
+  "givers": {
+    "Alchemist": {
+      "name": ["Alchimiste", "Alchemist"],
+      "region": false
+    },
+    "Deepforest": {
+      "name": ["Bois de test", "Test wood"],
+      "region": true
+    }
+  },
+  "items": {
+    "w": {
+      "name": ["Bois de test", "Test wood"],
+      "icon": null
+    }
+  }
+}

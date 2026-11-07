@@ -9,6 +9,7 @@ Produces in out_dir:
   map-data.json   map markers, categories, biomes
   resources.json  chests, plants, ores (loaded on demand)
   craft.json      recipes, Flame Altar levels, building pieces
+  lore.json       lore notes and quests of the journal
   biomes.png    biome map (optional background layer)
   icons/        map marker icons used by the markers
 """
@@ -30,6 +31,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import render_map  # noqa: E402  (FogZone tiles and void mask)
 import build_resources  # noqa: E402  (chests, plants, ores)
 import build_craft  # noqa: E402  (recipes, altar, building)
+import build_lore  # noqa: E402  (journal: lore notes and quests)
 
 MAIN_SCENE = "509feadb-4c60-425f-9c7c-deeefd9b6920"
 LANGUAGES = ("Fr_Fr", "En_Us")
@@ -659,6 +661,7 @@ def main(src, export, out):
     print(f"{len(container_loot.cells)} containers of guaranteed loot without a chest or a marker")
     items = item_table_for_map(markers, resources, item_names, export, out)
     craft = build_craft.build_craft(src, locas, markers, resources, categories, export, out)
+    lore = build_lore.build_lore(src, export, out)
 
     # Biome layer. Biome map row 0 is the south edge, so flip it for north-up.
     biome = load(glob.glob(f"{src}/BiomeMapResource/{MAIN_SCENE}_*.json")[0])
@@ -684,7 +687,7 @@ def main(src, export, out):
         "items": items,
         "markers": markers,
     }
-    for name, obj in (("map-data", data), ("resources", resources), ("craft", craft)):
+    for name, obj in (("map-data", data), ("resources", resources), ("craft", craft), ("lore", lore)):
         with open(f"{out}/{name}.json", "w", encoding="utf-8") as f:
             json.dump(obj, f, ensure_ascii=False, separators=(",", ":"))
 
