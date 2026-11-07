@@ -3,6 +3,7 @@
 --   map/<name>.png       world map tiles and shader parameter textures
 --   map/<name>.r16       raw 16-bit textures (base height map)
 --   icons/<guid>.png     map marker icons, plus icons/index.tsv (guid \t debugName)
+--   skills/<guid>.png    pictures of the skill tree nodes
 
 local MAP_GUID = "01bcbd07-bdbf-41c0-9999-5d58fb1a3aa1"
 local LANGUAGES = { "Fr_Fr", "En_Us" }
@@ -109,6 +110,38 @@ local function export_item_icons()
 	print("exported " .. count .. " item icons, skipped " .. skipped)
 end
 
+-- Skill tree icons: skills/<image guid>.png, the pictures the nodes of keen::SkillTreeResource point to
+-- (iconActive / iconInactive). Same block-size care as the item pictures above.
+local function export_skill_icons()
+	local wanted = {}
+	---@type keen.SkillTreeResource
+	local tree = game.assets.get_resources_by_type("keen::SkillTreeResource")[1].data
+	for _, node in ipairs(tree.nodes) do
+		for _, icon in ipairs({ node.iconActive, node.iconInactive }) do
+			if icon.image ~= nil then wanted[tostring(icon.image)] = true end
+		end
+	end
+	local count, skipped = 0, 0
+	for _, res in ipairs(game.assets.get_resources_by_type("keen::UiTextureResource")) do
+		local guid = tostring(res.guid)
+		---@type keen.UiTextureResource
+		local texture = res.data
+		if wanted[guid] then
+			local buf = game.assets.get_content(texture.data.hash):read_data()
+			local w, h = texture.size.x, texture.size.y
+			if texture.format:find("^BC") then w, h = math.ceil(w / 4) * 4, math.ceil(h / 4) * 4 end
+			local block = (texture.format:find("^BC1") or texture.format:find("^BC4")) and 8 or 16
+			if texture.format:find("^BC") and buf:remaining() < w * h / 16 * block then
+				skipped = skipped + 1
+			else
+				io.export("skills/" .. guid .. ".png", image.encode(image.decode_texture(buf, texture.format, w, h), "png"))
+				count = count + 1
+			end
+		end
+	end
+	print("exported " .. count .. " skill icons, skipped " .. skipped)
+end
+
 -- Raw terrain voxel tiles: voxels/<level>/<x>_<y>.bin
 local WORLD_GUID = "509feadb-4c60-425f-9c7c-deeefd9b6920"
 -- Level 5 is 1 m per voxel (used by extract_surface.py); lower levels are
@@ -136,9 +169,10 @@ local function export_voxels()
 	end
 end
 
-local args = { translations = false, icons = false, map = false, voxels = false, items = true }
+local args = { translations = false, icons = false, map = false, voxels = false, items = true, skills = false }
 if args.translations then export_translations() end
 if args.icons then export_icons() end
 if args.map then export_map() end
 if args.voxels then export_voxels() end
 if args.items then export_item_icons() end
+if args.skills then export_skill_icons() end

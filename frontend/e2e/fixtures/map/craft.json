@@ -44,6 +44,14 @@
       "type": "Chest",
       "rarity": "Rare",
       "set": "Armor_T1_Test"
+    },
+    "a0000000-0000-4000-8000-00000000000a": {
+      "name": ["Carte au trésor", "Treasure map"],
+      "icon": null
+    },
+    "q": {
+      "name": ["Objet lié", "Linked item"],
+      "icon": null
     }
   },
   "stations": {
@@ -154,6 +162,31 @@
       "unlock": {
         "type": "flame",
         "text": ["Flamme niveau 3", "Flame level 3"]
+      }
+    },
+    {
+      "id": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+      "name": ["Recette liée", "Linked recipe"],
+      "output": {
+        "item": "q",
+        "count": 1
+      },
+      "station": "bench",
+      "inputs": [
+        {
+          "item": "w",
+          "count": 1
+        },
+        {
+          "item": "a0000000-0000-4000-8000-00000000000a",
+          "count": 1
+        }
+      ],
+      "seconds": 2,
+      "unlock": {
+        "type": "item",
+        "items": ["a0000000-0000-4000-8000-00000000000a"],
+        "text": ["Obtenir : Carte au trésor", "Get: Treasure map"]
       }
     }
   ],

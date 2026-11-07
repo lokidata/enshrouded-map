@@ -27,7 +27,12 @@
       "icon": "icons/tower.svg",
       "visible": true
     },
-    "chest": { "label": ["Coffre", "Chest"], "kind": "dots", "icon": null, "visible": false }
+    "chest": {
+      "label": ["Coffre", "Chest"],
+      "kind": "dots",
+      "icon": null,
+      "visible": false
+    }
   },
   "markers": [
     {
@@ -55,7 +60,8 @@
       "x": 500,
       "y": 10,
       "z": 800,
-      "fastTravel": false
+      "fastTravel": false,
+      "item": "a0000000-0000-4000-8000-00000000000a"
     },
     {
       "name": ["Chapeau de test", "Test hat"],
@@ -75,5 +81,11 @@
       "z": 700,
       "fastTravel": true
     }
-  ]
+  ],
+  "items": {
+    "a0000000-0000-4000-8000-00000000000a": {
+      "name": ["Carte au trésor", "Treasure map"],
+      "icon": null
+    }
+  }
 }

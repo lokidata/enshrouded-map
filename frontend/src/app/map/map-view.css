@@ -230,6 +230,13 @@ app-map {
   height: 56px;
   margin: 0 auto 4px;
 }
+.popup-portrait {
+  display: block;
+  width: 96px;
+  height: 96px;
+  margin: 0 auto 4px;
+  object-fit: contain;
+}
 .popup-icon {
   width: 32px;
   height: 32px;

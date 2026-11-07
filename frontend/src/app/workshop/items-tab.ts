@@ -5,6 +5,7 @@ import { normalize } from '../core/filter.store';
 import { Sources } from '../core/craft.model';
 import { Names } from '../core/map-data.model';
 import { LangService } from '../core/lang.service';
+import { Found } from '../core/found.service';
 import { MapFocus } from '../core/map-focus.service';
 import { ItemChip } from './item-chip';
 import { EntryCard } from './entry-card';
@@ -85,6 +86,18 @@ const FACETS: readonly { key: Facet; title: string }[] = [
               <img [src]="icon" alt="" width="48" height="48" />
             }
             <h2>{{ craft.itemName(guid) }}</h2>
+            @if (onMap(guid); as place) {
+              <span class="meta" role="status">
+                {{ 'wsMapFound' | transloco: { done: place.done, total: place.total } }}
+              </span>
+              <button
+                type="button"
+                class="pill"
+                (click)="focus.show({ markers: found.markersOf(guid) })"
+              >
+                {{ 'wsShowOnMap' | transloco }}
+              </button>
+            }
             @if (itemSet(); as set) {
               <button type="button" class="pill" (click)="nav.openSet(set.key)">
                 {{ 'wsInSet' | transloco: { name: craft.text(set.name) } }}
@@ -229,6 +242,7 @@ export class ItemsTab {
   protected readonly limit = signal(PAGE);
   protected readonly usedLimit = signal(PAGE);
   protected readonly focus = inject(MapFocus);
+  protected readonly found = inject(Found);
   protected readonly grouped = signal(true);
 
   /** Items that a recipe makes or uses. */
@@ -366,6 +380,12 @@ export class ItemsTab {
     }
     return markers.size || groups.length ? { markers: [...markers], groups } : null;
   });
+
+  /** How many places of the open item are marked on the map; null when it is not on it. */
+  protected onMap(item: string): { done: number; total: number } | null {
+    const place = this.found.itemProgress(item);
+    return place.total ? place : null;
+  }
 
   protected setFacet(key: Facet, value: string): void {
     this.sel.update((s) => ({ ...s, [key]: value }));

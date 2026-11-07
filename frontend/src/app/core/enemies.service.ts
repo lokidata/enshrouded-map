@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { EnemiesData } from './enemies.model';
 import { LangService } from './lang.service';
@@ -13,6 +13,14 @@ export class EnemiesService {
 
   /** Null until loaded, and when the server has no enemies.json (the Enemies entry is then hidden). */
   readonly data = signal<EnemiesData | null>(null);
+  /** The picture of the enemy that stands at a map marker, by mark id ("boss:x:z"). */
+  readonly imageByMark = computed(() => {
+    const images = new Map<string, string>();
+    for (const e of this.data()?.enemies ?? [])
+      if (e.image) for (const id of e.sources?.markers ?? []) images.set(id, e.image);
+    return images;
+  });
+
   /** The enemy whose page is open: a link `#enemy=<id>` opens it. */
   readonly open = signal<string | null>(null);
 

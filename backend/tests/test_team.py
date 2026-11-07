@@ -1,21 +1,8 @@
-from collections.abc import Iterator
-
-import pytest
 from conftest import PW, ApiClient
 
 from app.main import app
 
 T = "/api/v1/team"
-
-
-@pytest.fixture
-def bob(user: ApiClient) -> Iterator[ApiClient]:
-    """A second client logged in as 'bob' (alice, on `user`, is the first account)."""
-    token = user.post("/api/v1/auth/invitations").json()["token"]
-    with ApiClient(app) as c:
-        body = {"token": token, "username": "bob", "password": PW}
-        assert c.post("/api/v1/auth/invitations/accept", json=body).status_code == 200
-        yield c
 
 
 def add(owner: ApiClient, user_id: int) -> None:
