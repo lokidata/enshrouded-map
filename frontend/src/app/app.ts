@@ -12,6 +12,7 @@ import { ViewStore } from './core/view.store';
 import { MapView } from './map/map-view';
 import { Sidebar } from './sidebar/sidebar';
 import { TeamDialog } from './team/team-dialog';
+import { TopBar } from './topbar/topbar';
 import { Workshop } from './workshop/workshop';
 
 const KEY = 'menu';
@@ -36,26 +37,32 @@ function read(): string | null {
     PasskeyDialog,
     TeamDialog,
     Workshop,
+    TopBar,
     TranslocoPipe,
   ],
   template: `
     @if (auth.user()) {
-      <aside id="sidebar" [hidden]="!menuOpen()"><app-sidebar /></aside>
-      <button
-        type="button"
-        class="menu-tab"
-        [class.open]="menuOpen()"
-        aria-controls="sidebar"
-        [attr.aria-expanded]="menuOpen()"
-        [attr.aria-label]="(menuOpen() ? 'hideMenu' : 'showMenu') | transloco"
-        (click)="toggleMenu()"
-      >
-        {{ menuOpen() ? (layout.top() ? '˄' : '‹') : layout.top() ? '˅' : '›' }}
-      </button>
-      <app-map [hidden]="views.view() !== 'map'" />
-      @defer (when views.view() === 'workshop') {
-        <app-workshop [hidden]="views.view() !== 'workshop'" />
-      }
+      <app-topbar />
+      <div class="body" [class.top]="layout.top()">
+        <aside id="sidebar" [hidden]="!menuOpen() || views.view() !== 'map'"><app-sidebar /></aside>
+        @if (views.view() === 'map') {
+          <button
+            type="button"
+            class="menu-tab"
+            [class.open]="menuOpen()"
+            aria-controls="sidebar"
+            [attr.aria-expanded]="menuOpen()"
+            [attr.aria-label]="(menuOpen() ? 'hideMenu' : 'showMenu') | transloco"
+            (click)="toggleMenu()"
+          >
+            {{ menuOpen() ? (layout.top() ? '˄' : '‹') : layout.top() ? '˅' : '›' }}
+          </button>
+        }
+        <app-map [hidden]="views.view() !== 'map'" />
+        @defer (when views.view() === 'workshop') {
+          <app-workshop [hidden]="views.view() !== 'workshop'" />
+        }
+      </div>
     }
     <app-auth-dialog />
     <app-account-dialog />
@@ -72,7 +79,6 @@ function read(): string | null {
       </button>
     }
   `,
-  host: { '[class.top]': 'layout.top()' },
   styleUrl: './app.css',
 })
 export class App {

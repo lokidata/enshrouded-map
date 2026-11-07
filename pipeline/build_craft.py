@@ -2,7 +2,14 @@
 
 Writes craft.json:
 
-  {"items":   {guid: {"name": [fr, en], "icon": "items/<guid>.png" | None}},
+  {"items":   {guid: {"name": [fr, en], "icon": "items/<guid>.png" | None,
+                      "cat": one of CATEGORIES (enshrouded.tools' item categories, from category + slot),
+                      "type": one of TYPES (armour slot, weapon family from the debug name...),
+                      "food": one of FOODS (from the debug name), "rarity": ItemInfo.rarity,
+                      "cls": "Warrior" | "Ranger" | "Mage", "lvl": item level,
+                      "set": key of "sets" (armour pieces that share a set);
+                      the optional ones are absent when the game has no value}},
+   "sets":    {key: {"name": [fr, en], "pieces": [guid, ...]}},   armour sets, pieces ordered head to feet
    "stations": {id: {"name": [fr, en], "npc": bool}},
    "categories": {id: [{"item": guid, "scaling": n}]},   any item of the list
    "groups": {key: [fr, en]},                            groups of building pieces
@@ -209,6 +216,119 @@ def map_sources(markers, resources, categories, item_names):
     return ids, groups
 
 
+# Item categories as enshrouded.tools shows them, from ItemInfo.category and the equipment slot.
+CATEGORY = {"Weapons": "weapons", "Ammunition": "ammo", "Consumables": "food", "Materials": "materials",
+            "BuildTools": "building", "Blueprints": "building", "Tools": "tools", "FishingRod": "tools",
+            "Instrument": "tools", "WeaponGem": "gems", "Collectibles": "collectibles",
+            "ColorPalette": "palettes", "AnimalFood": "animal"}
+EQUIPMENT = {"Armour_Head": "armor", "Armour_UpperBody": "armor", "Armour_LowerBody": "armor",
+             "Armour_Arms": "armor", "Armour_Feet": "armor", "Shield": "shields", "Armour_Ring": "rings",
+             "Backpack": "tools"}
+SLOT_TYPE = {"Armour_Head": "Head", "Armour_UpperBody": "Chest", "Armour_LowerBody": "Legs",
+             "Armour_Arms": "Hands", "Armour_Feet": "Feet", "Backpack": "Backpacks", "Arrow": "Arrows",
+             "Spell": "Spells", "FishingBait": "FishingBait", "TerrainMaterial": "Terrain"}
+CATEGORY_TYPE = {"Instrument": "Instruments", "FishingRod": "FishingRods", "Blueprints": "Blueprints"}
+FOOD = (("egg", "Egg"), ("fish", "Fish"), ("meat", "Meat"), ("fruit", "Fruit"), ("mushroom", "Mushroom"),
+        ("grain", "GrainProduct"), ("vegetable", "Vegetable"), ("herb", "Herb"), ("sweet", "Sweet"),
+        ("nightplant", "NightPlant"), ("hydration", "Liquid"))
+
+
+def item_category(d):
+    if d["category"] == "Equipment":
+        return EQUIPMENT.get((d.get("equipment") or {}).get("slot"))
+    return CATEGORY.get(d["category"])
+
+
+def weapon_type(debug):
+    """Weapon family, from the developer name (the game has no readable family name)."""
+    n = debug.lower()
+    for key, t in (("grenade", "Throwable"), ("pickaxe", "Pickaxes"), ("greatsword", "TwoHandedGreatsword"),
+                   ("greataxe", "TwoHandedAxe"), ("dagger", "Daggers"), ("bow", "Bow"), ("wand", "Wand"),
+                   ("staff", "Staff"), ("fist", "UnarmedFists"), ("hammer", "TwoHandedHammer")):
+        if key in n:
+            return t
+    two = "2h" in n
+    for key, one, both in (("sword", "OneHandedSword", "TwoHandedSword"), ("axe", "OneHandedAxe", "TwoHandedAxe"),
+                           ("mace", "OneHandedClub", "TwoHandedClub"), ("club", "OneHandedClub", "TwoHandedClub")):
+        if key in n:
+            return both if two else one
+    return "Other"
+
+
+def item_type(d):
+    slot = (d.get("equipment") or {}).get("slot")
+    if slot in ("MeleeWeapon", "MidRangeWeapon", "RangeWeapon"):
+        return weapon_type(d["debugName"])
+    return SLOT_TYPE.get(slot) or CATEGORY_TYPE.get(d["category"])
+
+
+SET_SLOTS = ("Head", "Chest", "Hands", "Legs", "Feet")
+SLOT_WORDS = re.compile(r"(?i)_(head|helmet|chest|upperbody|legs|lowerbody|feet|boots|arms|hands|gloves)(?=_|$)")
+CLASS_WORD = re.compile(r"_(mage|ranger|warrior)(?=_|$)")
+STOP_WORDS = {"de", "du", "des", "d", "la", "le", "l", "et", "the", "of", "and", "a", "s"}
+
+
+def armor_set(d):
+    """Key shared by the pieces of an armour set: the developer name without the slot word."""
+    if (d.get("equipment") or {}).get("slot") not in SLOT_TYPE or SLOT_TYPE[d["equipment"]["slot"]] not in SET_SLOTS:
+        return None
+    if d["debugName"].startswith("NO_"):  # switched off by the developers
+        return None
+    return SLOT_WORDS.sub("", d["debugName"], count=1).lower()
+
+
+def set_name(piece_names):
+    """The words every piece of the set has in common ("Gants du pestiféré", "Casque du pestiféré" -> "Pestiféré").
+
+    Words are compared by their first 5 letters, so that "duveteuse" and "duveteux" match; the spelling is the
+    first piece's. Without a common word, the first piece's name.
+    """
+    split = [re.findall(r"[\w'’-]+", n.lower().replace("’", "'")) for n in piece_names]
+    split = [[w for part in words for w in part.split("'") if w and w not in STOP_WORDS] for words in split]
+    common = [w for w in split[0] if all(any(w[:5] == o[:5] for o in other) for other in split[1:])]
+    if common:
+        return " ".join(common).capitalize()
+    return piece_names[0]
+
+
+CLASS_LABEL = {"Mage": ("Mage", "Mage"), "Ranger": ("Rôdeur", "Ranger"), "Warrior": ("Guerrier", "Warrior")}
+
+
+def distinct_set_names(sets, items, languages):
+    """Appends what tells two sets with the same name apart: loot or cosmetic, then the class, then the key."""
+    for lang in range(languages):
+        by_name = {}
+        for key, s in sets.items():
+            by_name.setdefault(s["name"][lang], []).append(key)
+        for name, keys in by_name.items():
+            if len(keys) < 2:
+                continue
+            for key in keys:
+                classes = {items[g].get("cls") for g in sets[key]["pieces"]} - {None}
+                vanity = key.startswith("vanity")
+                tag = (CLASS_LABEL[next(iter(classes))][lang] if len(classes) == 1
+                       and len({items[g].get("cls") for k in keys for g in sets[k]["pieces"]}) > 1
+                       else ("cosmétique", "cosmetic")[lang] if vanity and not all(k.startswith("Vanity") for k in keys)
+                       else key)
+                sets[key]["name"][lang] = f"{name} ({tag})"
+
+
+def all_members(by_guid, item_names):
+    """Armour set key -> every named piece in the game, not only those a recipe mentions."""
+    members = {}
+    for guid, d in by_guid.items():
+        key = armor_set(d)
+        if key and guid in item_names and "unused" not in d["debugName"].lower() and "test" not in d["debugName"].lower():
+            members.setdefault(key, []).append(guid)
+    return members
+
+
+def food_type(d):
+    n = d["debugName"].lower()
+    if d["category"] == "Consumables" and n.lstrip("_").startswith("food"):
+        return next((t for key, t in FOOD if key in n), None)
+
+
 def build_craft(src, locas, markers, resources, categories, export, out):
     from build_data import fnv_guid, write_item_picture
     infos = {}
@@ -322,9 +442,52 @@ def build_craft(src, locas, markers, resources, categories, export, out):
                        for i in c["items"] if i["itemId"]["value"] in infos]
             input_categories[key] = members
             used.update(m["item"] for m in members)
-    items = {guid: {"name": item_names[guid], "icon": write_item_picture(export, out, guid)} for guid in sorted(used)}
+    by_guid = {d["$guid"]: d for d in infos.values()}
+
+    def item_entry(guid):
+        d = by_guid[guid]
+        e = {"name": item_names[guid], "icon": write_item_picture(export, out, guid), "rarity": d["rarity"]}
+        for key, value in (("cat", item_category(d)), ("type", item_type(d)), ("food", food_type(d)),
+                           ("cls", d["itemClassAlignment"] if d["itemClassAlignment"] != "None" else None),
+                           ("lvl", d["itemLevelRange"]["minLevel"] or None)):
+            if value:
+                e[key] = value
+        return e
+
+    # a set is complete even where the recipes only know some of its pieces
+    for key, guids in all_members(by_guid, item_names).items():
+        if any(g in used for g in guids):
+            used.update(guids)
+    items = {guid: item_entry(guid) for guid in sorted(used)}
+    members = {}
+    for guid in items:
+        key = armor_set(by_guid[guid])
+        if key:
+            members.setdefault(key, []).append(guid)
+    # one set can span the three classes (a Mage helmet, a Ranger chest...): same name but for the class word,
+    # and no two pieces for one slot
+    merged = {}
+    for key, guids in members.items():
+        merged.setdefault(CLASS_WORD.sub("", key), []).append(key)
+    for classless, keys in merged.items():
+        slots = [items[g]["type"] for k in keys for g in members[k]]
+        if len(keys) > 1 and len(slots) == len(set(slots)):
+            members[classless] = [g for k in keys for g in members.pop(k)]
+    sets = {}
+    for key, guids in sorted(members.items()):
+        if len(guids) < 2:
+            continue
+        guids.sort(key=lambda g: SET_SLOTS.index(items[g]["type"]))
+        names = [[item_names[g][i] for g in guids] for i in range(len(locas))]
+        label = [set_name(n) for n in names]
+        if key.lower().endswith("_loot"):
+            label = [f"{n} ({t})" for n, t in zip(label, ("butin", "loot"))]
+        sets[key] = {"name": label, "pieces": guids}
+        for g in guids:
+            items[g]["set"] = key
+    distinct_set_names(sets, items, len(locas))
     data = {"items": items, "stations": {str(k): v for k, v in stations.items()},
-            "categories": input_categories, "groups": groups_seen, "recipes": recipes, "blocks": blocks, "altar": altar}
+            "sets": sets, "categories": input_categories, "groups": groups_seen, "recipes": recipes, "blocks": blocks, "altar": altar}
     types = {}
     for e in recipes + blocks:
         types[e["unlock"]["type"]] = types.get(e["unlock"]["type"], 0) + 1

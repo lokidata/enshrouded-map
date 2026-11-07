@@ -14,7 +14,7 @@ interface Saved {
 export class ProjectStore {
   readonly lines = signal<Line[]>([]);
   readonly expand = signal(true);
-  readonly choices = signal<Choices>({ recipe: {}, category: {} });
+  readonly choices = signal<Choices>({ recipe: {}, category: {}, have: {} });
 
   constructor() {
     const saved = this.read();
@@ -68,6 +68,19 @@ export class ProjectStore {
     );
   }
 
+  /** Quantity of an item already owned (0 forgets it). */
+  setHave(item: string, qty: number): void {
+    const n = Math.max(0, Math.min(99999, Math.floor(qty) || 0));
+    this.update(() =>
+      this.choices.update((c) => {
+        const have = { ...c.have };
+        if (n) have[item] = n;
+        else delete have[item];
+        return { ...c, have };
+      }),
+    );
+  }
+
   private update(change: () => void): void {
     change();
     try {
@@ -87,7 +100,11 @@ export class ProjectStore {
       return {
         lines: raw.lines.filter((l) => typeof l?.recipe === 'string' && l.qty > 0),
         expand: raw.expand !== false,
-        choices: { recipe: raw.choices?.recipe ?? {}, category: raw.choices?.category ?? {} },
+        choices: {
+          recipe: raw.choices?.recipe ?? {},
+          category: raw.choices?.category ?? {},
+          have: raw.choices?.have ?? {},
+        },
       };
     } catch {
       return null;

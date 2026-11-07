@@ -6,6 +6,9 @@
   --border: #2f343c;
   --hover: #2a2e35;
   --accent: #e8a33c;
+  --gold: #c9a24d; /* borders and titles of the workshop */
+  --gold-dim: #5d4a24;
+  --panel-deep: #181b20;
 }
 * {
   box-sizing: border-box;

@@ -6,8 +6,14 @@ import { normalize } from '../core/filter.store';
 import { LangService } from '../core/lang.service';
 import { ProgressStore } from '../core/progress.store';
 import { EntryCard } from './entry-card';
+import { ItemChip } from './item-chip';
 
 const PAGE = 40;
+type Facet = 'cat' | 'rarity';
+const FACETS: readonly { key: Facet; title: string }[] = [
+  { key: 'cat', title: 'wsCategory' },
+  { key: 'rarity', title: 'wsRarity' },
+];
 const NO_TIER = 'none'; // the filter value of the pieces without a tier
 const NO_STATION = 'none'; // the filter value of the recipes without a known station
 
@@ -18,86 +24,209 @@ const tierRank = (tier: string): number => (tier === NO_TIER ? 99 : Number(tier.
 
 @Component({
   selector: 'app-entries-tab',
-  imports: [TranslocoPipe, EntryCard],
+  imports: [TranslocoPipe, EntryCard, ItemChip],
   template: `
-    <div class="filters">
-      <input
-        type="search"
-        [placeholder]="'wsSearch' | transloco"
-        [attr.aria-label]="'wsSearch' | transloco"
-        [value]="query()"
-        (input)="setQuery($any($event.target).value)"
-      />
-      @if (kind() === 'recipes') {
-        <select
-          [attr.aria-label]="'wsStation' | transloco"
-          (change)="setStation($any($event.target).value)"
-        >
-          <option value="">{{ 'wsAllStations' | transloco }}</option>
-          @for (s of stations(); track s.id) {
-            <option [value]="s.id" [selected]="s.id === station()">{{ s.label }}</option>
+    <div class="browse">
+      <aside class="side" [attr.aria-label]="'wsFilters' | transloco">
+        <input
+          type="search"
+          [placeholder]="'wsFilterName' | transloco"
+          [attr.aria-label]="'wsSearch' | transloco"
+          [value]="query()"
+          (input)="setQuery($any($event.target).value)"
+        />
+        @if (catFacet(); as cat) {
+          <h3 class="side-title">{{ cat.title | transloco }}</h3>
+          <ul class="cat-list">
+            <li>
+              <button type="button" [class.active]="!sel().cat" (click)="setFacet('cat', '')">
+                <span>{{ 'wsAllItems' | transloco }}</span
+                ><b>{{ source().length }}</b>
+              </button>
+            </li>
+            @for (o of cat.options; track o.value) {
+              <li>
+                <button
+                  type="button"
+                  [class.active]="sel().cat === o.value"
+                  [attr.aria-pressed]="sel().cat === o.value"
+                  (click)="setFacet('cat', o.value)"
+                >
+                  <span>{{ o.label }}</span
+                  ><b>{{ o.n }}</b>
+                </button>
+              </li>
+            }
+          </ul>
+        }
+        @if (kind() === 'recipes') {
+          <label class="side-select">
+            <span class="side-title">{{ 'wsStation' | transloco }}</span>
+            <select
+              [attr.aria-label]="'wsStation' | transloco"
+              (change)="setStation($any($event.target).value)"
+            >
+              <option value="">{{ 'wsAllStations' | transloco }}</option>
+              @for (s of stations(); track s.id) {
+                <option [value]="s.id" [selected]="s.id === station()">{{ s.label }}</option>
+              }
+            </select>
+          </label>
+        } @else {
+          <label class="side-select">
+            <span class="side-title">{{ 'wsGroup' | transloco }}</span>
+            <select
+              [attr.aria-label]="'wsGroup' | transloco"
+              (change)="setGroup($any($event.target).value)"
+            >
+              <option value="">{{ 'wsAllGroups' | transloco }}</option>
+              @for (g of groups(); track g.id) {
+                <option [value]="g.id" [selected]="g.id === group()">{{ g.label }}</option>
+              }
+            </select>
+          </label>
+          <label class="side-select">
+            <span class="side-title">{{ 'wsTier' | transloco }}</span>
+            <select
+              [attr.aria-label]="'wsTier' | transloco"
+              (change)="setTier($any($event.target).value)"
+            >
+              <option value="">{{ 'wsAllTiers' | transloco }}</option>
+              @for (t of tiers(); track t) {
+                <option [value]="t" [selected]="t === tier()">
+                  {{ t === NO_TIER ? ('wsNoTier' | transloco) : t }}
+                </option>
+              }
+            </select>
+          </label>
+        }
+        @if (rarityFacet(); as r) {
+          <label class="side-select">
+            <span class="side-title">{{ r.title | transloco }}</span>
+            <select
+              [attr.aria-label]="r.title | transloco"
+              (change)="setFacet('rarity', $any($event.target).value)"
+            >
+              <option value="">{{ 'wsAll' | transloco }}</option>
+              @for (o of r.options; track o.value) {
+                <option [value]="o.value" [selected]="o.value === sel().rarity">
+                  {{ o.label }} ({{ o.n }})
+                </option>
+              }
+            </select>
+          </label>
+        }
+        <label class="check">
+          <input type="checkbox" [checked]="locked()" (change)="locked.set(!locked())" />
+          {{ 'wsLockedOnly' | transloco }}
+        </label>
+      </aside>
+      <section class="main">
+        <div class="bar">
+          @if (kind() === 'blocks') {
+            <span class="bar-label">{{ 'wsSort' | transloco }}</span>
+            <button
+              type="button"
+              class="pill"
+              [attr.aria-pressed]="sort() === 'name'"
+              (click)="sort.set('name')"
+            >
+              {{ 'wsName' | transloco }}
+            </button>
+            <button
+              type="button"
+              class="pill"
+              [attr.aria-pressed]="sort() === 'tier'"
+              (click)="sort.set('tier')"
+            >
+              {{ 'wsTier' | transloco }}
+            </button>
           }
-        </select>
-      } @else if (kind() === 'blocks') {
-        <select
-          [attr.aria-label]="'wsGroup' | transloco"
-          (change)="setGroup($any($event.target).value)"
-        >
-          <option value="">{{ 'wsAllGroups' | transloco }}</option>
-          @for (g of groups(); track g.id) {
-            <option [value]="g.id" [selected]="g.id === group()">{{ g.label }}</option>
-          }
-        </select>
-        <select
-          [attr.aria-label]="'wsTier' | transloco"
-          (change)="setTier($any($event.target).value)"
-        >
-          <option value="">{{ 'wsAllTiers' | transloco }}</option>
-          @for (t of tiers(); track t) {
-            <option [value]="t" [selected]="t === tier()">
-              {{ t === NO_TIER ? ('wsNoTier' | transloco) : t }}
-            </option>
-          }
-        </select>
-        <select
-          [attr.aria-label]="'wsSort' | transloco"
-          (change)="sort.set($any($event.target).value)"
-        >
-          <option value="name" [selected]="sort() === 'name'">
-            {{ 'wsSortName' | transloco }}
-          </option>
-          <option value="tier" [selected]="sort() === 'tier'">
-            {{ 'wsSortTier' | transloco }}
-          </option>
-        </select>
-      }
-      <label class="check">
-        <input type="checkbox" [checked]="locked()" (change)="locked.set(!locked())" />
-        {{ 'wsLockedOnly' | transloco }}
-      </label>
+          <span class="count" role="status">{{ 'wsCount' | transloco: { n: list().length } }}</span>
+          <button
+            type="button"
+            class="pill"
+            [attr.aria-pressed]="view() === 'grid'"
+            (click)="view.set('grid')"
+          >
+            {{ 'wsViewGrid' | transloco }}
+          </button>
+          <button
+            type="button"
+            class="pill"
+            [attr.aria-pressed]="view() === 'table'"
+            (click)="view.set('table')"
+          >
+            {{ 'wsViewTable' | transloco }}
+          </button>
+        </div>
+        @if (view() === 'table') {
+          <table class="entries-table">
+            <thead>
+              <tr>
+                <th scope="col">{{ 'wsName' | transloco }}</th>
+                <th scope="col">{{ 'wsStation' | transloco }}</th>
+                @if (kind() === 'blocks') {
+                  <th scope="col">{{ 'wsTier' | transloco }}</th>
+                }
+                <th scope="col">{{ 'wsIngredients' | transloco }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (e of shown(); track e.id) {
+                <tr>
+                  <td>{{ craft.text(e.name) }}</td>
+                  <td>{{ craft.stationName(e.station) }}</td>
+                  @if (kind() === 'blocks') {
+                    <td>{{ tierText(e) }}</td>
+                  }
+                  <td>
+                    <ul class="inputs">
+                      @for (i of e.inputs; track $index) {
+                        <li>
+                          @if (i.item) {
+                            <app-item-chip [item]="i.item" [count]="i.count" />
+                          } @else {
+                            <span class="any">{{ 'wsAnyOf' | transloco }} × {{ i.count }}</span>
+                          }
+                        </li>
+                      }
+                    </ul>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td [attr.colspan]="kind() === 'blocks' ? 4 : 3" class="empty">
+                    {{ 'wsNoResult' | transloco }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        } @else {
+          <div class="cards">
+            @for (e of shown(); track e.id) {
+              <app-entry-card [entry]="e" />
+            } @empty {
+              <p class="empty">{{ 'wsNoResult' | transloco }}</p>
+            }
+          </div>
+        }
+        @if (list().length > limit()) {
+          <button type="button" class="more pill" (click)="limit.set(limit() + PAGE)">
+            {{ 'wsMore' | transloco: { n: list().length - limit() } }}
+          </button>
+        }
+      </section>
     </div>
-    <p class="count" role="status">{{ 'wsCount' | transloco: { n: list().length } }}</p>
-    <div class="cards">
-      @for (e of shown(); track e.id) {
-        <app-entry-card [entry]="e" />
-      } @empty {
-        <p class="empty">{{ 'wsNoResult' | transloco }}</p>
-      }
-    </div>
-    @if (list().length > limit()) {
-      <button type="button" class="more" (click)="limit.set(limit() + PAGE)">
-        {{ 'wsMore' | transloco: { n: list().length - limit() } }}
-      </button>
-    }
   `,
-  styleUrl: './workshop.css',
 })
 export class EntriesTab {
   readonly kind = input.required<'recipes' | 'blocks'>();
 
   protected readonly PAGE = PAGE;
   protected readonly NO_TIER = NO_TIER;
-  private readonly craft = inject(CraftService);
+  protected readonly craft = inject(CraftService);
   private readonly lang = inject(LangService);
   private readonly progress = inject(ProgressStore);
 
@@ -108,8 +237,10 @@ export class EntriesTab {
   protected readonly sort = signal<'name' | 'tier'>('name');
   protected readonly locked = signal(false);
   protected readonly limit = signal(PAGE);
+  protected readonly sel = signal<Record<Facet, string>>({ cat: '', rarity: '' });
+  protected readonly view = signal<'grid' | 'table'>('grid');
 
-  private readonly source = computed<readonly (Entry | BlockEntry)[]>(() => {
+  protected readonly source = computed<readonly (Entry | BlockEntry)[]>(() => {
     const d = this.craft.data();
     return (this.kind() === 'recipes' ? d?.recipes : d?.blocks) ?? [];
   });
@@ -125,6 +256,29 @@ export class EntriesTab {
       }),
     );
   });
+
+  /** The category and rarity of what an entry makes (an older craft.json has neither). */
+  private meta(e: Entry, key: Facet): string {
+    return (e.output && this.craft.data()?.items[e.output.item]?.[key]) || '';
+  }
+
+  protected readonly facets = computed(() =>
+    FACETS.map((f) => {
+      const counts = new Map<string, number>();
+      for (const e of this.source()) {
+        const value = this.meta(e, f.key);
+        if (value) counts.set(value, (counts.get(value) ?? 0) + 1);
+      }
+      const lang = this.lang.lang();
+      const options = [...counts]
+        .map(([value, n]) => ({ value, n, label: this.craft.label(f.key, value) }))
+        .sort((a, b) => a.label.localeCompare(b.label, lang));
+      return { ...f, options };
+    }).filter((f) => f.options.length),
+  );
+
+  protected readonly catFacet = computed(() => this.facets().find((f) => f.key === 'cat'));
+  protected readonly rarityFacet = computed(() => this.facets().find((f) => f.key === 'rarity'));
 
   protected readonly stations = computed(() => {
     const ids = new Set(this.source().map((e) => e.station ?? NO_STATION));
@@ -148,6 +302,7 @@ export class EntriesTab {
 
   protected readonly list = computed(() => {
     const q = normalize(this.query().trim());
+    const sel = this.sel();
     const station = this.station();
     const group = this.group();
     const tier = this.tier();
@@ -161,6 +316,7 @@ export class EntriesTab {
         (e) =>
           (!q || haystack.get(e.id)!.includes(q)) &&
           (!station || (e.station ?? NO_STATION) === station) &&
+          FACETS.every((f) => !sel[f.key] || this.meta(e, f.key) === sel[f.key]) &&
           (!group || (e as BlockEntry).group === group) &&
           (!tier || ((e as BlockEntry).tier ?? NO_TIER) === tier) &&
           (!locked || !done.has(`recipe:${e.id}`)),
@@ -173,6 +329,16 @@ export class EntriesTab {
   });
 
   protected readonly shown = computed(() => this.list().slice(0, this.limit()));
+
+  protected tierText(e: Entry): string {
+    const tier = tierOf(e);
+    return tier === NO_TIER ? '' : tier;
+  }
+
+  protected setFacet(key: Facet, value: string): void {
+    this.sel.update((s) => ({ ...s, [key]: value }));
+    this.limit.set(PAGE);
+  }
 
   protected setQuery(value: string): void {
     this.query.set(value);

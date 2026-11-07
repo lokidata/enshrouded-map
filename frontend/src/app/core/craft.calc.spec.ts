@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CalcContext, RAW, calculate, defaultRecipe } from './craft.calc';
+import { CalcContext, RAW, calculate, defaultRecipe, tree } from './craft.calc';
 import { Entry } from './craft.model';
 
 const unlock = { type: 'none' as const, text: ['', ''] };
@@ -114,5 +114,45 @@ describe('calculate', () => {
 
   it('ignores a line whose recipe is gone', () => {
     expect(calculate([{ recipe: 'nope', qty: 1 }], ctx, none, true).raw.size).toBe(0);
+  });
+});
+
+describe('owned items, leftovers and the tree', () => {
+  const plank = recipe('plank', 'plank', [{ item: 'wood', count: 1 }], 2, 'saw');
+  const table = recipe('table', 'table', [
+    { item: 'plank', count: 3 },
+    { item: 'nail', count: 4 },
+  ]);
+  const ctx = context([plank, table]);
+  const lines = [{ recipe: 'table', qty: 1 }];
+
+  it('counts the leftovers and the whole crafts', () => {
+    const r = calculate(lines, ctx, none, true);
+    expect(r.crafted[0]).toMatchObject({ item: 'plank', need: 3, crafts: 2, spare: 1 });
+    expect(r.steps).toBe(3); // 1 table + 2 plank crafts
+  });
+
+  it('does not break down an owned craftable item, and takes owned raw materials off', () => {
+    const r = calculate(lines, ctx, { ...none, have: { plank: 3, nail: 1 } }, true);
+    expect(r.crafted).toEqual([]);
+    expect(obj(r.raw)).toEqual({ nail: 3 }); // no wood: the planks are owned
+    const part = calculate(lines, ctx, { ...none, have: { plank: 1 } }, true);
+    expect(obj(part.raw)).toEqual({ wood: 1, nail: 4 }); // 2 planks missing: 1 craft of 2
+  });
+
+  it('draws the breakdown, an owned item stops its branch', () => {
+    const [root] = tree(lines, ctx, { ...none, have: { nail: 1 } });
+    expect(root).toMatchObject({ item: 'table', crafts: 1 });
+    const [pl, nail] = root.children;
+    expect(pl).toMatchObject({ item: 'plank', qty: 3, crafts: 2 });
+    expect(pl.children[0]).toMatchObject({ item: 'wood', qty: 2, recipe: null });
+    expect(nail).toMatchObject({ item: 'nail', qty: 4, have: 1, recipe: null });
+  });
+
+  it('cuts a cycle in the tree', () => {
+    const a = recipe('a', 'a', [{ item: 'b', count: 1 }]);
+    const b = recipe('b', 'b', [{ item: 'a', count: 1 }]);
+    const [root] = tree([{ recipe: 'a', qty: 1 }], context([a, b]), none);
+    expect(root.children[0].children[0]).toMatchObject({ item: 'a', recipe: null });
   });
 });
