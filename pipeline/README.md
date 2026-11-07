@@ -128,6 +128,8 @@ Writes, in `artifacts/map/`:
 | ---------------- | ------------------------------------------------------------------------------------------- |
 | `map-data.json`  | categories, markers (with the guaranteed loot of each one), biomes, item names and pictures |
 | `resources.json` | chests, plants and ores, grouped per element (loaded after the first render)                |
+| `enemies.json`   | bosses and elite enemies: faction, experience, extra health per player, regions, places on the map, nearby named areas, trophy |
+| `enemies/`       | a picture of each boss (192 px, from its head or trophy item)                               |
 | `lore.json`      | the journal: lore notes (with their pages), their categories, quests with steps, givers and rewards |
 | `craft.json`     | recipes, Flame Altar levels, building pieces, stations, how each one unlocks, item category / type / food type / rarity / class / level |
 | `biomes.png`     | biome layer                                                                                 |
@@ -140,7 +142,7 @@ change in the game data. Current reference: 1225 markers (79 unique items,
 1198 recipes, 1324 building pieces, 14 altar levels, 78 armour sets,
 320 lore notes (564 pages), 186 quests, 2912 item pictures.
 
-`build_resources.py` (chests, plants, ores, special loot), `build_lore.py` (the journal) and `build_craft.py`
+`build_resources.py` (chests, plants, ores, special loot), `build_enemies.py` (bosses and elites), `build_lore.py` (the journal) and `build_craft.py`
 (recipes, altar, building; its docstring describes `craft.json`) are used by
 `build_data.py` and are not run on their own.
 

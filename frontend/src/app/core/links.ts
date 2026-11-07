@@ -1,5 +1,5 @@
 /** Link carrying a one-time token in the URL fragment: never sent to a server nor written in its logs. */
-export const hashLink = (kind: 'invite' | 'reset', token: string): string =>
+export const hashLink = (kind: 'invite' | 'reset' | 'enemy', token: string): string =>
   `${location.origin}${location.pathname}#${kind}=${token}`;
 
 /** Reads (and removes from the address bar) the token of an invitation or reset link. */

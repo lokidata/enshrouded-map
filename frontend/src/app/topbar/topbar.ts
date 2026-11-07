@@ -1,6 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { CraftService } from '../core/craft.service';
+import { EnemiesService } from '../core/enemies.service';
 import { LAYOUTS, LayoutService } from '../core/layout.service';
 import { LoreService } from '../core/lore.service';
 import { LangService } from '../core/lang.service';
@@ -31,6 +32,16 @@ import { AccountBar } from '../sidebar/account-bar';
           (click)="views.set('workshop')"
         >
           {{ 'workshop' | transloco }}
+        </button>
+      }
+      @if (enemies.data()) {
+        <button
+          type="button"
+          [class.active]="views.view() === 'enemies'"
+          [attr.aria-current]="views.view() === 'enemies' ? 'page' : null"
+          (click)="views.set('enemies')"
+        >
+          {{ 'enemies' | transloco }}
         </button>
       }
       @if (lore.data()) {
@@ -161,6 +172,7 @@ import { AccountBar } from '../sidebar/account-bar';
 })
 export class TopBar {
   protected readonly craft = inject(CraftService);
+  protected readonly enemies = inject(EnemiesService);
   protected readonly lore = inject(LoreService);
   protected readonly views = inject(ViewStore);
   protected readonly layout = inject(LayoutService);

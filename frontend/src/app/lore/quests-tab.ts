@@ -3,9 +3,12 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { normalize } from '../core/filter.store';
 import { LangService } from '../core/lang.service';
 import { LoreQuest } from '../core/lore.model';
+import { questMark } from '../core/lore-progress';
 import { LoreService } from '../core/lore.service';
+import { ProgressStore } from '../core/progress.store';
 
 type Kind = 'all' | 'main' | 'side';
+type Status = 'all' | 'todo' | 'done';
 const NO_GIVER = 'none';
 
 /** The quests of the journal: search, who gives them, main or side, and a quest's steps and rewards. */
@@ -22,6 +25,21 @@ const NO_GIVER = 'none';
           [value]="query()"
           (input)="query.set($any($event.target).value); open.set(null)"
         />
+        <p class="count" role="status">
+          {{ 'questCount' | transloco: { done: doneCount(), total: quests().length } }}
+        </p>
+        <div class="side-pills" role="group" [attr.aria-label]="'loreStatus' | transloco">
+          @for (s of statuses; track s) {
+            <button
+              type="button"
+              class="pill"
+              [attr.aria-pressed]="status() === s"
+              (click)="status.set(s); open.set(null)"
+            >
+              {{ 'questStatus_' + s | transloco }}
+            </button>
+          }
+        </div>
         <div class="side-pills" role="group" [attr.aria-label]="'loreQuestKind' | transloco">
           @for (k of kinds; track k) {
             <button
@@ -68,6 +86,10 @@ const NO_GIVER = 'none';
           </button>
           <header class="item-head">
             <h2>{{ lore.text(quest.name) }}</h2>
+            <label class="known-box">
+              <input type="checkbox" [checked]="done(quest)" (change)="toggle(quest)" />
+              {{ 'questDone' | transloco }}
+            </label>
           </header>
           <p class="meta">
             {{ giverLabel(quest) }} ·
@@ -106,7 +128,7 @@ const NO_GIVER = 'none';
           </div>
           <div class="cards">
             @for (quest of list(); track quest.id) {
-              <article class="entry">
+              <article class="entry" [class.known]="done(quest)">
                 <header>
                   <div class="head">
                     <h3>
@@ -122,6 +144,10 @@ const NO_GIVER = 'none';
                       }
                     </p>
                   </div>
+                  <label class="known-box">
+                    <input type="checkbox" [checked]="done(quest)" (change)="toggle(quest)" />
+                    {{ 'questDone' | transloco }}
+                  </label>
                 </header>
                 <p class="preview">{{ preview(quest) }}</p>
               </article>
@@ -137,14 +163,20 @@ const NO_GIVER = 'none';
 export class QuestsTab {
   protected readonly lore = inject(LoreService);
   private readonly lang = inject(LangService);
+  private readonly progress = inject(ProgressStore);
 
   protected readonly kinds: readonly Kind[] = ['all', 'main', 'side'];
+  protected readonly statuses: readonly Status[] = ['all', 'todo', 'done'];
+  protected readonly status = signal<Status>('all');
   protected readonly query = signal('');
   protected readonly giver = signal('');
   protected readonly kind = signal<Kind>('all');
   protected readonly open = signal<string | null>(null);
 
   protected readonly quests = computed(() => this.lore.data()?.quests ?? []);
+  protected readonly doneCount = computed(
+    () => this.quests().filter((q) => this.progress.done().has(questMark(q.id))).length,
+  );
   protected readonly current = computed(() => this.quests().find((q) => q.id === this.open()));
 
   private readonly haystack = computed(
@@ -187,14 +219,25 @@ export class QuestsTab {
     const q = normalize(this.query().trim());
     const giver = this.giver();
     const kind = this.kind();
+    const status = this.status();
+    const marks = this.progress.done();
     const haystack = this.haystack();
     return this.quests().filter(
       (quest) =>
         (!q || haystack.get(quest.id)!.includes(q)) &&
         (!giver || (quest.giver ?? NO_GIVER) === giver) &&
-        (kind === 'all' || quest.main === (kind === 'main')),
+        (kind === 'all' || quest.main === (kind === 'main')) &&
+        (status === 'all' || marks.has(questMark(quest.id)) === (status === 'done')),
     );
   });
+
+  protected done(quest: LoreQuest): boolean {
+    return this.progress.done().has(questMark(quest.id));
+  }
+
+  protected toggle(quest: LoreQuest): void {
+    void this.progress.toggle(questMark(quest.id));
+  }
 
   protected giverLabel(quest: LoreQuest): string {
     const giver = quest.giver ? this.lore.data()?.givers[quest.giver] : null;

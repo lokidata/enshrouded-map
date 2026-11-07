@@ -4,11 +4,13 @@ from pydantic import BaseModel, Field, StringConstraints
 
 from app.schemas.common import StrictModel
 
-# A map element ("category:x:z"), a known recipe ("recipe:<guid>"), a found note ("lore:<id>").
+# Marks: a map element ("category:x:z"), a known recipe ("recipe:<guid>"), a found note
+# ("lore:<id>"), a found page of a note ("lore:<id>:<page>", shaped like a map element),
+# a finished quest ("quest:<id>").
 MarkId = Annotated[
     str,
     StringConstraints(
-        pattern=r"^([A-Za-z]+:-?\d+:-?\d+|recipe:[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}|lore:[0-9]{1,10})$",
+        pattern=r"^([A-Za-z]+:-?\d+:-?\d+|recipe:[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}|lore:[0-9]{1,10}|quest:[0-9]{1,10})$",
         max_length=64,
     ),
 ]

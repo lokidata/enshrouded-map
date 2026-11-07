@@ -7,12 +7,14 @@ const origin = (page: Page) => ({ baseURL: new URL(page.url()).origin });
 /** True when nothing covers the middle of the element: what the player can really click. */
 async function onTop(locator: Locator): Promise<void> {
   await expect
-    .poll(() =>
-      locator.evaluate((el) => {
-        const r = el.getBoundingClientRect();
-        const top = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
-        return !!top && el.contains(top);
-      }),
+    .poll(
+      () =>
+        locator.evaluate((el) => {
+          const r = el.getBoundingClientRect();
+          const top = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+          return !!top && el.contains(top);
+        }),
+      { timeout: 15_000 }, // a cold dev server can still be laying the page out
     )
     .toBe(true);
 }
@@ -634,6 +636,66 @@ test('workshop: recipes, unlock tick, show on the map, altar, calculator', async
   await expect(page.getByText('Le projet est vide')).toBeVisible();
 });
 
+test('enemies: filters, facts, show on the map, AXE', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel("Nom d'utilisateur").fill(user);
+  await page
+    .getByRole('dialog')
+    .getByLabel('Mot de passe', { exact: true })
+    .fill('a brand new passphrase');
+  await page.getByRole('dialog').getByRole('button', { name: 'Se connecter' }).click();
+  await expect(page.locator('.who')).toContainText(user);
+  const fixture = await page.evaluate(async () =>
+    (await (await fetch('enemies.json')).text()).includes('fixture_enemies'),
+  );
+  test.skip(!fixture, 'needs the fixture map');
+
+  const violations = async () =>
+    (
+      await new AxeBuilder({ page })
+        .include('app-enemies')
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+        .analyze()
+    ).violations.map((v) => `${v.id}: ${v.nodes[0].html.slice(0, 120)}`);
+  const cards = page.locator('app-enemies .entry');
+  await page.getByRole('button', { name: 'Ennemis', exact: true }).click();
+  await expect(cards).toHaveCount(2);
+  expect(await violations(), 'list').toEqual([]);
+
+  // kind, faction and region filters
+  await page.getByRole('button', { name: 'Boss', exact: true }).click();
+  await expect(cards).toHaveCount(1);
+  await page.getByRole('button', { name: 'Tous', exact: true }).click();
+  await page.getByRole('button', { name: /^Creux/ }).click();
+  await expect(cards).toHaveCount(1);
+  await expect(cards).toContainText('Squelette de test');
+  await page.getByRole('button', { name: /^Toutes/ }).click();
+  await page.getByRole('button', { name: /^Hautes pâtures/ }).click();
+  await expect(cards).toHaveCount(1);
+  await page.getByRole('button', { name: /^Hautes pâtures/ }).click(); // again: no region filter
+  await expect(cards).toHaveCount(2);
+
+  // the facts of one enemy
+  await page.getByRole('button', { name: 'Cyclope de test' }).click();
+  const facts = page.locator('app-enemies .facts');
+  await expect(facts).toContainText('× 8');
+  await expect(facts).toContainText('+ 60 %');
+  await expect(facts).toContainText('Hautes pâtures');
+  await expect(page.locator('app-enemies .portrait')).toBeVisible(); // its picture
+  await expect(facts).toContainText('Pic Hurlant'); // the named area near it
+  await expect(facts).toContainText('Tête de cyclope de test');
+  // the address names it: a reload comes back to its page
+  await expect.poll(() => page.evaluate(() => location.hash)).toBe('#enemy=test-cyclops');
+  await page.reload();
+  await expect(page.locator('app-enemies h2')).toHaveText('Cyclope de test');
+  expect(await violations(), 'enemy').toEqual([]);
+
+  // show it on the map
+  await page.getByRole('button', { name: 'Voir sur la carte' }).click();
+  await expect(page.locator('app-enemies')).toBeHidden();
+  await expect(page.locator('img.leaflet-marker-icon[src*="unique"]').first()).toBeVisible();
+});
+
 test('lore: notes found per player, quests, AXE', async ({ page }) => {
   await page.goto('/');
   await page.getByLabel("Nom d'utilisateur").fill(user);
@@ -678,8 +740,18 @@ test('lore: notes found per player, quests, AXE', async ({ page }) => {
   await page.getByRole('button', { name: 'Note de test' }).click();
   await expect(page.locator('app-lore .note-page p')).toHaveCount(3);
   expect(await violations(), 'note').toEqual([]);
+  const side = page.locator('app-lore .side');
+  const pages = page.locator('app-lore .note-page');
+  await pages.first().getByLabel('Page récupérée').check(); // one page only
+  await expect(side).toContainText('1 page(s) récupérée(s) sur 3');
+  await expect(side).toContainText('0 trouvée(s) sur 2');
+  await page.locator('app-lore header').getByLabel('Trouvée').check(); // the whole note
+  await expect(side).toContainText('2 page(s) récupérée(s) sur 3');
+  await pages.nth(1).getByLabel('Page récupérée').uncheck(); // the whole mark is split
+  await expect(side).toContainText('1 page(s) récupérée(s) sur 3');
+  await expect(side).toContainText('0 trouvée(s) sur 2');
   await page.locator('app-lore header').getByLabel('Trouvée').check();
-  await expect(page.locator('.who')).toHaveText(who!); // a found note is not a marked map element
+  await expect(page.locator('.who')).toHaveText(who!); // found pages are not marked map elements
   await expect(async () => {
     await page.reload();
     await open();
@@ -695,6 +767,26 @@ test('lore: notes found per player, quests, AXE', async ({ page }) => {
   await page.getByRole('tab', { name: 'Quêtes' }).click();
   await expect(page.locator('app-lore .entry')).toHaveCount(2);
   expect(await violations(), 'quests').toEqual([]);
+  const quests = page.locator('app-lore .entry');
+  await expect(side).toContainText('0 terminée(s) sur 2');
+  await quests.filter({ hasText: 'Quête de test' }).getByLabel('Terminée').check();
+  await expect(side).toContainText('1 terminée(s) sur 2');
+  await expect(page.locator('.who')).toHaveText(who!); // a finished quest is not a marked map element
+  await expect(async () => {
+    await page.reload();
+    await open();
+    await page.getByRole('tab', { name: 'Quêtes' }).click();
+    await expect(side).toContainText('1 terminée(s) sur 2', { timeout: 1000 });
+  }).toPass();
+  const status = page.locator('app-lore .side-pills').first();
+  await status.getByRole('button', { name: 'À faire' }).click();
+  await expect(quests).toHaveCount(1);
+  await expect(quests).toContainText('Quête de région');
+  await status.getByRole('button', { name: 'Terminées' }).click();
+  await expect(quests).toHaveCount(1);
+  await expect(quests).toContainText('Quête de test');
+  await status.getByRole('button', { name: 'Toutes' }).click();
+  await expect(quests).toHaveCount(2);
   await page.getByRole('button', { name: /^Alchimiste/ }).click();
   await expect(page.locator('app-lore .entry')).toHaveCount(1);
   await page.getByRole('button', { name: 'Quête de test' }).click();
@@ -729,6 +821,23 @@ test('workshop: every tab passes the AXE checks (WCAG A and AA)', async ({ page 
       page.locator('#ws-panel').locator('h2, article, input, button').first(),
     ).toBeVisible();
     expect(await violations(), tab).toEqual([]);
+  }
+
+  // the enemies (when the server has enemies.json): the list and one enemy
+  if (await page.getByRole('button', { name: 'Ennemis', exact: true }).count()) {
+    await page.getByRole('button', { name: 'Ennemis', exact: true }).click();
+    const enemies = async (name: string) =>
+      (
+        await new AxeBuilder({ page })
+          .include('app-enemies')
+          .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+          .analyze()
+      ).violations.map((v) => `${name} ${v.id}: ${v.nodes[0].html.slice(0, 120)}`);
+    await expect(page.locator('app-enemies .entry').first()).toBeVisible();
+    expect(await enemies('enemies')).toEqual([]);
+    await page.locator('app-enemies .entry .chip-link').first().click();
+    await expect(page.locator('app-enemies .facts')).toBeVisible();
+    expect(await enemies('enemy')).toEqual([]);
   }
 
   // the lore (when the server has lore.json): both tabs, and a note opened
