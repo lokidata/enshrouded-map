@@ -81,6 +81,7 @@ aside[hidden] {
 app-map[hidden] {
   display: none;
 }
+app-skills[hidden],
 app-enemies[hidden],
 app-lore[hidden],
 app-workshop[hidden] {

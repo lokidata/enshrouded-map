@@ -8,10 +8,13 @@ import { PasskeyDialog } from './auth/passkey-dialog';
 import { AuthService } from './core/auth.service';
 import { LayoutService } from './core/layout.service';
 import { ProgressStore } from './core/progress.store';
+import { EnemiesService } from './core/enemies.service';
+import { PlannerStore } from './core/planner.store';
 import { ViewStore } from './core/view.store';
 import { Enemies } from './enemies/enemies';
 import { Lore } from './lore/lore';
 import { MapView } from './map/map-view';
+import { Skills } from './skills/skills';
 import { Sidebar } from './sidebar/sidebar';
 import { TeamDialog } from './team/team-dialog';
 import { TopBar } from './topbar/topbar';
@@ -41,6 +44,7 @@ function read(): string | null {
     Workshop,
     Lore,
     Enemies,
+    Skills,
     TopBar,
     TranslocoPipe,
   ],
@@ -69,6 +73,9 @@ function read(): string | null {
         @defer (when views.view() === 'enemies') {
           <app-enemies [hidden]="views.view() !== 'enemies'" />
         }
+        @defer (when views.view() === 'skills') {
+          <app-skills [hidden]="views.view() !== 'skills'" />
+        }
         @defer (when views.view() === 'lore') {
           <app-lore [hidden]="views.view() !== 'lore'" />
         }
@@ -89,6 +96,7 @@ function read(): string | null {
       </button>
     }
   `,
+  host: { '(window:hashchange)': 'onHash()' },
   styleUrl: './app.css',
 })
 export class App {
@@ -96,7 +104,16 @@ export class App {
   protected readonly auth = inject(AuthService);
   protected readonly layout = inject(LayoutService);
   protected readonly views = inject(ViewStore);
+  private readonly planner = inject(PlannerStore);
+  private readonly enemies = inject(EnemiesService);
   protected readonly menuOpen = signal(read() !== 'closed');
+
+  /** A link pasted in a tab that is already open only changes the fragment: open what it names. */
+  protected onHash(): void {
+    if (!this.auth.user()) return;
+    if (this.planner.openFromHash()) this.views.set('skills');
+    if (this.enemies.openFromHash()) this.views.set('enemies');
+  }
 
   protected toggleMenu(): void {
     this.menuOpen.update((open) => !open);

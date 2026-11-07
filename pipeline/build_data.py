@@ -11,6 +11,7 @@ Produces in out_dir:
   craft.json      recipes, Flame Altar levels, building pieces
   lore.json       lore notes and quests of the journal
   enemies.json    bosses and elite enemies
+  skills.json     the skill tree (build planner)
   biomes.png    biome map (optional background layer)
   icons/        map marker icons used by the markers
 """
@@ -33,6 +34,7 @@ import render_map  # noqa: E402  (FogZone tiles and void mask)
 import build_resources  # noqa: E402  (chests, plants, ores)
 import build_craft  # noqa: E402  (recipes, altar, building)
 import build_enemies  # noqa: E402  (bosses and elites)
+import build_skills  # noqa: E402  (skill tree)
 import build_lore  # noqa: E402  (journal: lore notes and quests)
 
 MAIN_SCENE = "509feadb-4c60-425f-9c7c-deeefd9b6920"
@@ -706,7 +708,8 @@ def main(src, export, out):
         "items": items,
         "markers": markers,
     }
-    for name, obj in (("map-data", data), ("resources", resources), ("craft", craft), ("lore", lore), ("enemies", enemies)):
+    for name, obj in (("map-data", data), ("resources", resources), ("craft", craft), ("lore", lore), ("enemies", enemies),
+                      ("skills", build_skills.build_skills(src, export, out))):
         with open(f"{out}/{name}.json", "w", encoding="utf-8") as f:
             json.dump(obj, f, ensure_ascii=False, separators=(",", ":"))
 

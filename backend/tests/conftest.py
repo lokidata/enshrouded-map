@@ -66,3 +66,13 @@ def user(client: ApiClient) -> ApiClient:
     )
     assert r.status_code == 200
     return client
+
+
+@pytest.fixture
+def bob(user: ApiClient) -> Iterator[ApiClient]:
+    """A second client logged in as 'bob' (alice, on `user`, is the first account)."""
+    token = user.post("/api/v1/auth/invitations").json()["token"]
+    with ApiClient(app) as c:
+        body = {"token": token, "username": "bob", "password": PW}
+        assert c.post("/api/v1/auth/invitations/accept", json=body).status_code == 200
+        yield c

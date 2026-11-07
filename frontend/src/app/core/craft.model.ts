@@ -32,6 +32,8 @@ export type UnlockType = 'item' | 'npc' | 'flame' | 'level' | 'quest' | 'none';
 export interface Unlock {
   type: UnlockType;
   text: Names;
+  /** Items whose obtaining unlocks it (guids). */
+  items?: readonly string[];
 }
 
 export interface Sources {

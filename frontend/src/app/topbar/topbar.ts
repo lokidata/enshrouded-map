@@ -4,6 +4,7 @@ import { CraftService } from '../core/craft.service';
 import { EnemiesService } from '../core/enemies.service';
 import { LAYOUTS, LayoutService } from '../core/layout.service';
 import { LoreService } from '../core/lore.service';
+import { SkillsService } from '../core/skills.service';
 import { LangService } from '../core/lang.service';
 import { MapDataService } from '../core/map-data.service';
 import { ViewStore } from '../core/view.store';
@@ -42,6 +43,16 @@ import { AccountBar } from '../sidebar/account-bar';
           (click)="views.set('enemies')"
         >
           {{ 'enemies' | transloco }}
+        </button>
+      }
+      @if (skills.data()) {
+        <button
+          type="button"
+          [class.active]="views.view() === 'skills'"
+          [attr.aria-current]="views.view() === 'skills' ? 'page' : null"
+          (click)="views.set('skills')"
+        >
+          {{ 'skills' | transloco }}
         </button>
       }
       @if (lore.data()) {
@@ -174,6 +185,7 @@ export class TopBar {
   protected readonly craft = inject(CraftService);
   protected readonly enemies = inject(EnemiesService);
   protected readonly lore = inject(LoreService);
+  protected readonly skills = inject(SkillsService);
   protected readonly views = inject(ViewStore);
   protected readonly layout = inject(LayoutService);
   protected readonly lang = inject(LangService);

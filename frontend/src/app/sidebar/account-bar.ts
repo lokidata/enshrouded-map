@@ -21,7 +21,7 @@ import { TeamStore } from '../core/team.store';
           class="who"
           aria-haspopup="menu"
           [attr.aria-expanded]="open()"
-          (click)="open.set(!open())"
+          (click)="toggle()"
         >
           👤 {{ name }} · {{ progress.mapCount() }} {{ 'progress' | transloco }} ▾
         </button>
@@ -201,6 +201,12 @@ export class AccountBar {
 
   protected outside(event: Event): void {
     if (!this.host.nativeElement.contains(event.target as Node)) this.dismiss();
+  }
+
+  /** Opening the menu closes the invitation link: both open at the same place. */
+  protected toggle(): void {
+    this.open.update((open) => !open);
+    if (this.open()) this.link.set(null);
   }
 
   /** Closes the menu and the invitation link: both float over the map. */

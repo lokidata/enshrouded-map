@@ -68,7 +68,7 @@ textures, terrain voxels) is read by the Lua mod in `eml_mod/`, run by `emm`.
    `$GAME/mods/map_export/src/mod.lua`. For a full run, set everything to
    `true`:
    ```lua
-   local args = { translations = true, icons = true, map = true, voxels = true, items = true }
+   local args = { translations = true, icons = true, map = true, voxels = true, items = true, skills = true }
    ```
 3. Run the export:
    ```sh
@@ -84,6 +84,7 @@ textures, terrain voxels) is read by the Lua mod in `eml_mod/`, run by `emm`.
 | `map`          | `map/*.png`, `map/*.r16`              | render_map.py, build_data.py (Shroud, island outline) |
 | `voxels`       | `voxels/5/<x>_<y>.bin` (1 m terrain)  | extract_surface.py, extract_ores.py                   |
 | `items`        | `items/<guid>.png` (256 px)           | build_data.py (item pictures in popups)               |
+| `skills`       | `skills/<guid>.png`                   | build_skills.py (pictures of the skill nodes)         |
 
 ## 3. Extract the terrain
 
@@ -128,6 +129,8 @@ Writes, in `artifacts/map/`:
 | ---------------- | ------------------------------------------------------------------------------------------- |
 | `map-data.json`  | categories, markers (with the guaranteed loot of each one), biomes, item names and pictures |
 | `resources.json` | chests, plants and ores, grouped per element (loaded after the first render)                |
+| `skills.json`    | the skill tree: 243 nodes with position, class, cost, levels, texts and icon, and their links |
+| `skills/`        | the icon of each active skill (96 px)                                                       |
 | `enemies.json`   | bosses and elite enemies: faction, experience, extra health per player, regions, places on the map, nearby named areas, trophy |
 | `enemies/`       | a picture of each boss (192 px, from its head or trophy item)                               |
 | `lore.json`      | the journal: lore notes (with their pages), their categories, quests with steps, givers and rewards |
@@ -142,7 +145,7 @@ change in the game data. Current reference: 1225 markers (79 unique items,
 1198 recipes, 1324 building pieces, 14 altar levels, 78 armour sets,
 320 lore notes (564 pages), 186 quests, 2912 item pictures.
 
-`build_resources.py` (chests, plants, ores, special loot), `build_enemies.py` (bosses and elites), `build_lore.py` (the journal) and `build_craft.py`
+`build_resources.py` (chests, plants, ores, special loot), `build_enemies.py` (bosses and elites), `build_skills.py` (the skill tree), `build_lore.py` (the journal) and `build_craft.py`
 (recipes, altar, building; its docstring describes `craft.json`) are used by
 `build_data.py` and are not run on their own.
 

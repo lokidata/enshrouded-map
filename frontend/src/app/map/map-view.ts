@@ -15,6 +15,7 @@ import { AuthService } from '../core/auth.service';
 import { Catalog, PlacedResource } from '../core/catalog.service';
 import { FilterStore } from '../core/filter.store';
 import { LangService } from '../core/lang.service';
+import { EnemiesService } from '../core/enemies.service';
 import { LootEntry, MapMarker, itemKey, markId } from '../core/map-data.model';
 import { MapDataService } from '../core/map-data.service';
 import { MapFocus } from '../core/map-focus.service';
@@ -153,6 +154,7 @@ export class MapView {
   private readonly progress = inject(ProgressStore);
   private readonly team = inject(TeamStore);
   private readonly focus = inject(MapFocus);
+  private readonly enemies = inject(EnemiesService);
   private readonly host = viewChild.required<ElementRef<HTMLElement>>('host');
 
   protected readonly coords = signal('');
@@ -572,6 +574,15 @@ export class MapView {
     const root = this.popup(m.name[i], this.mapData.data.categories[m.cat].label[i] + fast, id);
     const picture = m.item && this.itemPicture(m.item, 'popup-picture');
     if (picture) root.prepend(picture);
+    // a boss or an elite: the picture of its head
+    const portrait = id && this.enemies.imageByMark().get(id);
+    if (portrait) {
+      const img = el('img', 'popup-portrait');
+      img.src = portrait;
+      img.alt = '';
+      root.prepend(img);
+      root.classList.add('popup-tall');
+    }
     const title = m.item ? 'alsoGuaranteed' : 'guaranteedItems';
     if (m.loot?.length) root.append(this.lootList(m.loot, this.lang.t(title)));
     if (picture || m.loot?.length) root.classList.add('popup-tall');

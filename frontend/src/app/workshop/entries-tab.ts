@@ -4,7 +4,7 @@ import { CraftService } from '../core/craft.service';
 import { BlockEntry, Entry } from '../core/craft.model';
 import { normalize } from '../core/filter.store';
 import { LangService } from '../core/lang.service';
-import { ProgressStore } from '../core/progress.store';
+import { Found } from '../core/found.service';
 import { EntryCard } from './entry-card';
 import { ItemChip } from './item-chip';
 
@@ -216,7 +216,7 @@ export class EntriesTab {
   protected readonly NO_TIER = NO_TIER;
   protected readonly craft = inject(CraftService);
   private readonly lang = inject(LangService);
-  private readonly progress = inject(ProgressStore);
+  private readonly found = inject(Found);
 
   protected readonly query = signal('');
   protected readonly station = signal('');
@@ -312,7 +312,6 @@ export class EntriesTab {
     const byTier = this.sort() === 'tier';
     const haystack = this.haystack();
     const locked = this.locked();
-    const done = this.progress.done();
     const lang = this.lang.lang();
     return this.source()
       .filter(
@@ -322,7 +321,7 @@ export class EntriesTab {
           FACETS.every((f) => !sel[f.key] || this.meta(e, f.key) === sel[f.key]) &&
           (!group || (e as BlockEntry).group === group) &&
           (!tier || ((e as BlockEntry).tier ?? NO_TIER) === tier) &&
-          (!locked || !done.has(`recipe:${e.id}`)),
+          (!locked || !this.found.known(e)),
       )
       .sort(
         (a, b) =>

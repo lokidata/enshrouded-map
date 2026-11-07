@@ -6,6 +6,7 @@ import { normalize } from '../core/filter.store';
 import { LangService } from '../core/lang.service';
 import { copyText, hashLink } from '../core/links';
 import { MapFocus } from '../core/map-focus.service';
+import { ProgressStore } from '../core/progress.store';
 import { ViewStore } from '../core/view.store';
 
 type Kind = 'all' | 'boss' | 'elite';
@@ -114,6 +115,10 @@ type Kind = 'all' | 'boss' | 'elite';
               <dd>{{ regionLabels(enemy) }}</dd>
               <dt>{{ 'enemySpotsTitle' | transloco }}</dt>
               <dd>{{ enemy.spots }}</dd>
+              @if (enemy.sources; as sources) {
+                <dt>{{ 'enemyDoneTitle' | transloco }}</dt>
+                <dd>{{ doneOf(enemy) }} / {{ sources.markers?.length }}</dd>
+              }
               @if (enemy.places.length) {
                 <dt>{{ 'enemyPlaces' | transloco }}</dt>
                 <dd>{{ placeLabels(enemy) }}</dd>
@@ -152,7 +157,14 @@ type Kind = 'all' | 'boss' | 'elite';
                     @if (enemy.xp !== null) {
                       {{ 'enemyXp' | transloco: { n: enemy.xp } }} ·
                     }
-                    {{ 'enemySpots' | transloco: { n: enemy.spots } }}
+                    @if (enemy.sources; as sources) {
+                      {{
+                        'enemyDone'
+                          | transloco: { done: doneOf(enemy), total: sources.markers?.length }
+                      }}
+                    } @else {
+                      {{ 'enemySpots' | transloco: { n: enemy.spots } }}
+                    }
                   </p>
                 </article>
               } @empty {
@@ -171,6 +183,7 @@ export class Enemies {
   protected readonly focus = inject(MapFocus);
   private readonly lang = inject(LangService);
   private readonly views = inject(ViewStore);
+  private readonly progress = inject(ProgressStore);
 
   protected readonly kinds: readonly Kind[] = ['all', 'boss', 'elite'];
   protected readonly query = signal('');
@@ -238,6 +251,12 @@ export class Enemies {
   protected regionLabels(enemy: Enemy): string {
     const names = this.data.data()?.regions ?? {};
     return enemy.regions.map((r) => this.data.text(names[r])).join(', ') || '—';
+  }
+
+  /** How many of its places on the map are marked done. */
+  protected doneOf(enemy: Enemy): number {
+    const marks = this.progress.done();
+    return (enemy.sources?.markers ?? []).filter((id) => marks.has(id)).length;
   }
 
   protected placeLabels(enemy: Enemy): string {

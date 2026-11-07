@@ -6,17 +6,26 @@ const origin = (page: Page) => ({ baseURL: new URL(page.url()).origin });
 
 /** True when nothing covers the middle of the element: what the player can really click. */
 async function onTop(locator: Locator): Promise<void> {
-  await expect
-    .poll(
-      () =>
-        locator.evaluate((el) => {
-          const r = el.getBoundingClientRect();
-          const top = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
-          return !!top && el.contains(top);
-        }),
-      { timeout: 15_000 }, // a cold dev server can still be laying the page out
-    )
-    .toBe(true);
+  try {
+    await expect
+      .poll(
+        () =>
+          locator.evaluate((el) => {
+            const r = el.getBoundingClientRect();
+            const top = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+            return !!top && el.contains(top);
+          }),
+        { timeout: 15_000 }, // a cold dev server can still be laying the page out
+      )
+      .toBe(true);
+  } catch (error) {
+    // keep a picture of what covers the element
+    await locator
+      .page()
+      .screenshot({ path: `test-results/on-top-${Date.now()}.png` })
+      .catch(() => undefined);
+    throw error;
+  }
 }
 
 /** Opens the profile menu, checks that every entry can be reached, and picks one. */
@@ -636,6 +645,171 @@ test('workshop: recipes, unlock tick, show on the map, altar, calculator', async
   await expect(page.getByText('Le projet est vide')).toBeVisible();
 });
 
+test('skills: take nodes, budget, save several builds, share link, AXE', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel("Nom d'utilisateur").fill(user);
+  await page
+    .getByRole('dialog')
+    .getByLabel('Mot de passe', { exact: true })
+    .fill('a brand new passphrase');
+  await page.getByRole('dialog').getByRole('button', { name: 'Se connecter' }).click();
+  await expect(page.locator('.who')).toContainText(user);
+  const fixture = await page.evaluate(async () =>
+    (await (await fetch('skills.json')).text()).includes('fixture_skills'),
+  );
+  test.skip(!fixture, 'needs the fixture map');
+
+  const violations = async () =>
+    (
+      await new AxeBuilder({ page })
+        .include('app-skills')
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+        .analyze()
+    ).violations.map((v) => `${v.id}: ${v.nodes[0].html.slice(0, 120)}`);
+  const node = (name: RegExp) => page.locator('app-skills g.skill').filter({ hasText: name });
+  const side = page.locator('app-skills');
+  const points = page.locator('app-skills .points');
+  const popup = page.locator('app-skills .popup');
+  const builds = () =>
+    page.getByRole('button', { name: 'Builds enregistrés', exact: true }).click();
+  const open = () => page.getByRole('button', { name: 'Compétences', exact: true }).click();
+  await open();
+  await expect(points).toContainText(/Disponible\s*6$/);
+  expect(await violations(), 'tree').toEqual([]);
+  await expect(page.locator('app-skills g.skill image')).toHaveCount(1); // the node the game gives a picture
+
+  // a node is taken from a root or from a node already taken
+  await node(/Tir précis/).click();
+  await expect(points).toContainText(/Disponible\s*6$/); // locked: nothing next to it
+  await expect(popup).toContainText('Verrouillée');
+  for (let i = 0; i < 4; i++) await node(/Endurance/).click(); // 3 levels, then no more
+  await expect(points).toContainText(/Disponible\s*3$/);
+  await expect(node(/Endurance/)).toContainText('3/3');
+  await expect(popup).toContainText('30%'); // the value of its level in the text
+  await node(/Résistance/).click(); // 2 points
+  await expect(points).toContainText(/Disponible\s*1$/);
+  await node(/Tir précis/).click(); // 3 points: over the budget
+  await expect(points).toContainText(/Disponible\s*1$/);
+  await expect(popup).toContainText('Pas assez de points');
+  await node(/Isolée/).click(); // linked to nothing
+  await expect(points).toContainText(/Disponible\s*1$/);
+
+  // a level comes off with the right click, but not the last one of a node others hang from
+  await node(/Endurance/).click({ button: 'right' });
+  await expect(points).toContainText(/Disponible\s*2$/);
+  await node(/Endurance/).click({ button: 'right' });
+  await node(/Endurance/).click({ button: 'right' }); // level 1, Résistance hangs from it
+  await expect(points).toContainText(/Disponible\s*3$/);
+  await expect(node(/Endurance/)).toContainText('1/3');
+
+  await builds();
+  // several builds: save, new, open, delete; they survive a reload
+  await side.getByLabel('Nom du build').fill('Mon archer');
+  await side.getByRole('button', { name: 'Enregistrer' }).click();
+  await expect(side.locator('.builds')).toContainText('Mon archer');
+  await side.getByRole('button', { name: 'Nouveau' }).click();
+  await expect(points).toContainText(/Disponible\s*6$/);
+  await node(/Force/).click();
+  await side.getByLabel('Nom du build').fill('Autre');
+  await side.getByRole('button', { name: 'Enregistrer' }).click();
+  await expect(side.locator('.builds li')).toHaveCount(2);
+  await page.reload();
+  await open();
+  await builds();
+  await expect(side.locator('.builds li')).toHaveCount(2);
+  await side
+    .locator('.builds')
+    .getByRole('button', { name: /^Mon archer/ })
+    .click();
+  await expect(points).toContainText(/Disponible\s*3$/);
+  await expect(node(/Endurance/)).toContainText('1/3');
+  await side.getByRole('button', { name: 'Supprimer Mon archer' }).click();
+  await expect(side.locator('.builds li')).toHaveCount(1);
+  await expect(side.locator('.builds')).not.toContainText('Mon archer');
+  expect(await violations(), 'builds').toEqual([]);
+  await builds();
+
+  // attributes and summary
+  await node(/Force/).click();
+  await expect(page.locator('app-skills .attrs')).toContainText('Force');
+  await page.getByRole('button', { name: 'Résumé', exact: true }).click();
+  await expect(side.locator('.sheet')).toContainText('Compétences prises');
+  expect(await violations(), 'summary').toEqual([]);
+
+  // a shared link opens a build (index.level in base 36, in the order of skills.json)
+  await page.goto('/#build=1.2-2.1');
+  await expect(points).toContainText(/Disponible\s*2$/);
+  await expect(node(/Endurance/)).toContainText('2/3');
+  await expect.poll(() => page.evaluate(() => location.hash)).toBe('');
+});
+
+test('a marker done on the map shows everywhere, and the other way round', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel("Nom d'utilisateur").fill(user);
+  await page
+    .getByRole('dialog')
+    .getByLabel('Mot de passe', { exact: true })
+    .fill('a brand new passphrase');
+  await page.getByRole('dialog').getByRole('button', { name: 'Se connecter' }).click();
+  await expect(page.locator('.who')).toContainText(user);
+  const fixture = await page.evaluate(async () =>
+    (await (await fetch('craft.json')).text()).includes('Recette liée'),
+  );
+  test.skip(!fixture, 'needs the fixture map');
+
+  const who = page.locator('.who');
+  const linked = page.locator('app-entry-card').filter({
+    has: page.getByRole('heading', { name: 'Recette liée' }),
+  });
+  const search = async (text: string) => {
+    const box = page.locator('app-workshop').getByRole('searchbox');
+    await box.click();
+    await box.fill(text);
+  };
+  const bosses = page.locator('app-enemies .entry').filter({ hasText: 'Cyclope de test' });
+
+  const count = async () => Number(/(\d+) faits/.exec((await who.textContent()) ?? '')![1]);
+
+  // marking the item on the map ... (an earlier test may have marked it: clear it first)
+  await page.locator('img.leaflet-marker-icon[src*="unique"]').first().click();
+  const action = page.locator('.leaflet-popup .popup-actions button');
+  if (!(await action.innerText()).includes('Marquer')) await action.click();
+  await expect(action).toContainText('Marquer');
+  const base = await count();
+  await action.click();
+  await expect(who).toContainText(`${base + 1} faits`);
+
+  // ... unlocks the recipe it opens in the workshop, shows on its item page and on the boss
+  await page.getByRole('button', { name: 'Atelier', exact: true }).click();
+  await search('liée');
+  await expect(linked.getByLabel('Débloquée')).toBeChecked();
+  await page.getByRole('tab', { name: 'Objets' }).click();
+  await search('trésor');
+  await page.getByRole('button', { name: 'Carte au trésor' }).click();
+  await expect(page.locator('app-workshop')).toContainText('Sur la carte : 1/1 trouvé(s)');
+  await page.getByRole('button', { name: 'Ennemis', exact: true }).click();
+  await expect(bosses).toContainText('1/1 faits');
+
+  // unticking the recipe unmarks the item on the map; ticking marks it again
+  await page.getByRole('button', { name: 'Atelier', exact: true }).click();
+  await page.getByRole('tab', { name: 'Recettes' }).click();
+  await search('liée');
+  await linked.getByLabel('Débloquée').uncheck();
+  await expect(who).toContainText(`${base} faits`);
+  await expect(linked.getByLabel('Débloquée')).not.toBeChecked();
+  await page.getByRole('button', { name: 'Ennemis', exact: true }).click();
+  await expect(bosses).toContainText('0/1 faits');
+  await page.getByRole('button', { name: 'Atelier', exact: true }).click();
+  await linked.getByLabel('Débloquée').check();
+  await expect(who).toContainText(`${base + 1} faits`);
+
+  // it is saved: still so after a reload
+  await expect(async () => {
+    await page.reload();
+    await expect(who).toContainText(`${base + 1} faits`, { timeout: 1000 });
+  }).toPass();
+});
+
 test('enemies: filters, facts, show on the map, AXE', async ({ page }) => {
   await page.goto('/');
   await page.getByLabel("Nom d'utilisateur").fill(user);
@@ -694,6 +868,9 @@ test('enemies: filters, facts, show on the map, AXE', async ({ page }) => {
   await page.getByRole('button', { name: 'Voir sur la carte' }).click();
   await expect(page.locator('app-enemies')).toBeHidden();
   await expect(page.locator('img.leaflet-marker-icon[src*="unique"]').first()).toBeVisible();
+  // its popup shows the picture of its head
+  await page.locator('img.leaflet-marker-icon[src*="unique"]').first().click();
+  await expect(page.locator('.leaflet-popup img.popup-portrait')).toBeVisible();
 });
 
 test('lore: notes found per player, quests, AXE', async ({ page }) => {
@@ -821,6 +998,19 @@ test('workshop: every tab passes the AXE checks (WCAG A and AA)', async ({ page 
       page.locator('#ws-panel').locator('h2, article, input, button').first(),
     ).toBeVisible();
     expect(await violations(), tab).toEqual([]);
+  }
+
+  // the skill tree (when the server has skills.json)
+  if (await page.getByRole('button', { name: 'Compétences', exact: true }).count()) {
+    await page.getByRole('button', { name: 'Compétences', exact: true }).click();
+    await expect(page.locator('app-skills g.skill').first()).toBeVisible();
+    const tree = (
+      await new AxeBuilder({ page })
+        .include('app-skills')
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+        .analyze()
+    ).violations.map((v) => `skills ${v.id}: ${v.nodes[0].html.slice(0, 120)}`);
+    expect(tree).toEqual([]);
   }
 
   // the enemies (when the server has enemies.json): the list and one enemy

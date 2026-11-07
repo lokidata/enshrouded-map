@@ -5,6 +5,8 @@ import { AuthMode, AuthService, Credentials, UserInfo } from './auth.service';
 import { CraftService } from './craft.service';
 import { EnemiesService } from './enemies.service';
 import { LoreService } from './lore.service';
+import { PlannerStore } from './planner.store';
+import { SkillsService } from './skills.service';
 import { FilterStore } from './filter.store';
 import { takeHashToken } from './links';
 import { MapDataService } from './map-data.service';
@@ -27,6 +29,8 @@ export class SessionService {
   private readonly craft = inject(CraftService);
   private readonly lore = inject(LoreService);
   private readonly enemies = inject(EnemiesService);
+  private readonly skills = inject(SkillsService);
+  private readonly planner = inject(PlannerStore);
 
   private saved: string | null = null;
   private pending: string | null = null;
@@ -113,6 +117,8 @@ export class SessionService {
     this.craft.clear();
     this.lore.clear();
     this.enemies.clear();
+    this.skills.clear();
+    this.planner.clear();
     this.views.set('map');
     this.filters.reset();
     this.saved = this.pending = null;
@@ -120,11 +126,13 @@ export class SessionService {
   }
 
   private async enter(info: UserInfo): Promise<void> {
-    const [, , , , marks, settings] = await Promise.all([
+    const [, , , , , , marks, settings] = await Promise.all([
       this.mapData.load(),
       this.craft.load(), // never fails: a server without craft.json just has no workshop
       this.lore.load(), // same for lore.json
       this.enemies.load(), // and enemies.json
+      this.skills.load(), // and skills.json
+      this.planner.load(), // the builds the player saved
       firstValueFrom(this.http.get<{ marks: string[] }>('api/v1/progress')),
       firstValueFrom(
         this.http.get<{ settings: { filters?: Record<string, boolean> } | null }>(
@@ -142,6 +150,7 @@ export class SessionService {
     this.auth.user.set(info.username);
     await this.team.load();
     if (this.enemies.openFromHash()) this.views.set('enemies');
+    if (this.planner.openFromHash()) this.views.set('skills');
   }
 
   private async flush(): Promise<void> {

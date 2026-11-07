@@ -5,7 +5,7 @@ import { CraftService } from '../core/craft.service';
 import { BlockEntry, Entry, Input } from '../core/craft.model';
 import { LangService } from '../core/lang.service';
 import { MapFocus } from '../core/map-focus.service';
-import { ProgressStore } from '../core/progress.store';
+import { Found } from '../core/found.service';
 import { ProjectStore } from '../core/project.store';
 import { ItemChip } from './item-chip';
 
@@ -39,7 +39,7 @@ import { ItemChip } from './item-chip';
           </p>
         </div>
         <label class="known-box">
-          <input type="checkbox" [checked]="known()" (change)="progress.toggle(markId())" />
+          <input type="checkbox" [checked]="known()" (change)="found.setKnown(entry(), !known())" />
           {{ 'wsKnown' | transloco }}
         </label>
       </header>
@@ -83,7 +83,7 @@ export class EntryCard {
   readonly entry = input.required<Entry | BlockEntry>();
 
   protected readonly craft = inject(CraftService);
-  protected readonly progress = inject(ProgressStore);
+  protected readonly found = inject(Found);
   protected readonly project = inject(ProjectStore);
   protected readonly focus = inject(MapFocus);
   private readonly lang = inject(LangService);
@@ -100,8 +100,7 @@ export class EntryCard {
     return { steps: r.steps, raw: [...r.raw].map(([item, count]) => ({ item, count })) };
   });
 
-  protected readonly markId = computed(() => `recipe:${this.entry().id}`);
-  protected readonly known = computed(() => this.progress.done().has(this.markId()));
+  protected readonly known = computed(() => this.found.known(this.entry()));
   protected readonly tier = computed(() => (this.entry() as BlockEntry).tier);
 
   /** "Any of: A, B, C" for an ingredient that several items can fill. */
