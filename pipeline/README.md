@@ -136,6 +136,7 @@ Writes, in `artifacts/map/`:
 | `enemies/`       | a picture of each boss (192 px, from its head or trophy item)                               |
 | `lore.json`      | the journal: lore notes (with their pages), their categories, quests with steps, givers and rewards |
 | `gear.json`      | equipable items (picture, armour shares, block, parry, weapon damage factors (base damage from the constants `genericWeaponSeed`/`powerCreepWeapon`, see `weaponBaseDamage`) and scaling attribute, tooltip stats, upgrades with icon and skill, damage perks (1196 on 475 weapons: 10 % of base damage of one kind), gem slot chance per weapon), the character balancing constants, the player's base attributes, rarity colours and the Attributes / Character screen labels |
+| `settings-presets.json` | dedicated-server presets Default / Relaxed / Hard / Survival (38 keys each, complete) and the min / max of every key, from `GameSettingsPresetsResource`; format in `build_presets.py` |
 | `gems.json`      | weapon gems (29: name, text, rarity, tier, stats with scale factor, picture), the weapons with a gem slot (40) and the slot chances, gem forge constants, house comfort (343 furniture pieces in 16 categories with their points, 15 instruments, Rested buff and comfort constants); format in `build_gems.py` |
 | `ui/`            | character screen pictures from the mod's `ui` option (perk icons, equipment slots, rarity, buffs, skill node frames) |
 | `craft.json`     | recipes, Flame Altar levels, building pieces, stations, how each one unlocks, item category / type / food type / rarity / class / level |
@@ -148,8 +149,8 @@ change in the game data. Current reference: 1225 markers (79 unique items,
 110 cosmetics, 107 collectibles), 2578 chests, 6632 ores, 76,742 plants,
 1198 recipes, 1324 building pieces, 14 altar levels, 78 armour sets,
 320 lore notes (564 pages), 186 quests, 2912 item pictures,
-1394 equipable items (575 with armour, 507 weapons, 72 shields, 38 rings, all with a picture, 246 with parry),
-365 upgrades, 403 UI texts, 153 UI pictures, 117 skill nodes with attribute effects.
+1394 equipable items (575 with armour, 507 weapons, 72 shields, 38 rings, all with a picture, 246 with parry; parry and block points: formulas from enshrouded.exe, see `parryPower`/`blockPower` in `frontend/src/app/core/gear.logic.ts`),
+4 server presets x 38 keys, 365 upgrades, 403 UI texts, 153 UI pictures, 117 skill nodes with attribute effects.
 
 `build_resources.py` (chests, plants, ores, special loot), `build_enemies.py` (bosses and elites), `build_skills.py` (the skill tree), `build_gear.py` (equipment stats; its docstring describes `gear.json`), `build_gems.py` (weapon gems and comfort, `gems.json`), `build_lore.py` (the journal) and `build_craft.py`
 (recipes, altar, building; its docstring describes `craft.json`) are used by
@@ -187,3 +188,7 @@ long as an element does not move or change category.
 - **Missing translations or icons**: check that the matching `args` key was
   `true` during step 2 and that `$WORK/export` is the folder passed to the
   later steps.
+
+### Server presets vs `docs/server-settings.md`
+
+All four presets are complete in the game data (nothing missing). Differences from the article: `playerDivingTimeFactor` min 0.75 (article 0.5); `enemyDamageFactor` max 2.5 (article 5); `bossHealthFactor` max 4 (article 5); Default `randomSpawnerAmount` is `Automatic` (article Normal); `perkUpgradeRecyclingFactor` Default 0.5 (article text 0.1, so the 0.5 of the file is right); extra key `flameLevelFogRemoval` (1..11; Default 11, Relaxed 11, Hard 11, Survival 11).

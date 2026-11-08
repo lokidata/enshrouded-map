@@ -29,8 +29,8 @@ const regen = (key: string, name: string, attr: string, text: string): RowDef =>
   format: 'Normal',
   attr,
   text,
-  est: true, // the game adds food and the Rested buff
-  plain: true,
+  plain: true, // matches the game's screen without food or Rested (19 / 10 / 50 checked); those buffs add more
+
 });
 const delay = (key: string, name: string, attr: string, text: string): RowDef => ({
   key,

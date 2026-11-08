@@ -20,6 +20,9 @@ import {
   worn,
   effectTotals,
   parryPoints,
+  parryPower,
+  blockPower,
+  blockPoints,
   perkDamage,
   rankDamage,
   rarityColor,
@@ -45,6 +48,27 @@ const c = {
   playerBaseStamina: 100,
   playerStaminaPerAP: 10,
   playerBaseOxygen: 30,
+};
+/** The constants of gear.json the parry and block formulas read (BalancingTable). */
+const game = {
+  genericWeaponSeed: 10,
+  powerCreepWeapon: 0.15000000596046448,
+  armorOffset: 23,
+  armorGradient: 15,
+  flameLevelMax: 20,
+  playerLevelMax: 100,
+  critBonus: 0.800000011920929,
+  baseCritChance: 0.10000000149011612,
+  htkStartPve: 5,
+  htkEndPve: 10,
+  playerBaseHealth: 100,
+  playerHealthPerAP: 50,
+  playerStaminaPerAP: 10,
+  htkStartEvp: 5,
+  htkEndEvp: 3,
+  epicWeaponBonus: 1.600000023841858,
+  parryToDepletion: 0.3499999940395355,
+  expectedBaseDamageFactor: 2.5,
 };
 const stat = (en: string, value: number, format: 'Normal' | 'Percentage' = 'Normal') => ({
   id: 1,
@@ -171,11 +195,21 @@ describe('gear logic', () => {
       ]),
     );
     const p = vitalParts(c, a, sums);
-    expect(p.health.map((x) => x.value)).toEqual([100, 105, 300]);
-    expect(p.mana.map((x) => x.value)).toEqual([100, 16, 100]);
-    expect(p.stamina.map((x) => x.value)).toEqual([100, 8, 30]);
+    expect(p.health.map((x) => x.value)).toEqual([100, 105, 0, 300]);
+    expect(p.mana.map((x) => x.value)).toEqual([100, 16, 0, 100]);
+    expect(p.stamina.map((x) => x.value)).toEqual([100, 8, 0, 30]);
     const v = vitals(c, a, sums);
     expect([v.health, v.mana, v.stamina, v.melee, v.ranged]).toEqual([505, 216, 138, 55, 15]);
+    // the game's 525: the ring's "Health +20" upgrade counts in the total, not in the tooltip's Equipment 105
+    const all = new Map(sums).set('Health|Normal', line('Health', 125));
+    const up = vitalParts(c, a, all, {}, sums);
+    expect(up.health.map((x) => [x.key, x.value])).toEqual([
+      ['player', 100],
+      ['equipment', 105],
+      ['upgrades', 20],
+      ['constitution', 300],
+    ]);
+    expect(vitals(c, a, all).health).toBe(525);
   });
   it('rowParts adds up to rowValue', () => {
     const d = damageRows[0];
@@ -280,10 +314,68 @@ describe('gear logic', () => {
     expect(rows.find((r) => r.kind === 'fire')?.resistance).toBe(10);
     expect(rows.find((r) => r.kind === 'blunt')?.resistance).toBe(0);
   });
-  it('parry of a piece (estimation) and rarity colours', () => {
+  it("block and parry: the game's formulas (Attributes screen of 2026-11-08)", () => {
+    // Riptide (block quality 0.25) at item level 16: "Bloquer 15", even with the two-handed sword in hand
+    expect(blockPower(game, 0.25, 16)).toBe(15);
+    expect(blockPower(game, 0.25, 21)).toBe(20);
+    expect(blockPower({}, 0.25, 16)).toBeNull();
+    // Ornate Greatsword (parry 0.7) at item level 16: 30 at the default world setting; the screen's 26 needs the
+    // world's "enemy stamina" factor between 0.85 and 0.88
+    expect(parryPower(game, 0.7, 16)).toBe(30);
+    expect(parryPower(game, 0.7, 16, 0.85)).toBe(26);
+    expect(parryPower(game, 1, 18)).toBe(51);
+    expect(parryPower({}, 0.7, 16)).toBeNull();
+    // 0.85..0.88 all give 26, no game preset has it (Default/Hard/Survival 1, Relaxed 0.5)
+    for (const k of [0.84, 0.85, 0.88, 0.89, 0.5])
+      expect([k, parryPower(game, 0.7, 16, k)]).toEqual([
+        k,
+        { 0.84: 25, 0.89: 27, 0.5: 15 }[k] ?? 26,
+      ]);
+  });
+
+  it('world settings (enshrouded.exe): health/mana/stamina base, oxygen, Shroud, parry', () => {
+    const a = {
+      constitution: 6,
+      spirit: 5,
+      resistance: 3,
+      strength: 11,
+      dexterity: 3,
+      intelligence: 3,
+    };
+    const sums = statSums([chest, ring]);
+    const def = vitals(c, a, sums);
+    // a default world (or an unknown key) changes nothing
+    expect(vitals(c, a, sums, {}, { playerHealthFactor: 1 })).toEqual(def);
+    expect(vitals(c, a, sums, {}, { playerHealthFactor: 'x' })).toEqual(def);
+    // health x1.5: round((100 + 300) x 1.5) = 600, the items' 50 is not scaled
+    const w = {
+      playerHealthFactor: 1.5,
+      playerManaFactor: 0.25,
+      playerStaminaFactor: 2,
+      playerDivingTimeFactor: 0.75,
+    };
+    const v = vitals(c, a, sums, {}, w);
+    expect([v.health, v.mana, v.stamina, v.oxygen]).toEqual([650, 50, 260, 23]);
+    const p = vitalParts(c, a, sums, {}, sums, w);
+    expect(p.health.map((x) => [x.key, x.value])).toEqual([
+      ['player', 150],
+      ['equipment', 50],
+      ['upgrades', 0],
+      ['constitution', 450],
+    ]);
+    // Shroud: round((240 + 60 x Flame) s x factor)
+    expect(shroudMinutes(1, 2)).toBe(10);
+    expect(shroudMinutes(3, 1.5)).toBe(10.5);
+    expect(shroudMinutes(11, 0.5)).toBe(7.5);
+    // parry: the "enemy stamina" factor through the piece and the weapon guard
+    const sword = { ...chest, lvl: [16, 16] as const, parry: 0.7 };
+    expect(parryPoints(game, sword, 0.85)).toBe(26);
+  });
+
+  it('parry of a piece and rarity colours', () => {
     const helm = { ...chest, lvl: [15, 15] as const, parry: 0.19 };
-    expect(parryPoints(c, helm)).toBe(7);
-    expect(parryPoints(c, ring)).toBeNull();
+    expect(parryPoints(game, helm)).toBe(7);
+    expect(parryPoints(game, ring)).toBeNull();
     expect(rarityColor({ rare: '#123456' }, 'Rare')).toBe('#123456');
     expect(rarityColor(undefined, 'Epic')).toBe('#c58bff');
     expect(rarityColor(undefined, 'Weird')).toBeNull();
@@ -291,12 +383,7 @@ describe('gear logic', () => {
 });
 
 describe('weapons', () => {
-  const k = {
-    genericWeaponSeed: 10,
-    powerCreepWeapon: 0.15000000596046448,
-    armorOffset: 23,
-    armorGradient: 15,
-  };
+  const k = game;
   const axe: GearItem = {
     name: ['Hache', 'Axe'],
     slot: 'Weapon',
@@ -352,14 +439,13 @@ describe('weapons', () => {
   it('the shield only goes with a one-handed weapon of a weapon slot', () => {
     const one = weaponGuard(k, 'weapon3', sword, shield);
     expect(one.shield).toBe(true);
-    expect(one.block).toBe(0.25);
-    expect(one.parry).toBe(2 * parryPoints(k, sword)!);
-    expect(weaponGuard(k, 'weapon1', axe, shield)).toEqual({
-      shield: false,
-      parry: null,
-      block: null,
-    });
-    expect(weaponGuard(k, 'ranged', sword, shield).shield).toBe(false);
+    expect(one.by).toBe(shield);
+    expect(one.parry).toBe(parryPoints(k, shield));
+    expect(one.block).toBe(blockPoints(k, shield));
+    // a two-handed weapon parries itself; the game still shows the shield's block
+    const two = weaponGuard(k, 'weapon1', axe, shield);
+    expect([two.shield, two.by, two.parry, two.block]).toEqual([false, axe, null, one.block]);
+    expect(weaponGuard(k, 'ranged', sword, shield).by).toBe(sword);
     expect(weaponGuard(k, 'weapon1', sword, undefined).block).toBeNull();
   });
 

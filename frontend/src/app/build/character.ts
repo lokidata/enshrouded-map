@@ -1,7 +1,7 @@
 import { Component, computed, inject } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { SlotKey } from '../core/gear.model';
-import { armorTotals, headline, lineSum, statSums, worn } from '../core/gear.logic';
+import { armorTotals, blockPoints, headline, upgraded, worn } from '../core/gear.logic';
 import { GearService } from '../core/gear.service';
 import { PlannerStore } from '../core/planner.store';
 import { GearSlot } from './gear-slot';
@@ -101,7 +101,13 @@ export class CharacterSheet {
     const item = this.gear.data()?.items[this.planner.gear()[slot] ?? ''];
     if (!item) return null;
     if (slot === 'shield') {
-      const n = lineSum(statSums([item]), ['Block'], 'Normal') ?? item.block;
+      const piece = upgraded(
+        this.constants(),
+        item,
+        this.planner.upgrades().shield ?? 0,
+        this.planner.itemLevels().shield,
+      );
+      const n = blockPoints(this.constants(), piece);
       return n ? { label: 'buildRow_block', n } : null;
     }
     return item.damage ? { label: 'equipDamageFactor', n: item.damage.mod } : null;

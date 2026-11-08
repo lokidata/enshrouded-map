@@ -12,6 +12,7 @@ for (const path of [
   'skills.json',
   'gear.json',
   'gems.json',
+  'settings-presets.json',
   'tiles/0/0_0.jpg',
   'icons/x.png',
   'items/x.png',

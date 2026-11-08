@@ -78,9 +78,9 @@ tooltip says), *_RechargeTimeout 500 (ms: the 0.50 s delays), Armor_*_Blowthroug
 DamageModAgainst_*, *DamageMod_* (multipliers, 1 = +0 %). Skill nodes change these attributes (skills.json
 "effects"), gear and food too. The XP needed per level after level 5 (experienceNeedPerLevel stops there) is
 not in the data: the wiki's floor(7100 + 112.5 * (L - 7)) gives 8562 at level 20 as the game's screen does.
-Parry: the item card of the Tank Helmet (parry 0.19) says 7 at item level 15 and the screen's total is 51 with
-a Riptide shield (parry 1.0); the scaling is in the game's code (round(parry * 0.15 * (23 + 15 * L)) fits both
-if the shield is level 18: unverified). Block (Riptide 0.25 -> 15) is not derived either.
+Parry and block: "parry" / "block" are the item's ParryProficiency_Base and blockSetup.quality; the shown numbers
+come from enshrouded.exe (parryPower / blockPower in frontend gear.logic.ts, from the constants here): block of
+Riptide (0.25) at level 16 = 15 as the game shows; parry also uses the world's enemyStaminaFactor (1 by default).
 "rested" holds the Rested buff's program constants: it adds Stamina_Max_Increase and Stamina_Recharge_Increase
 times (attribute + 2) / 5 to Stamina_Max_Adder and Stamina_Recharge, the attribute being "Level" (the program's
 own entity level: probably the comfort level, unverified).

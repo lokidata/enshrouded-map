@@ -13,6 +13,7 @@ import { PlannerStore } from './core/planner.store';
 import { HistoryStore } from './core/history.store';
 import { ViewStore } from './core/view.store';
 import { Enemies } from './enemies/enemies';
+import { Game } from './game/game';
 import { Gems } from './gems/gems';
 import { Lore } from './lore/lore';
 import { MapView } from './map/map-view';
@@ -51,6 +52,7 @@ function read(): string | null {
     Build,
     Equipment,
     Gems,
+    Game,
     Skills,
     TopBar,
     TranslocoPipe,
@@ -88,6 +90,9 @@ function read(): string | null {
         }
         @defer (when views.view() === 'gems') {
           <app-gems [hidden]="views.view() !== 'gems'" />
+        }
+        @defer (when views.view() === 'game') {
+          <app-game [hidden]="views.view() !== 'game'" />
         }
         @defer (when views.view() === 'skills') {
           <app-skills [hidden]="views.view() !== 'skills'" />

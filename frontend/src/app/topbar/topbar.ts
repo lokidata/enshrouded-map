@@ -77,6 +77,14 @@ import { AccountBar } from '../sidebar/account-bar';
           {{ 'gems' | transloco }}
         </button>
       }
+      <button
+        type="button"
+        [class.active]="views.view() === 'game'"
+        [attr.aria-current]="views.view() === 'game' ? 'page' : null"
+        (click)="views.set('game')"
+      >
+        {{ 'game' | transloco }}
+      </button>
     </nav>
     <span class="spacer"></span>
     @if (views.view() === 'map') {

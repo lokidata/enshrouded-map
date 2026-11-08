@@ -15,6 +15,7 @@ describe('history logic', () => {
     expect(sameNav(s, { ...s, item: 'x' })).toBe(false);
     expect(sameNav(s, { ...s, view: 'lore' })).toBe(false);
     expect(sameNav(s, { ...s, view: 'gems' })).toBe(false);
+    expect(sameNav(s, { ...s, view: 'game' })).toBe(false);
   });
   it('accepts only well-formed popped states', () => {
     expect(asNav(null)).toBeNull();

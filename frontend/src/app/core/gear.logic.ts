@@ -142,18 +142,92 @@ export const rarityColor = (
 ): string | null =>
   rarity ? (colors?.[rarity.toLowerCase()] ?? RARITY_FALLBACK[rarity] ?? null) : null;
 
-/** Parry points of a piece: ParryProficiency_Base x 0.15 x (offset + gradient x level) (fits the Tank Helmet's 7: ESTIMATE, formula in the game's code); else its "Parry Power" line. */
-export function parryPoints(c: Constants, item: GearItem): number | null {
-  if (item.parry === undefined || c['armorOffset'] === undefined)
-    return lineSum(statSums([item]), ['Parry Power'], 'Normal');
-  return Math.round(item.parry * 0.15 * (c['armorOffset'] + c['armorGradient'] * item.lvl[1]));
+const f = Math.fround;
+/** The game's float rounding: half away from zero. */
+const roundAway = (x: number) => Math.trunc(f(x >= 0 ? x + 0.5 : x - 0.5));
+
+/** The world's game settings (`GameSettingsStore.values()`); a missing or non-number key = the default world, 1. */
+export type World = Readonly<Record<string, unknown>>;
+export const worldFactor = (w: World, key: string): number => {
+  const v = w[key];
+  return typeof v === 'number' ? v : 1;
+};
+/** The setting each Personnage value reads in enshrouded.exe (world settings struct at +0x90 of the player context). */
+export const WORLD_KEY = {
+  health: 'playerHealthFactor',
+  mana: 'playerManaFactor',
+  stamina: 'playerStaminaFactor',
+  oxygen: 'playerDivingTimeFactor',
+  shroud: 'shroudTimeFactor',
+  parry: 'enemyStaminaFactor',
+} as const;
+
+/**
+ * The stun bar of an enemy of level L as enshrouded.exe estimates it for the parry (float32, same order):
+ * hit = trunc(base damage x (1 + crit chance x crit bonus) x (1 + L/100)^4 x epicWeaponBonus x hits-to-kill),
+ * hits-to-kill = htkStartPve + L/playerLevelMax x (htkEndPve - htkStartPve); stun = round(hit x staminaPerAP /
+ * healthPerAP x the world's "enemy stamina" factor). Null when gear.json lacks the constants.
+ */
+function enemyStun(c: Constants, level: number, enemyStamina: number): number | null {
+  const base = weaponBaseDamage(c, level);
+  if (base === null || c['parryToDepletion'] === undefined) return null;
+  const creep = f(f(level * f(0.01)) + 1);
+  let x = f(f(f(f(c['baseCritChance']) * f(c['critBonus'])) + 1) * base);
+  for (let i = 0; i < 4; i++) x = f(x * creep);
+  const htk = f(
+    f(f(level / c['playerLevelMax']) * (c['htkEndPve'] - c['htkStartPve'])) + c['htkStartPve'],
+  );
+  const hit = Math.max(Math.trunc(f(f(x * f(c['epicWeaponBonus'])) * htk)), 1);
+  const ratio = f(c['playerStaminaPerAP'] / c['playerHealthPerAP']);
+  return roundAway(f(f(ratio * hit) * f(enemyStamina)));
 }
 
-/** Sum of the pieces' parry points; null when none has any. */
-export function parryTotal(c: Constants, pieces: readonly GearItem[]): number | null {
-  const all = pieces.map((p) => parryPoints(c, p)).filter((n): n is number => n !== null);
-  return all.length ? all.reduce((a, b) => a + b, 0) : null;
+/**
+ * Parry power of an item of level L with ParryProficiency_Base `parry`: round(stun x parry x parryToDepletion)
+ * (enshrouded.exe, the code of the item card and of the Attributes screen). `enemyStamina` is the world setting
+ * (1 by default; the site does not know the world's).
+ */
+export function parryPower(
+  c: Constants,
+  parry: number,
+  level: number,
+  enemyStamina = 1,
+): number | null {
+  const stun = enemyStun(c, level, enemyStamina);
+  return stun === null
+    ? null
+    : roundAway(Math.abs(f(f(stun * f(parry)) * f(c['parryToDepletion']))));
 }
+
+/**
+ * Block of a shield of level L with block quality q (enshrouded.exe, float32): expected player health
+ * H = playerBaseHealth + 3 x L x healthPerAP x flameLevelMax / playerLevelMax, hits-to-kill = htkStartEvp -
+ * L/playerLevelMax x (htkStartEvp - htkEndEvp), hit = trunc(H / htk x expectedBaseDamageFactor),
+ * block = round(staminaPerAP / healthPerAP x hit x q). Exact; no world setting.
+ */
+export function blockPower(c: Constants, quality: number, level: number): number | null {
+  if (c['expectedBaseDamageFactor'] === undefined || c['htkStartEvp'] === undefined) return null;
+  const health = f(
+    f(f(f(f(level * 3) * c['playerHealthPerAP']) * c['flameLevelMax']) / c['playerLevelMax']) +
+      c['playerBaseHealth'],
+  );
+  const htk = f(
+    c['htkStartEvp'] - f((c['htkStartEvp'] - c['htkEndEvp']) * f(level / c['playerLevelMax'])),
+  );
+  const hit = Math.trunc(Math.abs(f(f(health / htk) * f(c['expectedBaseDamageFactor']))));
+  const ratio = f(c['playerStaminaPerAP'] / c['playerHealthPerAP']);
+  return roundAway(f(ratio * f(hit * f(quality))));
+}
+
+/** Parry power of a piece at its level (see parryPower); else its "Parry Power" line. */
+export function parryPoints(c: Constants, item: GearItem, enemyStamina = 1): number | null {
+  const n = item.parry === undefined ? null : parryPower(c, item.parry, item.lvl[1], enemyStamina);
+  return n ?? lineSum(statSums([item]), ['Parry Power'], 'Normal');
+}
+
+/** Block of a shield at its level (see blockPower); null without a block quality. */
+export const blockPoints = (c: Constants, item: GearItem): number | null =>
+  item.block === undefined ? null : blockPower(c, item.block, item.lvl[1]);
 
 /** What the taken skill nodes add to each attribute of the game (per level taken when the effect says so). */
 export function effectTotals(t: Tree, levels: Levels): Record<string, number> {
@@ -263,45 +337,68 @@ export interface Vitals {
 }
 
 /**
- * Main characteristics. Exact (checked against the game): ranged damage = 0.05 x dexterity, oxygen. ESTIMATES (the
- * game shows more than these formulas): health, mana, stamina (base + per point x attribute + the lines of the
- * equipment), melee and magic damage (0.05 per point of strength / intelligence + the equipment's lines). Damage is in %.
+ * Main characteristics. Exact (checked against the game's Attributes screen, no food buff): health, mana, stamina =
+ * base + per point x attribute + the worn items' lines + their upgrades' lines (the game's tooltip lists the items'
+ * own lines as "Equipment" and leaves the upgrades' out, they are still in its total), ranged damage = 0.05 x
+ * dexterity, oxygen. ESTIMATES: melee and magic damage (0.05 per point of strength / intelligence + the equipment's
+ * lines). Damage is in %.
  */
-export type PartKey = 'player' | 'equipment' | 'skills' | 'flame' | AttrKey;
+export type PartKey = 'player' | 'equipment' | 'upgrades' | 'skills' | 'flame' | AttrKey;
 export interface Part {
   key: PartKey;
   value: number;
 }
 export type VitalKey = keyof Vitals;
 
-/** Where each main characteristic comes from (zero parts are kept: the caller hides them). */
+/**
+ * Where each main characteristic comes from (zero parts are kept: the caller hides them). `own` = the sums of the
+ * items without their upgrades: health, mana and stamina then split "equipment" / "upgrades" like the game's tooltip.
+ */
 export function vitalParts(
   c: Constants,
   a: Record<AttrKey, number>,
   sums: ReadonlyMap<string, StatSum>,
   fx: Record<string, number> = {},
+  own: ReadonlyMap<string, StatSum> = sums,
+  world: World = {},
 ): Record<VitalKey, Part[]> {
   const flat = (n: string) => lineSum(sums, [n], 'Normal') ?? 0;
   const pct = (n: string) => lineSum(sums, [n], 'Percentage') ?? 0;
   const scale = c['damageScalePerAttributePoint'] * 100;
   const base = (value: number): Part => ({ key: 'player', value });
   const equip = (value: number): Part => ({ key: 'equipment', value });
+  const lines = (n: string): Part[] => {
+    const mine = lineSum(own, [n], 'Normal') ?? 0;
+    return [equip(mine), { key: 'upgrades', value: flat(n) - mine }];
+  };
+  /**
+   * enshrouded.exe (Health/Mana/Stamina_Max_Base): round((base + perAP x points) x the world factor), float32; the
+   * items' lines (the _Adder) are not scaled. The points' share alone = round(perAP x points x factor) (its other
+   * helper), the base gets the rest.
+   */
+  const scaled = (vital: VitalKey, b: number, perAP: number, attr: AttrKey, n: string): Part[] => {
+    const k = f(worldFactor(world, WORLD_KEY[vital as 'health']));
+    const points = perAP * a[attr];
+    const total = roundAway(f(f(b + points) * k));
+    const share = roundAway(f(f(points) * k));
+    return [base(total - share), ...lines(n), { key: attr, value: share }];
+  };
   return {
-    health: [
-      base(c['playerBaseHealth']),
-      equip(flat('Health')),
-      { key: 'constitution', value: c['playerHealthPerAP'] * a.constitution },
-    ],
-    mana: [
-      base(c['playerBaseMana']),
-      equip(flat('Mana')),
-      { key: 'spirit', value: c['playerManaPerAP'] * a.spirit },
-    ],
-    stamina: [
-      base(c['playerBaseStamina']),
-      equip(flat('Stamina')),
-      { key: 'resistance', value: c['playerStaminaPerAP'] * a.resistance },
-    ],
+    health: scaled(
+      'health',
+      c['playerBaseHealth'],
+      c['playerHealthPerAP'],
+      'constitution',
+      'Health',
+    ),
+    mana: scaled('mana', c['playerBaseMana'], c['playerManaPerAP'], 'spirit', 'Mana'),
+    stamina: scaled(
+      'stamina',
+      c['playerBaseStamina'],
+      c['playerStaminaPerAP'],
+      'resistance',
+      'Stamina',
+    ),
     melee: [{ key: 'strength', value: scale * a.strength }, equip(pct('Melee Damage'))],
     ranged: [{ key: 'dexterity', value: scale * a.dexterity }, equip(pct('Ranged Damage'))],
     magic: [
@@ -309,7 +406,10 @@ export function vitalParts(
       equip(pct('Magic Damage')),
       { key: 'skills', value: (fx['MagicDamageMod'] ?? 0) * 100 },
     ],
-    oxygen: [base(c['playerBaseOxygen'])],
+    // enshrouded.exe (Oxygen_MaxBase): round(playerBaseOxygen x OxygenMaxMod (1 here) x the diving time factor)
+    oxygen: [
+      base(roundAway(f(f(c['playerBaseOxygen']) * f(worldFactor(world, WORLD_KEY.oxygen))))),
+    ],
   };
 }
 
@@ -318,8 +418,9 @@ export function vitals(
   a: Record<AttrKey, number>,
   sums: ReadonlyMap<string, StatSum>,
   fx: Record<string, number> = {},
+  world: World = {},
 ): Vitals {
-  const parts = vitalParts(c, a, sums, fx);
+  const parts = vitalParts(c, a, sums, fx, sums, world);
   const sum = (k: VitalKey) => parts[k].reduce((n, p) => n + p.value, 0);
   return {
     health: sum('health'),
@@ -403,11 +504,12 @@ const ALTARS = [2, 4, 6, 8, 10, 11, 12, 13, 14, 15, 16];
 export const altars = (flame: number): number | null => ALTARS[flame - 1] ?? null;
 export const frostProtection = (flame: number): boolean => flame >= 8;
 /**
- * Time in the Shroud from the Flame with the default world settings, in minutes: enshrouded.exe sets
- * FogResistance_MaxFlameBase = (playerBaseFogResistance 240 + playerFogResistancePerFlameLevel 60 x Flame) s x the
- * world's Shroud time factor (1 by default).
+ * Time in the Shroud from the Flame, in minutes: enshrouded.exe sets FogResistance_MaxFlameBase =
+ * round((playerBaseFogResistance 240 + playerFogResistancePerFlameLevel 60 x Flame) s x the world's Shroud time
+ * factor), float32 (constants inlined: gear.json does not carry them).
  */
-export const shroudMinutes = (flame: number): number | null => (flame >= 1 ? 4 + flame : null);
+export const shroudMinutes = (flame: number, factor = 1): number | null =>
+  flame >= 1 ? roundAway(f((240 + 60 * flame) * f(factor))) / 60 : null;
 
 /**
  * The six skills that add one attribute point per two Flame levels. Exact (enshrouded.exe): Flame >> 1, added once
@@ -540,29 +642,31 @@ export function weaponDamage(
 export interface WeaponGuard {
   /** The shield is held with it (one-handed weapon in a weapon slot, a shield worn). */
   shield: boolean;
-  /** Parry points of the weapon (+ the shield's): ESTIMATE (see parryPoints); null when none has any. */
+  /** Parry power of the item that parries (`by`), see parryPower; null when it has none. */
   parry: number | null;
-  /** The shield's block (its Block line, else its block value); null without a shield. */
+  /** What parries: the shield with a one-handed weapon, else the weapon (the game names it beside the row). */
+  by: GearItem;
+  /** The shield's block (blockPoints), shown by the game whatever the weapon; null without a shield. */
   block: number | null;
 }
 
 /**
- * What a weapon gives to defend. The shield only goes with a one-handed weapon (`damage.hands` 1) of a weapon slot:
- * a two-handed weapon or the bow leaves it on the back.
+ * What a weapon gives to defend. The shield parries only with a one-handed weapon (`damage.hands` 1) of a weapon
+ * slot; a two-handed weapon parries itself. The game's Block row is the shield's even with a two-handed weapon.
  */
 export function weaponGuard(
   c: Constants,
   slot: SlotKey,
   weapon: GearItem,
   shield: GearItem | undefined,
+  enemyStamina = 1,
 ): WeaponGuard {
   const withShield = !!shield && slot !== 'ranged' && weapon.damage?.hands === 1;
-  const parts = [weapon, ...(withShield ? [shield!] : [])];
+  const by = withShield ? shield! : weapon;
   return {
     shield: withShield,
-    parry: parryTotal(c, parts),
-    block: withShield
-      ? (lineSum(statSums([shield!]), ['Block'], 'Normal') ?? shield!.block ?? null)
-      : null,
+    parry: parryPoints(c, by, enemyStamina),
+    by,
+    block: shield ? blockPoints(c, shield) : null,
   };
 }

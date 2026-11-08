@@ -35,6 +35,7 @@ async function menu(page: Page, item: string): Promise<void> {
   await page.getByRole('menuitem', { name: item }).click();
 }
 
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 test.describe.configure({ mode: 'serial' }); // the second test needs the account of the first
 
 const user = `e2e${Date.now()}`;
@@ -841,7 +842,8 @@ test('build: level, flame, equipment, protection, skills, save and reload', asyn
   await expect(build.getByRole('row', { name: /Protection physique/ })).toContainText('26');
   await expect(build.getByRole('row', { name: /\+ Contondant/ })).toContainText('6');
   await wear(/Arme 1/, /Épée d'essai/);
-  await expect(build.locator('dl.lines')).toContainText('+12'); // parry: helmet 0.19 at level 11 = 5 (estimation) + the sword's 7
+  await expect(build.locator('dl.lines')).toContainText("(Épée d'essai)"); // the parry is the weapon in hand's, named like the game
+  await expect(build.locator('dl.lines')).toContainText('7');
   await expect(build.getByText('estimation').first()).toBeVisible();
 
   // rows with a base value from the game: a value instead of a dash, a skill effect adds up (2 levels of 5 %)
@@ -1287,4 +1289,139 @@ test('gems: filters, level scaling, comfort input, back, AXE', async ({ page }) 
   await expect(
     page.locator('app-build div[app-stat-row]').filter({ hasText: 'Durée de Reposé' }),
   ).toContainText('—');
+});
+
+test('game: edit, export, import, reload, AXE', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel("Nom d'utilisateur").fill(user);
+  await page
+    .getByRole('dialog')
+    .getByLabel('Mot de passe', { exact: true })
+    .fill('a brand new passphrase');
+  await page.getByRole('dialog').getByRole('button', { name: 'Se connecter' }).click();
+  await expect(page.locator('.who')).toContainText(user);
+  const violations = async () =>
+    (
+      await new AxeBuilder({ page })
+        .include('app-game')
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+        .analyze()
+    ).violations.map((v) => `${v.id}: ${v.nodes[0].html.slice(0, 120)}`);
+  await page.getByRole('button', { name: 'Partie', exact: true }).click();
+  const preview = page.getByLabel('Aperçu du fichier enshrouded_server.json');
+  await expect(preview).toHaveValue(new RegExp(escapeRe('"name": "Enshrouded Server"')));
+  await expect(page.getByLabel('Santé des joueurs', { exact: true })).toBeEnabled();
+  expect(await violations(), 'default').toEqual([]);
+
+  await page.getByLabel('Préréglage', { exact: true }).selectOption('Custom');
+  const health = page.getByLabel('Santé des joueurs', { exact: true });
+  await health.fill('9'); // clamped to 4 like the server
+  await health.blur();
+  await expect(health).toHaveValue('4');
+  await expect(preview).toHaveValue(new RegExp(escapeRe('"playerHealthFactor": 4')));
+  await page.getByRole('button', { name: 'Rétablir Santé des joueurs' }).click();
+  await expect(preview).toHaveValue(new RegExp(escapeRe('"playerHealthFactor": 1')));
+  expect(await violations(), 'custom').toEqual([]);
+
+  await page.getByLabel('Ou collez son contenu').fill(
+    JSON.stringify({
+      name: 'Imported',
+      queryPort: 20000,
+      mystery: 1,
+      gameSettingsPreset: 'Custom',
+      gameSettings: { bossDamageFactor: 3, nope: 1 },
+    }),
+  );
+  await page.getByRole('button', { name: 'Vérifier' }).click();
+  await expect(page.locator('.gs-report')).toContainText('mystery');
+  await expect(page.locator('.gs-report')).toContainText('Dégâts des boss');
+  await page.getByRole('button', { name: 'Appliquer' }).click();
+  await expect(preview).toHaveValue(new RegExp(escapeRe('"queryPort": 20000')));
+  await expect(preview).toHaveValue(new RegExp(escapeRe('"bossDamageFactor": 3')));
+  await expect(preview).toHaveValue(new RegExp(escapeRe('"name": "Imported"')));
+  expect(await violations(), 'imported').toEqual([]);
+
+  await page.reload();
+  await page.getByRole('button', { name: 'Partie', exact: true }).click();
+  await page
+    .getByRole('navigation', { name: 'Partie' })
+    .getByRole('button', { name: 'Boss' })
+    .click();
+  await expect(page.getByLabel('Dégâts des boss', { exact: true })).toHaveValue('3');
+  await expect(preview).toHaveValue(new RegExp(escapeRe('"name": "Imported"')));
+});
+
+test('game: a preset can be changed, a field edit turns it into Custom, reset all goes back to Default', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByLabel("Nom d'utilisateur").fill(user);
+  await page
+    .getByRole('dialog')
+    .getByLabel('Mot de passe', { exact: true })
+    .fill('a brand new passphrase');
+  await page.getByRole('dialog').getByRole('button', { name: 'Se connecter' }).click();
+  await expect(page.locator('.who')).toContainText(user);
+  await page.getByRole('button', { name: 'Partie', exact: true }).click();
+  const preset = page.getByLabel('Préréglage', { exact: true });
+  const health = page.getByLabel('Santé des joueurs', { exact: true });
+  await preset.selectOption('Hard');
+  await expect(preset).toHaveValue('Hard');
+  await health.fill('3');
+  await health.blur();
+  await expect(preset).toHaveValue('Custom');
+  await expect(health).toHaveValue('3');
+  await page.getByRole('button', { name: 'Rétablir Santé des joueurs' }).click();
+  await expect(health).not.toHaveValue('3');
+  await health.fill('2');
+  await health.blur();
+  await page.getByRole('button', { name: 'Tout rétablir' }).click();
+  await expect(preset).toHaveValue('Default');
+  await expect(health).toHaveValue('1');
+});
+
+test('game settings feed the Personnage values and their tooltips', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel("Nom d'utilisateur").fill(user);
+  await page
+    .getByRole('dialog')
+    .getByLabel('Mot de passe', { exact: true })
+    .fill('a brand new passphrase');
+  await page.getByRole('dialog').getByRole('button', { name: 'Se connecter' }).click();
+  await expect(page.locator('.who')).toContainText(user);
+  const fixture = await page.evaluate(async () =>
+    (await (await fetch('gear.json')).text()).includes('fixture_gear'),
+  );
+  test.skip(!fixture, 'needs the fixture map');
+
+  const build = page.locator('app-build');
+  const openBuild = () =>
+    page.locator('app-topbar').getByRole('button', { name: 'Personnage', exact: true }).click();
+  await openBuild();
+  await build.getByLabel('Niveau de flamme', { exact: true }).fill('4');
+  await build.getByLabel('Niveau de flamme', { exact: true }).dispatchEvent('change');
+  const health = build.locator('[app-stat-row]').filter({ hasText: 'Santé' }).first();
+  const shroud = build.locator('[app-stat-row]').filter({ hasText: /Temps dans l[ae] Brume/ });
+  await expect(health).toContainText('250'); // 100 + 50 x constitution 3, default world
+  await expect(shroud).toContainText('8 min');
+
+  await page.getByRole('button', { name: 'Partie', exact: true }).click();
+  const game = page.locator('app-game');
+  await game.getByLabel('Préréglage', { exact: true }).selectOption('Custom');
+  for (const [label, value] of [
+    ['Santé des joueurs', '2'],
+    ['Temps dans la Brume', '2'],
+  ]) {
+    await game.getByLabel(label, { exact: true }).fill(value);
+    await game.getByLabel(label, { exact: true }).blur();
+  }
+
+  await openBuild();
+  await expect(health).toContainText('500'); // round((100 + 150) x 2)
+  await expect(shroud).toContainText('16 min'); // (4 + Flame 4) x 2
+  await health.locator('dd').hover();
+  await expect(health.getByRole('tooltip')).toContainText('Réglage de la partie');
+  await expect(health.getByRole('tooltip')).toContainText('×2');
+  await shroud.locator('dd').hover();
+  await expect(shroud.getByRole('tooltip')).toContainText('Réglage de la partie');
 });

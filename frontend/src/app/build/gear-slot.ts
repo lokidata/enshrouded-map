@@ -14,11 +14,14 @@ import {
   attackSpeed,
   headline,
   parryPoints,
+  WORLD_KEY,
+  worldFactor,
   pieceArmor,
   rankDamage,
   rankGain,
   upgraded,
 } from '../core/gear.logic';
+import { GameSettingsStore } from '../core/game-settings.store';
 import { GearService } from '../core/gear.service';
 import { PlannerStore } from '../core/planner.store';
 import { SlotPicker } from '../equipment/slot-picker';
@@ -120,7 +123,7 @@ import { SlotPicker } from '../equipment/slot-picker';
               <dt>{{ 'buildRow_parry' | transloco }}</dt>
               <dd>
                 @if (item()!.parry !== undefined) {
-                  <span class="est" [title]="'buildEstimateTip' | transloco">{{
+                  <span class="est" [title]="'buildParryTip' | transloco">{{
                     'buildEstimate' | transloco
                   }}</span>
                 }
@@ -243,7 +246,14 @@ export class GearSlot {
     upgraded(this.constants(), this.item()!, this.taken(), this.planner.itemLevels()[this.slot()]),
   );
   protected readonly armor = computed(() => headline(pieceArmor(this.constants(), this.piece())));
-  protected readonly parry = computed(() => parryPoints(this.constants(), this.piece()));
+  private readonly settings = inject(GameSettingsStore);
+  protected readonly parry = computed(() =>
+    parryPoints(
+      this.constants(),
+      this.piece(),
+      worldFactor(this.settings.values(), WORLD_KEY.parry),
+    ),
+  );
   protected readonly color = computed(() => this.gear.color(this.item()?.rarity));
   protected readonly level = computed(() => this.piece().lvl[1]);
   protected readonly levelMax = computed(() => this.item()!.lvl[1] + this.item()!.upgrades.length);
