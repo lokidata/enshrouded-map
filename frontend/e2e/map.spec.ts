@@ -1301,7 +1301,7 @@ test('browser Back and Forward walk through the views', async ({ page }) => {
   await expect(current).toHaveText('Lore');
 });
 
-test('gems: filters, level scaling, comfort input, back, AXE', async ({ page }) => {
+test('comfort points are kept in the draft and Rested stays unknown', async ({ page }) => {
   await page.goto('/');
   await page.getByLabel("Nom d'utilisateur").fill(user);
   await page
@@ -1310,39 +1310,6 @@ test('gems: filters, level scaling, comfort input, back, AXE', async ({ page }) 
     .fill('a brand new passphrase');
   await page.getByRole('dialog').getByRole('button', { name: 'Se connecter' }).click();
   await expect(page.locator('.who')).toContainText(user);
-  const fixture = await page.evaluate(
-    async () => (await (await fetch('gems.json')).json()).gems?.length === 2,
-  );
-  test.skip(!fixture, 'needs the fixture map');
-
-  const violations = async (sel: string) =>
-    (
-      await new AxeBuilder({ page })
-        .include(sel)
-        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
-        .analyze()
-    ).violations.map((v) => `${v.id}: ${v.nodes[0].html.slice(0, 120)}`);
-  const cards = page.locator('app-gems .entry');
-  await page.getByRole('button', { name: 'Pierres', exact: true }).click();
-  await expect(cards).toHaveCount(2);
-  expect(await violations('app-gems'), 'list').toEqual([]);
-  await page.locator('app-gems').getByRole('searchbox').fill('brûlure');
-  await expect(cards).toHaveCount(1);
-  await page.locator('app-gems').getByRole('searchbox').fill('');
-  await page.getByRole('button', { name: 'T1', exact: true }).click();
-  await expect(cards).toHaveCount(2);
-
-  await page.getByRole('button', { name: 'Pierre précieuse de saignement' }).click();
-  const facts = page.locator('app-gems dl.facts');
-  await expect(facts).toContainText('8'); // level 1: the data's value, exact
-  await page.getByLabel('Niveau de la pierre').fill('3');
-  await page.getByLabel('Niveau de la pierre').press('Enter');
-  await page.getByLabel('Niveau de la pierre').blur();
-  await expect(facts).toContainText('6.2 s'); // 6 s + 0.5 s x 0.15 x 3, tagged as an estimation
-  await expect(facts).toContainText('estimation');
-  expect(await violations('app-gems'), 'gem').toEqual([]);
-  await page.goBack(); // Back leaves the Gems screen
-  await expect(page.locator('app-gems')).toBeHidden();
 
   // comfort: kept in the draft, Rested stays unknown ("—")
   await page.getByRole('button', { name: 'Personnage', exact: true }).click();

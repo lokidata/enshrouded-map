@@ -14,7 +14,6 @@ import { HistoryStore } from './core/history.store';
 import { ViewStore } from './core/view.store';
 import { Enemies } from './enemies/enemies';
 import { Game } from './game/game';
-import { Gems } from './gems/gems';
 import { Lore } from './lore/lore';
 import { MapView } from './map/map-view';
 import { Build } from './build/build';
@@ -51,7 +50,6 @@ function read(): string | null {
     Enemies,
     Build,
     Equipment,
-    Gems,
     Game,
     Skills,
     TopBar,
@@ -87,9 +85,6 @@ function read(): string | null {
         }
         @defer (when views.view() === 'equipment') {
           <app-equipment [hidden]="views.view() !== 'equipment'" />
-        }
-        @defer (when views.view() === 'gems') {
-          <app-gems [hidden]="views.view() !== 'gems'" />
         }
         @defer (when views.view() === 'game') {
           <app-game [hidden]="views.view() !== 'game'" />
