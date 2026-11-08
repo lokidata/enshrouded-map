@@ -26,6 +26,8 @@ SLOTS = frozenset(
 )  # equipment slots
 MAX_UPGRADES = 8  # per piece (the data has 5 at most)
 MAX_UPGRADE_INDEX = 64
+GEM_SLOTS = frozenset(["weapon1", "weapon2", "weapon3", "ranged"])  # slots that can hold a gem
+MAX_GEM_LEVEL = 200  # the data has 105
 GUID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
 
 
@@ -47,6 +49,26 @@ def _upgrades(upgrades: dict[str, list[int]]) -> dict[str, list[int]]:
     return upgrades
 
 
+class GemIn(StrictModel):
+    """The gem set in a weapon slot, at its gem level."""
+
+    id: str
+    level: int = Field(ge=1, le=MAX_GEM_LEVEL)
+
+    @field_validator("id")
+    @classmethod
+    def _guid(cls, guid: str) -> str:
+        if not GUID.fullmatch(guid):
+            raise ValueError("gem ids are lowercase guids")
+        return guid
+
+
+def _gems(gems: dict[str, GemIn]) -> dict[str, GemIn]:
+    if not GEM_SLOTS.issuperset(gems):
+        raise ValueError("unknown gem slot")
+    return gems
+
+
 class BuildIn(StrictModel):
     name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=60)]
     nodes: dict[str, int] = Field(max_length=MAX_NODES)
@@ -54,6 +76,7 @@ class BuildIn(StrictModel):
     flame: int = Field(default=0, ge=0, le=50)
     gear: dict[str, str] = Field(default_factory=dict, max_length=len(SLOTS))
     upgrades: dict[str, list[int]] = Field(default_factory=dict, max_length=len(SLOTS))
+    gems: dict[str, GemIn] = Field(default_factory=dict, max_length=len(GEM_SLOTS))
 
     @field_validator("nodes")
     @classmethod
@@ -67,6 +90,7 @@ class BuildIn(StrictModel):
 
     _slots = field_validator("gear")(_gear)
     _picks = field_validator("upgrades")(_upgrades)
+    _gem_slots = field_validator("gems")(_gems)
 
 
 class BuildOut(BaseModel):
@@ -77,4 +101,5 @@ class BuildOut(BaseModel):
     flame: int = 0
     gear: dict[str, str] = Field(default_factory=dict)
     upgrades: dict[str, list[int]] = Field(default_factory=dict)
+    gems: dict[str, dict[str, str | int]] = Field(default_factory=dict)
     updated_at: datetime

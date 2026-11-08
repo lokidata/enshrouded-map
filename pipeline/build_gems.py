@@ -7,12 +7,21 @@
          "icon": "items/<guid>.png" | absent,
          "sources": [{"name": [fr, en], "enemy": enemies.json id | absent}]  enemies that carry the gem in their loot
                     inventory (see GEM_DROPS),
-         "stats": [{"name": [fr, en], "value": n, "scale": scaleFactor | absent, "format": ...}],
+         "stats": [{"name": [fr, en], "value": n, "scale": scaleFactor | absent, "fn": scale function | absent,
+                    "format": ...}],
          "timesNs": [n]    TimeImpactConfig values (cooldowns / durations; 5000000000 = 5 s if ns, unverified)}
   A gem is not crafted (no recipe) and has no perks: its "upgrade tiers" are its levels, raised at Shroud Forges /
-  the Gem Forge ("Refine Gem", "Max Gem Level: %k"). The data holds each stat's value at the gem's level 1
-  and its `scaleFactor` (function WeaponPowerCreep; constants.powerCreepWeapon); the curve itself, the max gem
-  level and the cost of a level are in the game's code, not in the data: not derived here.
+  the Gem Forge ("Refine Gem", "Max Gem Level: %k"). Every scaled line of the 29 gems (uiValues and the impact
+  configs alike) has "fn" WeaponPowerCreep and reads the attribute "Level" of the gem itself (sourceEntity Self,
+  BaseAttributeResource bbf879a8): the gem's level drives it, not the weapon's. The curve is game code (not found
+  in enshrouded.exe); value + scale x constants.powerCreepWeapon x gem level (durations: scale in seconds)
+  reproduces in-game samples at level 15 (Bleeding: 14 damage per second for 7.1 s; Toxic Betrayal: damage 8;
+  "Normal" lines are Sint32 configs, rounded) but not Toxic Betrayal's 5.2 s (its line and impact config both say
+  6 s, the impact program's default is 3 s), so the site shows it as an estimation (`gemValue`, core/gems.logic.ts).
+  The %k of a "desc" are NOT in the order of "stats" (Toxic Betrayal, Meteoric Impact): the game's mapping is code.
+  Every effect is a trigger (crit, kill, block, orb...): none is a permanent stat of the character. All gems carry
+  the same item tag and no weapon category: the data puts no restriction on which socketed weapon takes which gem.
+  The max gem level and the cost of a level are game code: not derived here.
   "slot": {"probability": {rarity: chance a found weapon has a gem slot} (gemSlotProbability),
            "weapons": [guid of the weapons whose gemSlotOverride is set: 40, Rare+ only],
            "rule": the game's texts: the weapon must be fully upgraded to unlock the slot}
@@ -115,7 +124,8 @@ def build_gems(src, locas, export=None, out=None):
         if icon(d):
             gem["icon"] = icon(d)
         gem["stats"] = [{"name": loca(u["locaId"]["value"]), "value": u["value"], "format": u["valueFormat"],
-                         **({"scale": u["scaleData"]["scaleFactor"]} if u["isScaled"] else {})}
+                         **({"scale": u["scaleData"]["scaleFactor"], "fn": u["scaleData"]["function"]}
+                            if u["isScaled"] else {})}
                         for u in d["uiValues"] if loca(u["locaId"]["value"])]
         gem["timesNs"] = [c["$value"]["value"]["value"] for c in d["impactValues"]["simple"]
                           if c["$type"] == "keen::impact::TimeImpactConfig"]

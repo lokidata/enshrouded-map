@@ -25,6 +25,7 @@ def _out(build: Build) -> BuildOut:
         flame=build.flame,
         gear=build.gear,
         upgrades=build.upgrades,
+        gems=build.gems or {},
         updated_at=build.updated_at,
     )
 

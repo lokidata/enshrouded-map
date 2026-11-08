@@ -142,3 +142,32 @@ def test_upgrades_validation(user: ApiClient) -> None:
     ]
     for bad in bads:
         assert user.post(URL, json={**BUILD, "upgrades": bad}).status_code == 422, bad
+
+
+def test_gems(user: ApiClient) -> None:
+    assert user.post(URL, json=BUILD).json()["gems"] == {}  # old payload: default
+    gems = {"weapon1": {"id": G1, "level": 15}, "ranged": {"id": G1, "level": 1}}
+    made = user.post(URL, json={**BUILD, "gems": gems}).json()
+    assert made["gems"] == gems
+    assert any(b["gems"] == gems for b in user.get(URL).json())
+    put = user.put(
+        f"{URL}/{made['id']}", json={**BUILD, "gems": {"weapon3": {"id": G1, "level": 200}}}
+    )
+    assert put.json()["gems"] == {"weapon3": {"id": G1, "level": 200}}
+    assert user.put(f"{URL}/{made['id']}", json=BUILD).json()["gems"] == {}  # omitted: reset
+
+
+def test_gems_validation(user: ApiClient) -> None:
+    bads: list[object] = [
+        {"head": {"id": G1, "level": 1}},
+        {"shield": {"id": G1, "level": 1}},
+        {"weapon1": {"id": G1, "level": 0}},
+        {"weapon1": {"id": G1, "level": 201}},
+        {"weapon1": {"id": G1.upper(), "level": 1}},
+        {"weapon1": {"id": "abc", "level": 1}},
+        {"weapon1": {"id": G1}},
+        {"weapon1": {"id": G1, "level": 1, "x": 1}},
+        {"weapon1": G1},
+    ]
+    for bad in bads:
+        assert user.post(URL, json={**BUILD, "gems": bad}).status_code == 422, bad

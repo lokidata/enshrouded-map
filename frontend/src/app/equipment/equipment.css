@@ -155,3 +155,21 @@ ul {
   vertical-align: middle;
   margin-right: 6px;
 }
+.gempick {
+  display: grid;
+  gap: 6px;
+  margin: 6px 0;
+}
+.gempick select {
+  padding: 6px 8px;
+  max-width: 100%;
+}
+.gem-text {
+  margin: 0;
+}
+.est {
+  margin-left: 4px;
+  font-size: 0.75rem;
+  font-style: italic;
+  color: #e0c890;
+}

@@ -10,7 +10,8 @@ import {
   upgraded,
 } from '../core/gear.logic';
 import { GearService } from '../core/gear.service';
-import { PlannerStore } from '../core/planner.store';
+import { GemsService } from '../core/gems.service';
+import { PlannerStore, WEAPON_SLOTS, WeaponSlot } from '../core/planner.store';
 
 const PAGE = 60;
 const RARITIES = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'];
@@ -80,6 +81,57 @@ const RARITIES = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'];
                 </li>
               }
             </ol>
+          }
+          @if (gemSlot(); as ws) {
+            @if (gems.gems().length) {
+              <h5>{{ 'equipGem' | transloco }}</h5>
+              @if (!it.gem) {
+                <p class="note">{{ 'equipGemNoSlot' | transloco }}</p>
+              }
+              <div class="gempick">
+                <select
+                  [attr.aria-label]="'equipGem' | transloco"
+                  (change)="setGem(ws, $any($event.target).value)"
+                >
+                  <option value="" [selected]="!planner.gems()[ws]">
+                    {{ 'equipGemNone' | transloco }}
+                  </option>
+                  @for (g of gems.gems(); track g.id) {
+                    <option [value]="g.id" [selected]="planner.gems()[ws]?.id === g.id">
+                      {{ gems.text(g.name) }}
+                    </option>
+                  }
+                </select>
+                @if (gems.effect(planner.gems()[ws]); as e) {
+                  <label class="lvlpick">
+                    {{ 'gemLevel' | transloco }}
+                    <input
+                      type="number"
+                      [min]="e.gem.lvl[0]"
+                      [max]="e.gem.lvl[1]"
+                      [value]="e.level"
+                      (change)="setGemLevel(ws, $event)"
+                    />
+                    <small>({{ e.gem.lvl[0] }}–{{ e.gem.lvl[1] }})</small>
+                  </label>
+                  @if (e.text) {
+                    <p class="meta gem-text">{{ e.text }}</p>
+                  }
+                  <ul class="lines">
+                    @for (l of e.lines; track $index) {
+                      <li>
+                        {{ l.name }}: {{ l.text }}
+                        @if (l.estimate) {
+                          <span class="est" [title]="'buildGemTip' | transloco">{{
+                            'buildEstimate' | transloco
+                          }}</span>
+                        }
+                      </li>
+                    }
+                  </ul>
+                }
+              </div>
+            }
           }
           <button type="button" class="pill" (click)="planner.wear(slot(), null)">
             {{ 'equipRemove' | transloco }}
@@ -156,6 +208,7 @@ const RARITIES = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'];
 export class SlotPicker {
   protected readonly gear = inject(GearService);
   protected readonly planner = inject(PlannerStore);
+  protected readonly gems = inject(GemsService);
 
   protected readonly PAGE = PAGE;
   protected readonly rarities = RARITIES;
@@ -194,6 +247,22 @@ export class SlotPicker {
     );
   });
   protected readonly visible = computed(() => this.matching().slice(0, this.shown()));
+
+  /** The slot as a weapon slot (one that can hold a gem), else null. */
+  protected readonly gemSlot = computed(() => WEAPON_SLOTS.find((s) => s === this.slot()) ?? null);
+
+  /** Another gem keeps the level chosen (clamped to its range). */
+  protected setGem(slot: WeaponSlot, id: string): void {
+    this.planner.setGem(slot, id ? { id, level: this.planner.gems()[slot]?.level ?? 1 } : null);
+  }
+
+  protected setGemLevel(slot: WeaponSlot, event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const pick = this.planner.gems()[slot];
+    if (!pick) return;
+    this.planner.setGem(slot, { id: pick.id, level: input.valueAsNumber || 1 });
+    input.value = `${this.planner.gems()[slot]!.level}`;
+  }
 
   protected id(slot: SlotKey): string | undefined {
     return this.planner.gear()[slot];

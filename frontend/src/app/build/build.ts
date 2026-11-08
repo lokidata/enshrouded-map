@@ -376,6 +376,30 @@ interface Row {
                                 [desc]="'buildPerkTip' | transloco: { d: p.desc }"
                               ></div>
                             }
+                            @if (w.gem; as e) {
+                              <div
+                                app-stat-row
+                                class="gem-row"
+                                labelKey="equipGemSet"
+                                [value]="
+                                  gems.text(e.gem.name) +
+                                  ' · ' +
+                                  ('charLevel' | transloco) +
+                                  ' ' +
+                                  e.level
+                                "
+                                [desc]="e.text"
+                              ></div>
+                              @for (l of e.lines; track $index) {
+                                <div
+                                  app-stat-row
+                                  [label]="l.name"
+                                  [value]="l.text"
+                                  [estimate]="l.estimate"
+                                  estTip="buildGemTip"
+                                ></div>
+                              }
+                            }
                             @if (w.block !== '—') {
                               <div app-stat-row labelKey="buildRow_block" [value]="w.block"></div>
                             }
@@ -466,7 +490,7 @@ interface Row {
 })
 export class Build {
   protected readonly gear = inject(GearService);
-  private readonly gems = inject(GemsService);
+  protected readonly gems = inject(GemsService);
   protected readonly planner = inject(PlannerStore);
   protected readonly views = inject(ViewStore);
   private readonly skills = inject(SkillsService);
@@ -755,6 +779,8 @@ export class Build {
                 ],
           block: g.block === null ? '—' : `${g.block}`,
           perks,
+          // a gem's effects are triggers (crit, kill, block...): shown with the weapon, never in the totals
+          gem: this.gems.effect(this.planner.gems()[slot]),
         },
       ];
     });

@@ -17,8 +17,13 @@ import { GEAR_SLOTS, Gear, SlotKey, Upgrades } from './gear.model';
 import { Levels, SavedBuild } from './skills.model';
 import { GearService } from './gear.service';
 import { SkillsService } from './skills.service';
+import { GemPick } from './gems.model';
+import { GemsService } from './gems.service';
+import { gemLevel } from './gems.logic';
 
 const MAX_UPGRADES = 8; // as the API
+const MAX_GEM_LEVEL = 200; // as the API
+export type Gems = Partial<Record<WeaponSlot, GemPick>>;
 const DRAFT = 'skillDraft';
 const clamp = (n: number, min: number, max: number) =>
   Math.min(Math.max(Math.trunc(n) || min, min), max);
@@ -52,6 +57,7 @@ export class PlannerStore {
   private readonly http = inject(HttpClient);
   private readonly skills = inject(SkillsService);
   private readonly gearData = inject(GearService);
+  private readonly gemsData = inject(GemsService);
 
   private readonly draft = this.readDraft();
   readonly levels = signal<Levels>(this.draft.levels);
@@ -63,6 +69,8 @@ export class PlannerStore {
   readonly gear = signal<Gear>(this.draft.gear);
   /** How many of each worn piece's upgrades are taken. */
   readonly upgrades = signal<Upgrades>(this.draft.upgrades);
+  /** The gem set in each weapon slot, at its level. */
+  readonly gems = signal<Gems>(this.draft.gems);
   /** The weapon in hand: only its stat lines count in the totals (the others stay in the bag). */
   readonly active = signal<WeaponSlot>(readActive());
   /** What is worn without the weapons that are not in hand. */
@@ -113,7 +121,7 @@ export class PlannerStore {
   }
 
   reset(): void {
-    this.setAll({}, 1, 0, {}, {});
+    this.setAll({}, 1, 0, {}, {}, {});
   }
 
   setLevel(level: number): void {
@@ -138,6 +146,7 @@ export class PlannerStore {
     else delete next[slot];
     if (next[slot] !== this.gear()[slot]) {
       this.setUpgrades(slot, 0, false);
+      if (isWeapon(slot)) this.setGem(slot as WeaponSlot, null, false);
       this.setItemLevel(slot, null);
     }
     this.gear.set(next);
@@ -166,6 +175,20 @@ export class PlannerStore {
     if (write) this.writeDraft();
   }
 
+  /** Sets a gem in a weapon slot at a level (clamped to the gem's range), or takes it out (null). */
+  setGem(slot: WeaponSlot, pick: GemPick | null, write = true): void {
+    const next: Gems = { ...this.gems() };
+    if (pick) {
+      const gem = this.gemsData.gems().find((g) => g.id === pick.id);
+      next[slot] = {
+        id: pick.id,
+        level: gem ? gemLevel(gem, pick.level) : clamp(pick.level, 1, MAX_GEM_LEVEL),
+      };
+    } else delete next[slot];
+    this.gems.set(next);
+    if (write) this.writeDraft();
+  }
+
   /** A new, empty build. */
   create(): void {
     this.currentId.set(null);
@@ -185,6 +208,7 @@ export class PlannerStore {
       build.flame,
       build.gear,
       fromIndices(build.upgrades ?? {}),
+      readGems(build.gems ?? {}),
     );
   }
 
@@ -213,6 +237,7 @@ export class PlannerStore {
       flame: this.flame(),
       gear: this.gear(),
       upgrades: toIndices(this.upgrades()),
+      gems: this.gems(),
     };
     this.error.set(null);
     try {
@@ -269,8 +294,10 @@ export class PlannerStore {
     flame: number,
     gear: Gear,
     upgrades: Upgrades,
+    gems: Gems,
   ): void {
     this.upgrades.set(upgrades);
+    this.gems.set(gems);
     this.levels.set(levels);
     this.level.set(level);
     this.flame.set(flame);
@@ -290,6 +317,7 @@ export class PlannerStore {
     comfort: number;
     gear: Gear;
     upgrades: Upgrades;
+    gems: Gems;
   } {
     try {
       const raw = JSON.parse(localStorage.getItem(DRAFT) ?? '{}') as Record<string, unknown>;
@@ -317,9 +345,10 @@ export class PlannerStore {
               (v as number) <= MAX_UPGRADES,
           ),
         ),
+        gems: readGems((raw['gems'] ?? {}) as Record<string, unknown>),
       };
     } catch {
-      return { levels: {}, level: 1, flame: 0, comfort: 0, gear: {}, upgrades: {} };
+      return { levels: {}, level: 1, flame: 0, comfort: 0, gear: {}, upgrades: {}, gems: {} };
     }
   }
 
@@ -334,6 +363,7 @@ export class PlannerStore {
           comfort: this.comfort(),
           gear: this.gear(),
           upgrades: this.upgrades(),
+          gems: this.gems(),
         }),
       );
     } catch {
@@ -353,3 +383,15 @@ const fromIndices = (u: Record<string, number[]>): Upgrades =>
       .filter(([, l]) => l.length)
       .map(([k, l]) => [k, l.length]),
   );
+
+/** Gems of a draft or a saved build: weapon slots with a gem id and a level in the API's range. */
+function readGems(raw: Record<string, unknown>): Gems {
+  return Object.fromEntries(
+    Object.entries(raw).flatMap(([k, v]) => {
+      const p = v as Partial<GemPick> | null;
+      return isWeapon(k) && typeof p?.id === 'string' && Number.isInteger(p.level)
+        ? [[k, { id: p.id, level: clamp(p.level!, 1, MAX_GEM_LEVEL) }]]
+        : [];
+    }),
+  );
+}

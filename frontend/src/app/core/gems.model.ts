@@ -4,8 +4,9 @@ export interface GemStat {
   name: Names;
   /** The value at the gem's level 1. */
   value: number;
-  /** `scaleFactor` of the game's WeaponPowerCreep: the curve itself is not in the data. */
+  /** `scaleFactor` of the game's scale function `fn` (WeaponPowerCreep for all): see gemValue. */
   scale?: number;
+  fn?: string;
   format: string;
 }
 
@@ -31,5 +32,12 @@ export interface Gem {
 export interface GemsData {
   gems: readonly Gem[];
   slot: { probability: Record<string, number>; weapons: readonly string[] };
+  constants?: { powerCreepWeapon?: number };
   comfort?: { constants: Record<string, number> };
+}
+
+/** The gem set in a weapon slot, at its level (saved in builds). */
+export interface GemPick {
+  id: string;
+  level: number;
 }

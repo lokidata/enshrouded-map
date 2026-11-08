@@ -130,5 +130,7 @@ class Build(Base):
     flame: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     gear: Mapped[dict[str, str]] = mapped_column(JSON, default=dict)  # slot -> item guid
     upgrades: Mapped[dict[str, list[int]]] = mapped_column(JSON, default=dict)  # slot -> indices
+    # slot -> {"id": gem guid, "level": n}
+    gems: Mapped[dict[str, dict[str, str | int]]] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
