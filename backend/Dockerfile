@@ -10,7 +10,7 @@ RUN python -m venv /opt/venv \
 FROM python:3.12-slim@sha256:b18b261e1b4974b4f321451ad5251ded85abb22c2b8b262da527dda1d031ab30
 ENV PATH=/opt/venv/bin:$PATH PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
 # Fixed packages that the pinned base image does not have yet (apt); Dependabot moves the base forward.
-RUN apt-get update && apt-get install -y --no-install-recommends --only-upgrade apt libapt-pkg7.0 \
+RUN apt-get update && apt-get install -y --no-install-recommends --only-upgrade apt libapt-pkg7.0 zlib1g \
  && rm -rf /var/lib/apt/lists/*
 RUN useradd --uid 10001 --no-create-home --shell /usr/sbin/nologin app \
  && mkdir /data && chown app /data
