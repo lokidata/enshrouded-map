@@ -5,7 +5,6 @@ app-enemies,
 app-skills,
 app-build,
 app-equipment,
-app-gems,
 app-game {
   & {
     display: flex;

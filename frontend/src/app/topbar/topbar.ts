@@ -4,7 +4,6 @@ import { CraftService } from '../core/craft.service';
 import { EnemiesService } from '../core/enemies.service';
 import { LAYOUTS, LayoutService } from '../core/layout.service';
 import { LoreService } from '../core/lore.service';
-import { GemsService } from '../core/gems.service';
 import { GearService } from '../core/gear.service';
 import { SkillsService } from '../core/skills.service';
 import { LangService } from '../core/lang.service';
@@ -65,16 +64,6 @@ import { AccountBar } from '../sidebar/account-bar';
           (click)="views.set(gear.data() ? 'build' : 'skills')"
         >
           {{ 'build' | transloco }}
-        </button>
-      }
-      @if (gems.data()) {
-        <button
-          type="button"
-          [class.active]="views.view() === 'gems'"
-          [attr.aria-current]="views.view() === 'gems' ? 'page' : null"
-          (click)="views.set('gems')"
-        >
-          {{ 'gems' | transloco }}
         </button>
       }
       <button
@@ -207,7 +196,6 @@ export class TopBar {
   protected readonly lore = inject(LoreService);
   protected readonly skills = inject(SkillsService);
   protected readonly gear = inject(GearService);
-  protected readonly gems = inject(GemsService);
   protected readonly views = inject(ViewStore);
   protected readonly layout = inject(LayoutService);
   protected readonly lang = inject(LangService);

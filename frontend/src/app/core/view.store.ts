@@ -2,7 +2,7 @@ import { Injectable, signal } from '@angular/core';
 import { SlotKey } from './gear.model';
 
 export type View =
-  'map' | 'workshop' | 'lore' | 'enemies' | 'build' | 'equipment' | 'skills' | 'gems' | 'game';
+  'map' | 'workshop' | 'lore' | 'enemies' | 'build' | 'equipment' | 'skills' | 'game';
 
 /** What fills the main area next to the menu. */
 @Injectable({ providedIn: 'root' })
