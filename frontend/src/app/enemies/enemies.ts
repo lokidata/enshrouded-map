@@ -199,7 +199,7 @@ export class Enemies {
       const id = this.open();
       const hash = this.views.view() === 'enemies' && id ? `#enemy=${id}` : '';
       if (hash || location.hash.startsWith('#enemy=')) {
-        history.replaceState(null, '', location.pathname + location.search + hash);
+        history.replaceState(history.state, '', location.pathname + location.search + hash);
       }
     });
   }

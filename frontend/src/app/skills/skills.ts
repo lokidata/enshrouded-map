@@ -1,7 +1,9 @@
 import { Component, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { BuildsPanel } from '../build/builds-panel';
 import { normalize } from '../core/filter.store';
-import { copyText } from '../core/links';
+import { GearService } from '../core/gear.service';
+import { ViewStore } from '../core/view.store';
 import { PlannerStore } from '../core/planner.store';
 import { ATTRS, attributes, fill, reachable, segments } from '../core/skills.logic';
 import { SkillClass, SkillNode } from '../core/skills.model';
@@ -27,7 +29,7 @@ const POPUP_HEIGHT = 380;
 /** The skill tree drawn like the game's skill screen, and the builds a player plans on it and saves. */
 @Component({
   selector: 'app-skills',
-  imports: [TranslocoPipe],
+  imports: [TranslocoPipe, BuildsPanel],
   template: `
     <div
       #stage
@@ -196,6 +198,9 @@ const POPUP_HEIGHT = 380;
         >
           −
         </button>
+        <button type="button" class="pill" (click)="views.set(gear.data() ? 'build' : 'map')">
+          {{ (gear.data() ? 'buildBack' : 'skillBackMap') | transloco }}
+        </button>
         <button type="button" class="pill" (click)="fit()">{{ 'skillFit' | transloco }}</button>
       </nav>
       <p class="hint">{{ 'skillHint' | transloco }}</p>
@@ -221,58 +226,7 @@ const POPUP_HEIGHT = 380;
               </button>
             }
           </div>
-          <h3>{{ 'skillBuild' | transloco }}</h3>
-          <input
-            type="text"
-            maxlength="60"
-            [placeholder]="'skillName' | transloco"
-            [attr.aria-label]="'skillName' | transloco"
-            [value]="planner.name()"
-            (input)="planner.name.set($any($event.target).value)"
-          />
-          <div class="row">
-            <button type="button" class="pill" (click)="planner.save()">
-              {{ 'skillSave' | transloco }}
-            </button>
-            <button type="button" class="pill" (click)="planner.create()">
-              {{ 'skillNew' | transloco }}
-            </button>
-            <button type="button" class="pill" (click)="planner.reset()">
-              {{ 'skillReset' | transloco }}
-            </button>
-            <button type="button" class="pill" (click)="copyLink()">
-              {{ (copied() ? 'copied' : 'skillLink') | transloco }}
-            </button>
-          </div>
-          @if (planner.error(); as error) {
-            <p class="error" role="alert">{{ 'skillError_' + error | transloco }}</p>
-          }
-          <h3>{{ 'skillSavedBuilds' | transloco }}</h3>
-          <ul class="builds">
-            @for (b of planner.saved(); track b.id) {
-              <li>
-                <button
-                  type="button"
-                  [class.active]="planner.currentId() === b.id"
-                  [attr.aria-pressed]="planner.currentId() === b.id"
-                  (click)="planner.open(b)"
-                >
-                  <span>{{ b.name }}</span
-                  ><b>{{ points(b.nodes) }}</b>
-                </button>
-                <button
-                  type="button"
-                  class="drop"
-                  [attr.aria-label]="'skillDelete' | transloco: { name: b.name }"
-                  (click)="planner.delete(b.id)"
-                >
-                  ✕
-                </button>
-              </li>
-            } @empty {
-              <li class="empty">{{ 'skillNoBuilds' | transloco }}</li>
-            }
-          </ul>
+          <app-builds-panel />
         </section>
       }
 
@@ -381,6 +335,8 @@ const POPUP_HEIGHT = 380;
 export class Skills {
   protected readonly skills = inject(SkillsService);
   protected readonly planner = inject(PlannerStore);
+  protected readonly gear = inject(GearService);
+  protected readonly views = inject(ViewStore);
   private readonly stage = viewChild.required<ElementRef<HTMLElement>>('stage');
   private readonly svg = viewChild.required<ElementRef<SVGSVGElement>>('svg');
 
@@ -388,7 +344,6 @@ export class Skills {
   protected readonly query = signal('');
   protected readonly filter = signal<ClassFilter>('all');
   protected readonly panel = signal<PanelName | null>(null);
-  protected readonly copied = signal(false);
   protected readonly hover = signal<{ node: SkillNode; x: number; y: number } | null>(null);
   private readonly box = signal<Box>({ x: 0, y: 0, w: 1, h: 1 });
   private drag: { x: number; y: number } | null = null;
@@ -539,13 +494,6 @@ export class Skills {
     return node.type === 'Root' ? name : `${name} ${this.badge(node)}`;
   }
 
-  protected points(saved: Record<string, number>): number {
-    const tree = this.skills.tree();
-    return tree
-      ? Object.entries(saved).reduce((n, [id, l]) => n + (tree.byId.get(+id)?.cost ?? 0) * l, 0)
-      : 0;
-  }
-
   protected toggle(name: PanelName): void {
     this.panel.update((p) => (p === name ? null : name));
   }
@@ -559,10 +507,6 @@ export class Skills {
   protected drop(event: Event, node: SkillNode): void {
     event.preventDefault();
     this.planner.removeLevel(node.id);
-  }
-
-  protected async copyLink(): Promise<void> {
-    this.copied.set(await copyText(this.planner.link()));
   }
 
   // ---- the popup: beside the node, on the side with room

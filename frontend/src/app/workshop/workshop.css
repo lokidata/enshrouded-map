@@ -2,14 +2,22 @@
 app-workshop,
 app-lore,
 app-enemies,
-app-skills {
+app-skills,
+app-build,
+app-equipment,
+app-gems,
+app-game {
   & {
     display: flex;
     flex-direction: column;
     flex: 1;
     min-width: 0;
     min-height: 0;
-    background: var(--bg);
+    /* the dark nebula of the game's menus, shared by every screen but the map; panels keep their own opaque background */
+    background:
+      radial-gradient(ellipse at 30% 40%, rgba(120, 60, 140, 0.35), transparent 55%),
+      radial-gradient(ellipse at 70% 60%, rgba(40, 70, 150, 0.35), transparent 55%),
+      radial-gradient(circle at 50% 50%, #1b1230, #07050d 80%);
   }
   .tabs {
     display: flex;

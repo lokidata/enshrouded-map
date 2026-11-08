@@ -12,18 +12,67 @@ import {
   spent,
   toSaved,
 } from './skills.logic';
+import { FLAME_MAX } from './gear.logic';
+import { GEAR_SLOTS, Gear, SlotKey, Upgrades } from './gear.model';
 import { Levels, SavedBuild } from './skills.model';
+import { GearService } from './gear.service';
 import { SkillsService } from './skills.service';
 
+const MAX_UPGRADES = 8; // as the API
 const DRAFT = 'skillDraft';
+const clamp = (n: number, min: number, max: number) =>
+  Math.min(Math.max(Math.trunc(n) || min, min), max);
+
+export const WEAPON_SLOTS = ['weapon1', 'weapon2', 'weapon3', 'ranged'] as const;
+export type WeaponSlot = (typeof WEAPON_SLOTS)[number];
+const isWeapon = (k: string) => (WEAPON_SLOTS as readonly string[]).includes(k);
+function readLevels(): Upgrades {
+  try {
+    const raw = JSON.parse(localStorage.getItem('itemLevels') ?? '{}') as Record<string, unknown>;
+    return Object.fromEntries(
+      Object.entries(raw).filter(([k, v]) => isSlot(k) && Number.isInteger(v) && (v as number) > 0),
+    ) as Upgrades;
+  } catch {
+    return {};
+  }
+}
+const isSlot = (k: string) => (GEAR_SLOTS as readonly string[]).includes(k);
+function readActive(): WeaponSlot {
+  try {
+    const v = localStorage.getItem('activeWeapon');
+    return WEAPON_SLOTS.find((s) => s === v) ?? 'weapon1';
+  } catch {
+    return 'weapon1';
+  }
+}
 
 /** The build being planned, and the builds the player saved (api/v1/builds). */
 @Injectable({ providedIn: 'root' })
 export class PlannerStore {
   private readonly http = inject(HttpClient);
   private readonly skills = inject(SkillsService);
+  private readonly gearData = inject(GearService);
 
-  readonly levels = signal<Levels>(this.readDraft());
+  private readonly draft = this.readDraft();
+  readonly levels = signal<Levels>(this.draft.levels);
+  /** Character level and Flame level, and what is worn (see gear.json). */
+  readonly level = signal(this.draft.level);
+  readonly flame = signal(this.draft.flame);
+  /** Comfort points of the player's house (not saved in builds). */
+  readonly comfort = signal(this.draft.comfort);
+  readonly gear = signal<Gear>(this.draft.gear);
+  /** How many of each worn piece's upgrades are taken. */
+  readonly upgrades = signal<Upgrades>(this.draft.upgrades);
+  /** The weapon in hand: only its stat lines count in the totals (the others stay in the bag). */
+  readonly active = signal<WeaponSlot>(readActive());
+  /** What is worn without the weapons that are not in hand. */
+  readonly inHand = computed<Gear>(() =>
+    Object.fromEntries(
+      Object.entries(this.gear()).filter(([k]) => !isWeapon(k) || k === this.active()),
+    ),
+  );
+  /** Base level chosen per slot (between the item's minimum and maximum), on top of its upgrades; device only. */
+  readonly itemLevels = signal<Upgrades>(readLevels());
   readonly name = signal('');
   readonly saved = signal<readonly SavedBuild[]>([]);
   /** The saved build being edited; null for a new one. */
@@ -35,6 +84,15 @@ export class PlannerStore {
     return tree ? spent(tree, this.levels()) : 0;
   });
   readonly budget = computed(() => this.skills.data()?.budget ?? 0);
+
+  setActive(slot: WeaponSlot): void {
+    this.active.set(slot);
+    try {
+      localStorage.setItem('activeWeapon', slot);
+    } catch {
+      // storage blocked: the choice is just not kept
+    }
+  }
 
   canAdd(id: number): boolean {
     const tree = this.skills.tree();
@@ -55,7 +113,57 @@ export class PlannerStore {
   }
 
   reset(): void {
-    this.set({});
+    this.setAll({}, 1, 0, {}, {});
+  }
+
+  setLevel(level: number): void {
+    this.level.set(clamp(level, 1, this.limit('playerLevelCap', 200)));
+    this.writeDraft();
+  }
+
+  setFlame(flame: number): void {
+    this.flame.set(clamp(flame, 0, Math.min(this.limit('flameLevelMax', 50), FLAME_MAX)));
+    this.writeDraft();
+  }
+
+  setComfort(points: number): void {
+    this.comfort.set(clamp(points, 0, 100000));
+    this.writeDraft();
+  }
+
+  /** Wears an item in a slot, or takes the slot's item off (null). */
+  wear(slot: SlotKey, item: string | null): void {
+    const next: Partial<Record<SlotKey, string>> = { ...this.gear() };
+    if (item) next[slot] = item;
+    else delete next[slot];
+    if (next[slot] !== this.gear()[slot]) {
+      this.setUpgrades(slot, 0, false);
+      this.setItemLevel(slot, null);
+    }
+    this.gear.set(next);
+    this.writeDraft();
+  }
+
+  /** The base level of the piece in a slot (null = its maximum). */
+  setItemLevel(slot: SlotKey, level: number | null): void {
+    const next: Partial<Record<SlotKey, number>> = { ...this.itemLevels() };
+    if (level) next[slot] = Math.trunc(level);
+    else delete next[slot];
+    this.itemLevels.set(next);
+    try {
+      localStorage.setItem('itemLevels', JSON.stringify(next));
+    } catch {
+      // storage blocked: the level is just not kept
+    }
+  }
+
+  /** The first `count` upgrades of the piece in a slot are taken (0 = none). */
+  setUpgrades(slot: SlotKey, count: number, write = true): void {
+    const next: Partial<Record<SlotKey, number>> = { ...this.upgrades() };
+    if (count > 0) next[slot] = count;
+    else delete next[slot];
+    this.upgrades.set(next);
+    if (write) this.writeDraft();
   }
 
   /** A new, empty build. */
@@ -63,7 +171,7 @@ export class PlannerStore {
     this.currentId.set(null);
     this.name.set('');
     this.error.set(null);
-    this.set({});
+    this.reset();
   }
 
   open(build: SavedBuild): void {
@@ -71,7 +179,13 @@ export class PlannerStore {
     this.currentId.set(build.id);
     this.name.set(build.name);
     this.error.set(null);
-    this.set(tree ? fromSaved(tree, build.nodes) : {});
+    this.setAll(
+      tree ? fromSaved(tree, build.nodes) : {},
+      build.level,
+      build.flame,
+      build.gear,
+      fromIndices(build.upgrades ?? {}),
+    );
   }
 
   async load(): Promise<void> {
@@ -87,8 +201,7 @@ export class PlannerStore {
     this.currentId.set(null);
     this.name.set('');
     this.error.set(null);
-    this.levels.set({});
-    this.writeDraft({});
+    this.reset();
   }
 
   /** Saves the build under its name: a new one, or an update of the one being edited. */
@@ -96,6 +209,10 @@ export class PlannerStore {
     const body = {
       name: this.name().trim() || `Build ${this.saved().length + 1}`,
       nodes: toSaved(this.levels()),
+      level: this.level(),
+      flame: this.flame(),
+      gear: this.gear(),
+      upgrades: toIndices(this.upgrades()),
     };
     this.error.set(null);
     try {
@@ -143,25 +260,96 @@ export class PlannerStore {
 
   private set(levels: Levels): void {
     this.levels.set(levels);
-    this.writeDraft(levels);
+    this.writeDraft();
   }
 
-  private readDraft(): Levels {
+  private setAll(
+    levels: Levels,
+    level: number,
+    flame: number,
+    gear: Gear,
+    upgrades: Upgrades,
+  ): void {
+    this.upgrades.set(upgrades);
+    this.levels.set(levels);
+    this.level.set(level);
+    this.flame.set(flame);
+    this.gear.set(gear);
+    this.writeDraft();
+  }
+
+  /** A maximum from gear.json, else the API's own. */
+  private limit(key: string, api: number): number {
+    return Math.min(this.gearData.data()?.constants[key] ?? api, api);
+  }
+
+  private readDraft(): {
+    levels: Levels;
+    level: number;
+    flame: number;
+    comfort: number;
+    gear: Gear;
+    upgrades: Upgrades;
+  } {
     try {
-      const raw = JSON.parse(localStorage.getItem(DRAFT) ?? '{}') as Record<string, number>;
-      return Object.fromEntries(
-        Object.entries(raw).filter(([, l]) => Number.isInteger(l) && l > 0),
+      const raw = JSON.parse(localStorage.getItem(DRAFT) ?? '{}') as Record<string, unknown>;
+      // before the Build screen the draft was only the levels
+      const levels = (raw['levels'] ?? raw) as Record<string, number>;
+      const gear = Object.fromEntries(
+        Object.entries((raw['gear'] ?? {}) as Record<string, unknown>).filter(
+          ([k, v]) => (GEAR_SLOTS as readonly string[]).includes(k) && typeof v === 'string',
+        ),
       );
+      return {
+        levels: Object.fromEntries(
+          Object.entries(levels).filter(([, l]) => Number.isInteger(l) && l > 0),
+        ),
+        level: clamp(Number(raw['level']) || 1, 1, 200),
+        flame: clamp(Number(raw['flame']) || 0, 0, 50),
+        comfort: clamp(Number(raw['comfort']) || 0, 0, 100000),
+        gear,
+        upgrades: Object.fromEntries(
+          Object.entries((raw['upgrades'] ?? {}) as Record<string, unknown>).filter(
+            ([k, v]) =>
+              k in gear &&
+              Number.isInteger(v) &&
+              (v as number) > 0 &&
+              (v as number) <= MAX_UPGRADES,
+          ),
+        ),
+      };
     } catch {
-      return {};
+      return { levels: {}, level: 1, flame: 0, comfort: 0, gear: {}, upgrades: {} };
     }
   }
 
-  private writeDraft(levels: Levels): void {
+  private writeDraft(): void {
     try {
-      localStorage.setItem(DRAFT, JSON.stringify(levels));
+      localStorage.setItem(
+        DRAFT,
+        JSON.stringify({
+          levels: this.levels(),
+          level: this.level(),
+          flame: this.flame(),
+          comfort: this.comfort(),
+          gear: this.gear(),
+          upgrades: this.upgrades(),
+        }),
+      );
     } catch {
       // storage blocked: the draft is just not kept between visits
     }
   }
 }
+
+/** Saved as the indices 0..n-1 (the API allows any list; the chain is a count here). */
+const toIndices = (u: Upgrades): Record<string, number[]> =>
+  Object.fromEntries(
+    Object.entries(u).map(([k, n]) => [k, Array.from({ length: n }, (_, i) => i)]),
+  );
+const fromIndices = (u: Record<string, number[]>): Upgrades =>
+  Object.fromEntries(
+    Object.entries(u)
+      .filter(([, l]) => l.length)
+      .map(([k, l]) => [k, l.length]),
+  );

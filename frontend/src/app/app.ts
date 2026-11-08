@@ -10,10 +10,15 @@ import { LayoutService } from './core/layout.service';
 import { ProgressStore } from './core/progress.store';
 import { EnemiesService } from './core/enemies.service';
 import { PlannerStore } from './core/planner.store';
+import { HistoryStore } from './core/history.store';
 import { ViewStore } from './core/view.store';
 import { Enemies } from './enemies/enemies';
+import { Game } from './game/game';
+import { Gems } from './gems/gems';
 import { Lore } from './lore/lore';
 import { MapView } from './map/map-view';
+import { Build } from './build/build';
+import { Equipment } from './equipment/equipment';
 import { Skills } from './skills/skills';
 import { Sidebar } from './sidebar/sidebar';
 import { TeamDialog } from './team/team-dialog';
@@ -44,6 +49,10 @@ function read(): string | null {
     Workshop,
     Lore,
     Enemies,
+    Build,
+    Equipment,
+    Gems,
+    Game,
     Skills,
     TopBar,
     TranslocoPipe,
@@ -72,6 +81,18 @@ function read(): string | null {
         }
         @defer (when views.view() === 'enemies') {
           <app-enemies [hidden]="views.view() !== 'enemies'" />
+        }
+        @defer (when views.view() === 'build') {
+          <app-build [hidden]="views.view() !== 'build'" />
+        }
+        @defer (when views.view() === 'equipment') {
+          <app-equipment [hidden]="views.view() !== 'equipment'" />
+        }
+        @defer (when views.view() === 'gems') {
+          <app-gems [hidden]="views.view() !== 'gems'" />
+        }
+        @defer (when views.view() === 'game') {
+          <app-game [hidden]="views.view() !== 'game'" />
         }
         @defer (when views.view() === 'skills') {
           <app-skills [hidden]="views.view() !== 'skills'" />
@@ -105,6 +126,7 @@ export class App {
   protected readonly layout = inject(LayoutService);
   protected readonly views = inject(ViewStore);
   private readonly planner = inject(PlannerStore);
+  private readonly history = inject(HistoryStore); // starts the Back/Forward handling
   private readonly enemies = inject(EnemiesService);
   protected readonly menuOpen = signal(read() !== 'closed');
 

@@ -17,7 +17,16 @@ def _own(db: DbSession, user: CurrentUser, build_id: int) -> Build:
 
 
 def _out(build: Build) -> BuildOut:
-    return BuildOut(id=build.id, name=build.name, nodes=build.nodes, updated_at=build.updated_at)
+    return BuildOut(
+        id=build.id,
+        name=build.name,
+        nodes=build.nodes,
+        level=build.level,
+        flame=build.flame,
+        gear=build.gear,
+        upgrades=build.upgrades,
+        updated_at=build.updated_at,
+    )
 
 
 @router.get("", response_model=list[BuildOut])
@@ -35,7 +44,7 @@ def create_build(body: BuildIn, user: CurrentUser, db: DbSession) -> BuildOut:
     count = db.scalar(select(func.count()).select_from(Build).where(Build.user_id == user.id))
     if (count or 0) >= get_settings().max_builds:
         raise HTTPException(409, "too_many_builds")
-    build = Build(user_id=user.id, name=body.name, nodes=body.nodes)
+    build = Build(user_id=user.id, **body.model_dump())
     db.add(build)
     db.commit()
     return _out(build)
@@ -44,8 +53,8 @@ def create_build(body: BuildIn, user: CurrentUser, db: DbSession) -> BuildOut:
 @router.put("/{build_id}", response_model=BuildOut)
 def update_build(build_id: int, body: BuildIn, user: CurrentUser, db: DbSession) -> BuildOut:
     build = _own(db, user, build_id)
-    build.name = body.name
-    build.nodes = body.nodes
+    for field, value in body.model_dump().items():
+        setattr(build, field, value)
     db.commit()
     return _out(build)
 

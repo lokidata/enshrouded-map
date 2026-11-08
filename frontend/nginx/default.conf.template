@@ -77,6 +77,12 @@ server {
         root /srv/artifacts;
         expires 1d;
     }
+    # pictures of the game's UI (equipment slots, perk icons)
+    location ^~ /ui/ {
+        auth_request /_auth;
+        root /srv/artifacts;
+        expires 1d;
+    }
     # The tab icon, asked before any login: the one public file of the map folder.
     location = /enshrouded-icon.png {
         root /srv/artifacts;
@@ -93,7 +99,7 @@ server {
         expires 1d;
     }
     # Revalidated on each load (ETag): a new pipeline run shows up right away.
-    location ~ ^/(map-data|resources|craft|lore|enemies|skills)\.json$ {
+    location ~ ^/(map-data|resources|craft|lore|enemies|skills|gear|gems|settings-presets)\.json$ {
         auth_request /_auth;
         root /srv/artifacts;
         expires -1;

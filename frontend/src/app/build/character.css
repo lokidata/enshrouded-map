@@ -1,0 +1,129 @@
+:host {
+  display: block;
+}
+.sheet {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(300px, 1fr);
+  gap: 24px;
+  align-items: start;
+  margin-bottom: 16px;
+  padding: 16px;
+  color: #eadfc8;
+}
+.left {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 20px;
+}
+.row,
+.pair {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.pair {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  margin: 0;
+  text-align: right;
+  color: #cdbfa6;
+}
+.info b {
+  font:
+    700 1.5rem Georgia,
+    serif;
+  color: #f3ead6;
+}
+.right {
+  display: flex;
+  gap: 20px;
+}
+.armour {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.side {
+  flex: 1;
+  min-width: 0;
+}
+.total {
+  display: flex;
+  flex-direction: column;
+  margin: 0 0 12px;
+  color: #cdbfa6;
+}
+.total b {
+  font:
+    700 2rem Georgia,
+    serif;
+  color: #f3ead6;
+}
+.level {
+  padding: 12px;
+  background: rgba(28, 30, 62, 0.88);
+  border: 1px solid #6b5436;
+  border-radius: 6px;
+}
+.level p {
+  margin: 0 0 6px;
+}
+.bar {
+  height: 8px;
+  margin-bottom: 12px;
+  background: #3a3550;
+}
+.bar div {
+  height: 100%;
+  background: #f0a63a;
+}
+.pill {
+  padding: 6px 14px;
+  cursor: pointer;
+  color: #ffd36e;
+  background: rgba(20, 14, 8, 0.93);
+  border: 1px solid #6b5436;
+  border-radius: 999px;
+}
+.pill:focus-visible,
+.pill[aria-expanded='true'] {
+  outline: 2px solid #ffd36e;
+}
+@media (max-width: 800px) {
+  .sheet {
+    grid-template-columns: 1fr;
+  }
+  .left {
+    align-items: flex-start;
+  }
+}
+
+.wslot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.hand {
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  color: #cdbfa6;
+  background: rgba(20, 14, 8, 0.93);
+  border: 1px solid #6b5436;
+  border-radius: 999px;
+}
+.hand[aria-pressed='true'] {
+  color: #1b130a;
+  background: #e8b84a;
+  border-color: #e8b84a;
+}
+.hand:focus-visible {
+  outline: 2px solid #ffd36e;
+}

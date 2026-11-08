@@ -10,11 +10,15 @@ for (const path of [
   'lore.json',
   'enemies.json',
   'skills.json',
+  'gear.json',
+  'gems.json',
+  'settings-presets.json',
   'tiles/0/0_0.jpg',
   'icons/x.png',
   'items/x.png',
   'enemies/x.png',
   'skills/x.png',
+  'ui/x.png',
   'biomes.png',
 ]) {
   test(`${path} is refused without a session`, async ({ request }) => {
