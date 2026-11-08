@@ -619,5 +619,17 @@
   "gsImportInvalid": "Valeurs invalides, laissées par défaut :",
   "gsImportClamped": "Valeurs ramenées dans la plage :",
   "gsImportDiff": "Différences avec le défaut",
-  "gsImportNoDiff": "Aucune différence."
+  "gsImportNoDiff": "Aucune différence.",
+  "recoTitle": "Recommandations",
+  "recoLossarmor": "-{{n}} % d'armure",
+  "recoLossdamage": "-{{n}} % de dégâts de base",
+  "recoUpgrades": "Prenez les améliorations restantes : {{count}} suffisent pour atteindre le niveau {{level}}.",
+  "recoOk": "Tout est à niveau.",
+  "recoHelp": "Règle de l'application, pas du jeu : une pièce est signalée quand son niveau de base, ou avec les améliorations prises, passe sous 85 % (très bas sous 70 %) de la même pièce au niveau du personnage. Armure et dégâts de base suivent les formules exactes du jeu ; les anneaux et le bouclier ne sont pas évalués.",
+  "reco_low": "Niveau bas",
+  "reco_critical": "Niveau très bas",
+  "recoBoth": "niveau de base {{base}} : -{{baseLoss}} % ; avec améliorations {{now}} : -{{nowLoss}} % (personnage niveau {{target}})",
+  "recoStill": "Toujours trop faible même amélioré.",
+  "recoCompensated": "Le niveau de base est faible mais les améliorations compensent.",
+  "recoBase": "niveau de base {{level}} : -{{loss}} %"
 }

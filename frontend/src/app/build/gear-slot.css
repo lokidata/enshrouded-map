@@ -188,3 +188,26 @@ ol button:focus-visible {
   margin: 6px 0;
   font-size: 0.85rem;
 }
+.alert {
+  font-weight: 700;
+  color: #ffd27a;
+}
+.alert[data-severity='critical'] {
+  color: #ffa595;
+}
+:host > .alert {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -2px;
+  padding: 1px 0;
+  font-size: 0.7rem;
+  text-align: center;
+  white-space: nowrap;
+  background: rgba(14, 13, 20, 0.92);
+  border-radius: 0 0 3px 3px;
+  pointer-events: none;
+}
+.card .alert {
+  margin: 4px 0;
+}

@@ -41,6 +41,7 @@ import { SkillsService } from '../core/skills.service';
 import { ViewStore } from '../core/view.store';
 import { BuildsPanel } from './builds-panel';
 import { CharacterSheet } from './character';
+import { RecommendationsPanel } from './recommendations';
 import { StatRow, TipPart } from './stat-row';
 import {
   formatRow,
@@ -89,7 +90,7 @@ interface Row {
 /** The game's Character screen (sheet), then its Attributes screen: level, Flame, equipment and skills of the planned build. */
 @Component({
   selector: 'app-build',
-  imports: [TranslocoPipe, BuildsPanel, CharacterSheet, StatRow],
+  imports: [TranslocoPipe, BuildsPanel, CharacterSheet, RecommendationsPanel, StatRow],
   template: `
     @if (gear.data()) {
       <div class="stage">
@@ -238,6 +239,7 @@ interface Row {
 
           <div class="col">
             <app-character-sheet />
+            <app-recommendations />
             <section class="right">
               <div class="tabs" role="tablist" [attr.aria-label]="'buildTabs' | transloco">
                 @for (t of tabs; track t) {

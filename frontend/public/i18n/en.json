@@ -619,5 +619,17 @@
   "gsImportInvalid": "Invalid values, left at the default:",
   "gsImportClamped": "Values brought into range:",
   "gsImportDiff": "Differences from the default",
-  "gsImportNoDiff": "No difference."
+  "gsImportNoDiff": "No difference.",
+  "recoTitle": "Recommendations",
+  "recoLossarmor": "-{{n}} % armour",
+  "recoLossdamage": "-{{n}} % base damage",
+  "recoUpgrades": "Take the remaining upgrades: {{count}} are enough to reach level {{level}}.",
+  "recoOk": "Everything is up to level.",
+  "recoHelp": "The app's own rule, not the game's: a piece is flagged when its base level, or with the upgrades taken, falls under 85 % (very low under 70 %) of the same piece at the character's level. Armour and base damage use the game's exact formulas; rings and the shield are not assessed.",
+  "reco_low": "Low level",
+  "reco_critical": "Very low level",
+  "recoBoth": "base level {{base}}: -{{baseLoss}} %; with upgrades {{now}}: -{{nowLoss}} % (character level {{target}})",
+  "recoStill": "Still too low even upgraded.",
+  "recoCompensated": "The base level is low but the upgrades make up for it.",
+  "recoBase": "base level {{level}}: -{{loss}} %"
 }

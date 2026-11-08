@@ -1,0 +1,72 @@
+:host {
+  display: block;
+}
+.reco {
+  padding: 10px 16px;
+  color: #eadfc8;
+  background: rgba(28, 30, 62, 0.88);
+  border: 1px solid #6b5436;
+  border-radius: 6px;
+}
+summary {
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #cdbfa6;
+}
+summary:focus-visible {
+  outline: 3px solid #ffd36e;
+  outline-offset: 2px;
+}
+.count {
+  margin-left: 6px;
+  padding: 0 7px;
+  color: #1b1405;
+  background: #ffd27a;
+  border-radius: 9px;
+}
+.help {
+  margin: 8px 0;
+  font-size: 0.78rem;
+  color: #cdbfa6;
+}
+ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+li {
+  padding: 8px 10px;
+  border-left: 4px solid #ffd27a;
+  background: rgba(255, 255, 255, 0.05);
+}
+li[data-severity='critical'] {
+  border-left-color: #ff8f7e;
+}
+li p {
+  margin: 2px 0;
+  font-size: 0.85rem;
+}
+.tag {
+  margin-right: 6px;
+  padding: 1px 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #ffd27a;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+}
+li[data-severity='critical'] .tag {
+  color: #ffa595;
+}
+.advice {
+  color: #f3ead6;
+}
+.ok {
+  margin: 0;
+  font-size: 0.85rem;
+}
