@@ -1,9 +1,11 @@
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { CraftService } from '../core/craft.service';
 import { EnemiesService } from '../core/enemies.service';
 import { LAYOUTS, LayoutService } from '../core/layout.service';
 import { LoreService } from '../core/lore.service';
+import { GemsService } from '../core/gems.service';
+import { GearService } from '../core/gear.service';
 import { SkillsService } from '../core/skills.service';
 import { LangService } from '../core/lang.service';
 import { MapDataService } from '../core/map-data.service';
@@ -55,14 +57,24 @@ import { AccountBar } from '../sidebar/account-bar';
           {{ 'enemies' | transloco }}
         </button>
       }
-      @if (skills.data()) {
+      @if (skills.data() || gear.data()) {
         <button
           type="button"
-          [class.active]="views.view() === 'skills'"
-          [attr.aria-current]="views.view() === 'skills' ? 'page' : null"
-          (click)="views.set('skills')"
+          [class.active]="inBuild()"
+          [attr.aria-current]="inBuild() ? 'page' : null"
+          (click)="views.set(gear.data() ? 'build' : 'skills')"
         >
-          {{ 'skills' | transloco }}
+          {{ 'build' | transloco }}
+        </button>
+      }
+      @if (gems.data()) {
+        <button
+          type="button"
+          [class.active]="views.view() === 'gems'"
+          [attr.aria-current]="views.view() === 'gems' ? 'page' : null"
+          (click)="views.set('gems')"
+        >
+          {{ 'gems' | transloco }}
         </button>
       }
     </nav>
@@ -186,10 +198,15 @@ export class TopBar {
   protected readonly enemies = inject(EnemiesService);
   protected readonly lore = inject(LoreService);
   protected readonly skills = inject(SkillsService);
+  protected readonly gear = inject(GearService);
+  protected readonly gems = inject(GemsService);
   protected readonly views = inject(ViewStore);
   protected readonly layout = inject(LayoutService);
   protected readonly lang = inject(LangService);
   protected readonly layouts = LAYOUTS;
   protected readonly layoutIcon = { auto: 'A', left: '◧', top: '⬒' };
+  protected readonly inBuild = computed(() =>
+    ['build', 'equipment', 'skills'].includes(this.views.view()),
+  );
   protected readonly languages = inject(MapDataService).data.languages;
 }

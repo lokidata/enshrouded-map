@@ -36,6 +36,8 @@ import build_craft  # noqa: E402  (recipes, altar, building)
 import build_enemies  # noqa: E402  (bosses and elites)
 import build_skills  # noqa: E402  (skill tree)
 import build_lore  # noqa: E402  (journal: lore notes and quests)
+import build_gear  # noqa: E402  (equipment stats, character constants)
+import build_gems  # noqa: E402  (weapon gems, comfort)
 
 MAIN_SCENE = "509feadb-4c60-425f-9c7c-deeefd9b6920"
 LANGUAGES = ("Fr_Fr", "En_Us")
@@ -709,7 +711,9 @@ def main(src, export, out):
         "markers": markers,
     }
     for name, obj in (("map-data", data), ("resources", resources), ("craft", craft), ("lore", lore), ("enemies", enemies),
-                      ("skills", build_skills.build_skills(src, export, out))):
+                      ("skills", build_skills.build_skills(src, export, out)),
+                      ("gear", build_gear.build_gear(src, locas, export, out)),
+                      ("gems", build_gems.build_gems(src, locas, export, out))):
         with open(f"{out}/{name}.json", "w", encoding="utf-8") as f:
             json.dump(obj, f, ensure_ascii=False, separators=(",", ":"))
 

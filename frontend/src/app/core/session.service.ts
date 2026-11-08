@@ -6,6 +6,8 @@ import { CraftService } from './craft.service';
 import { EnemiesService } from './enemies.service';
 import { LoreService } from './lore.service';
 import { PlannerStore } from './planner.store';
+import { GearService } from './gear.service';
+import { GemsService } from './gems.service';
 import { SkillsService } from './skills.service';
 import { FilterStore } from './filter.store';
 import { takeHashToken } from './links';
@@ -30,6 +32,8 @@ export class SessionService {
   private readonly lore = inject(LoreService);
   private readonly enemies = inject(EnemiesService);
   private readonly skills = inject(SkillsService);
+  private readonly gear = inject(GearService);
+  private readonly gems = inject(GemsService);
   private readonly planner = inject(PlannerStore);
 
   private saved: string | null = null;
@@ -118,6 +122,8 @@ export class SessionService {
     this.lore.clear();
     this.enemies.clear();
     this.skills.clear();
+    this.gear.clear();
+    this.gems.clear();
     this.planner.clear();
     this.views.set('map');
     this.filters.reset();
@@ -126,12 +132,14 @@ export class SessionService {
   }
 
   private async enter(info: UserInfo): Promise<void> {
-    const [, , , , , , marks, settings] = await Promise.all([
+    const [, , , , , , , , marks, settings] = await Promise.all([
       this.mapData.load(),
       this.craft.load(), // never fails: a server without craft.json just has no workshop
       this.lore.load(), // same for lore.json
       this.enemies.load(), // and enemies.json
       this.skills.load(), // and skills.json
+      this.gear.load(), // and gear.json
+      this.gems.load(), // and gems.json
       this.planner.load(), // the builds the player saved
       firstValueFrom(this.http.get<{ marks: string[] }>('api/v1/progress')),
       firstValueFrom(

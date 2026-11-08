@@ -671,8 +671,14 @@ test('skills: take nodes, budget, save several builds, share link, AXE', async (
   const points = page.locator('app-skills .points');
   const popup = page.locator('app-skills .popup');
   const builds = () =>
-    page.getByRole('button', { name: 'Builds enregistrés', exact: true }).click();
-  const open = () => page.getByRole('button', { name: 'Compétences', exact: true }).click();
+    side.getByRole('button', { name: 'Builds enregistrés', exact: true }).click();
+  const open = async () => {
+    await page
+      .locator('app-topbar')
+      .getByRole('button', { name: 'Personnage', exact: true })
+      .click();
+    await page.getByRole('button', { name: 'Compétences', exact: true }).click();
+  };
   await open();
   await expect(points).toContainText(/Disponible\s*6$/);
   expect(await violations(), 'tree').toEqual([]);
@@ -741,6 +747,147 @@ test('skills: take nodes, budget, save several builds, share link, AXE', async (
   await expect(points).toContainText(/Disponible\s*2$/);
   await expect(node(/Endurance/)).toContainText('2/3');
   await expect.poll(() => page.evaluate(() => location.hash)).toBe('');
+});
+
+test('build: level, flame, equipment, protection, skills, save and reload', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel("Nom d'utilisateur").fill(user);
+  await page
+    .getByRole('dialog')
+    .getByLabel('Mot de passe', { exact: true })
+    .fill('a brand new passphrase');
+  await page.getByRole('dialog').getByRole('button', { name: 'Se connecter' }).click();
+  await expect(page.locator('.who')).toContainText(user);
+  const fixture = await page.evaluate(async () =>
+    (await (await fetch('gear.json')).text()).includes('fixture_gear'),
+  );
+  test.skip(!fixture, 'needs the fixture map');
+
+  const build = page.locator('app-build');
+  const topbar = page.locator('app-topbar');
+  const go = (name: string) => page.getByRole('button', { name, exact: true }).click();
+  const openBuild = () => topbar.getByRole('button', { name: 'Personnage', exact: true }).click();
+  const setNumber = async (label: string, value: string) => {
+    await build.getByLabel(label, { exact: true }).fill(value);
+    await build.getByLabel(label, { exact: true }).dispatchEvent('change');
+  };
+  const wear = async (slot: RegExp, item: RegExp) => {
+    await build.getByRole('button', { name: slot }).click(); // a slot of the sheet opens the picker
+    const dialog = page.getByRole('dialog');
+    await dialog.locator('.item').filter({ hasText: item }).click();
+    await dialog.getByRole('button', { name: 'Fermer' }).click();
+    await expect(dialog).toBeHidden();
+  };
+  await openBuild();
+  const sheet = page.locator('app-character-sheet');
+  await expect(sheet.locator('.total').first()).toContainText('0'); // nothing worn
+  await setNumber('Niveau du personnage', '20');
+  await setNumber('Niveau de flamme', '4');
+  await setNumber('Niveau de flamme', '999'); // clamped to the fixture's maximum
+  await expect(build.getByLabel('Niveau de flamme', { exact: true })).toHaveValue('11');
+  await setNumber('Niveau de flamme', '4');
+  await expect(build).toContainText('8562'); // XP for the next level at level 20
+  await expect(build).toContainText('8 min'); // Shroud time 4 + Flame
+  await expect(build).toContainText('augmente vos attributs primaires de 3 chacun');
+  await expect(build.locator('dl').filter({ hasText: 'Santé' }).first()).toContainText('+15%'); // ranged: 0.05 x dexterity 3 (Flame)
+  await expect(build.locator('dl').filter({ hasText: 'Santé' }).first()).toContainText('250'); // estimated health, nothing worn
+
+  await wear(/Tête/, /Casque d'essai/);
+  await expect(sheet.locator('.total').first()).toContainText('24'); // physical armour of the helmet
+  await expect(build.locator('dl').filter({ hasText: 'Santé' }).first()).toContainText('290'); // + the helmet's Health line
+  await build.getByRole('tab', { name: 'Protection' }).click();
+  await expect(build.getByRole('row', { name: /Protection physique/ })).toContainText('24');
+  await expect(build.getByRole('row', { name: /\+ Contondant/ })).toContainText('0%'); // base 0 %, no line
+  // upgrades from the item's card: a chain, the base armour is counted one level higher per upgrade (0.14 * 188 = 26)
+  const head = build.getByRole('button', { name: /^Tête/ });
+  await head.hover();
+  const card = build.getByRole('group', { name: "Casque d'essai" });
+  await expect(card).toContainText('Équipé');
+  await expect(card).toContainText('Niveau');
+  await card.getByRole('button', { name: /Armure émoussée/ }).click();
+  await expect(card.getByRole('button', { name: /Armure émoussée/ })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await expect(card).toContainText('+2 / +2'); // rank 1: base 24 -> 26 on both armours
+  const violations = async (include: string) =>
+    (
+      await new AxeBuilder({ page })
+        .include(include)
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+        .analyze()
+    ).violations.map((v) => v.id);
+  expect(await violations('app-build')).toEqual([]);
+  await head.focus();
+  await page.keyboard.press('Escape');
+  await expect(card).toBeHidden();
+  await expect(sheet.locator('.total').first()).toContainText('26');
+  await head.click(); // the picker (a dialog on the same screen), also scanned
+  await expect(page.getByRole('dialog')).toBeVisible();
+  expect(await violations('dialog')).toEqual([]);
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toBeHidden();
+  await expect(head).toBeFocused();
+  // the stat tooltip: total, breakdown, the game's description; reachable by keyboard and scanned
+  const health = build.locator('[app-stat-row]').filter({ hasText: 'Santé' }).first();
+  await health.locator('dd').focus();
+  const tip = health.getByRole('tooltip');
+  await expect(tip).toContainText('Équipement');
+  await expect(tip).toContainText('Constitution');
+  await expect(tip).toContainText('Vous mourez lorsque votre santé atteint zéro');
+  expect(await violations('app-build')).toEqual([]);
+  await page.keyboard.press('Escape');
+  await expect(tip).toBeHidden();
+  await expect(build.getByRole('row', { name: /Protection physique/ })).toContainText('26');
+  await expect(build.getByRole('row', { name: /\+ Contondant/ })).toContainText('6');
+  await wear(/Arme 1/, /Épée d'essai/);
+  await expect(build.locator('dl.lines')).toContainText('+12'); // parry: helmet 0.19 at level 11 = 5 (estimation) + the sword's 7
+  await expect(build.getByText('estimation').first()).toBeVisible();
+
+  // rows with a base value from the game: a value instead of a dash, a skill effect adds up (2 levels of 5 %)
+  await build.getByRole('tab', { name: 'Dégâts' }).click();
+  await expect(build.getByText('Dégâts de coup critique')).toBeVisible();
+  await expect(
+    build.locator('dl > div').filter({ hasText: 'Dégâts de coup critique' }),
+  ).toContainText('+150%');
+  await expect(
+    build.locator('dl > div').filter({ hasText: 'Chance de coup critique' }).first(),
+  ).toContainText('5%');
+  await expect(build.locator('dl > div').filter({ hasText: 'À deux mains' })).toContainText('0%');
+  expect(await violations('app-build')).toEqual([]);
+
+  // the skill tree and back
+  await go('Compétences');
+  await expect(page.locator('app-skills g.skill').first()).toBeVisible();
+  for (let i = 0; i < 2; i++)
+    await page
+      .locator('app-skills g.skill')
+      .filter({ hasText: /Endurance/ })
+      .click();
+  await go('Retour au personnage');
+  await expect(build.getByLabel('Niveau du personnage', { exact: true })).toHaveValue('20');
+  await build.getByRole('tab', { name: 'Dégâts' }).click();
+  await expect(build.locator('dl > div').filter({ hasText: 'À deux mains' })).toContainText('+10%');
+
+  // save, reload, new (back to level 1), open the saved build
+  await build.getByRole('button', { name: 'Builds enregistrés', exact: true }).click();
+  await build.getByLabel('Nom du build').fill('Avec équipement');
+  await build.getByRole('button', { name: 'Enregistrer' }).click();
+  await expect(build.locator('.builds')).toContainText('Avec équipement');
+  await page.reload();
+  await openBuild();
+  await expect(sheet.locator('.total').first()).toContainText('26'); // the draft, upgrades included
+  await build.getByRole('button', { name: 'Builds enregistrés', exact: true }).click();
+  await build.getByRole('button', { name: 'Nouveau' }).click();
+  await expect(build.getByLabel('Niveau du personnage', { exact: true })).toHaveValue('1');
+  await build
+    .locator('.builds')
+    .getByRole('button', { name: /^Avec équipement/ })
+    .click();
+  await expect(build.getByLabel('Niveau du personnage', { exact: true })).toHaveValue('20');
+  await expect(build.getByLabel('Niveau de flamme', { exact: true })).toHaveValue('4');
+  await build.getByRole('tab', { name: 'Protection' }).click();
+  await expect(build.getByRole('row', { name: /Protection physique/ })).toContainText('26');
 });
 
 test('a marker done on the map shows everywhere, and the other way round', async ({ page }) => {
@@ -1000,17 +1147,34 @@ test('workshop: every tab passes the AXE checks (WCAG A and AA)', async ({ page 
     expect(await violations(), tab).toEqual([]);
   }
 
-  // the skill tree (when the server has skills.json)
-  if (await page.getByRole('button', { name: 'Compétences', exact: true }).count()) {
+  // the build screen, its equipment and the skill tree (when the server has gear.json / skills.json)
+  const buildButton = page
+    .locator('app-topbar')
+    .getByRole('button', { name: 'Personnage', exact: true });
+  if (await buildButton.count()) {
+    const scan = async (include: string, label: string) =>
+      (
+        await new AxeBuilder({ page })
+          .include(include)
+          .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+          .analyze()
+      ).violations.map((v) => `${label} ${v.id}: ${v.nodes[0].html.slice(0, 120)}`);
+    await buildButton.click();
+    const slot = page.locator('app-character-sheet app-gear-slot button').first();
+    if (await slot.count()) {
+      expect(await scan('app-character-sheet', 'sheet')).toEqual([]);
+      for (const tab of ['Bases', 'Dégâts', 'Protection']) {
+        await page.getByRole('tab', { name: tab }).click();
+        expect(await scan('app-build', `build ${tab}`)).toEqual([]);
+      }
+      await slot.click();
+      await expect(page.getByRole('dialog')).toBeVisible();
+      expect(await scan('dialog', 'picker')).toEqual([]);
+      await page.keyboard.press('Escape');
+    }
     await page.getByRole('button', { name: 'Compétences', exact: true }).click();
     await expect(page.locator('app-skills g.skill').first()).toBeVisible();
-    const tree = (
-      await new AxeBuilder({ page })
-        .include('app-skills')
-        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
-        .analyze()
-    ).violations.map((v) => `skills ${v.id}: ${v.nodes[0].html.slice(0, 120)}`);
-    expect(tree).toEqual([]);
+    expect(await scan('app-skills', 'skills')).toEqual([]);
   }
 
   // the enemies (when the server has enemies.json): the list and one enemy
@@ -1049,4 +1213,78 @@ test('workshop: every tab passes the AXE checks (WCAG A and AA)', async ({ page 
     await expect(page.locator('app-lore .entry').first()).toBeVisible();
     expect(await lore('quests')).toEqual([]);
   }
+});
+
+test('browser Back and Forward walk through the views', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel("Nom d'utilisateur").fill(user);
+  await page
+    .getByRole('dialog')
+    .getByLabel('Mot de passe', { exact: true })
+    .fill('a brand new passphrase');
+  await page.getByRole('dialog').getByRole('button', { name: 'Se connecter' }).click();
+  await expect(page.locator('.who')).toContainText(user);
+  const current = page.locator('app-topbar [aria-current="page"]').first();
+  await page.getByRole('button', { name: 'Lore', exact: true }).click();
+  await expect(current).toHaveText('Lore');
+  await page.goBack();
+  await expect(current).not.toHaveText('Lore');
+  await page.goForward();
+  await expect(current).toHaveText('Lore');
+});
+
+test('gems: filters, level scaling, comfort input, back, AXE', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel("Nom d'utilisateur").fill(user);
+  await page
+    .getByRole('dialog')
+    .getByLabel('Mot de passe', { exact: true })
+    .fill('a brand new passphrase');
+  await page.getByRole('dialog').getByRole('button', { name: 'Se connecter' }).click();
+  await expect(page.locator('.who')).toContainText(user);
+  const fixture = await page.evaluate(
+    async () => (await (await fetch('gems.json')).json()).gems?.length === 2,
+  );
+  test.skip(!fixture, 'needs the fixture map');
+
+  const violations = async (sel: string) =>
+    (
+      await new AxeBuilder({ page })
+        .include(sel)
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+        .analyze()
+    ).violations.map((v) => `${v.id}: ${v.nodes[0].html.slice(0, 120)}`);
+  const cards = page.locator('app-gems .entry');
+  await page.getByRole('button', { name: 'Pierres', exact: true }).click();
+  await expect(cards).toHaveCount(2);
+  expect(await violations('app-gems'), 'list').toEqual([]);
+  await page.locator('app-gems').getByRole('searchbox').fill('brûlure');
+  await expect(cards).toHaveCount(1);
+  await page.locator('app-gems').getByRole('searchbox').fill('');
+  await page.getByRole('button', { name: 'T1', exact: true }).click();
+  await expect(cards).toHaveCount(2);
+
+  await page.getByRole('button', { name: 'Pierre précieuse de saignement' }).click();
+  const facts = page.locator('app-gems dl.facts');
+  await expect(facts).toContainText('8'); // level 1: the data's value, exact
+  await page.getByLabel('Niveau de la pierre').fill('3');
+  await page.getByLabel('Niveau de la pierre').press('Enter');
+  await page.getByLabel('Niveau de la pierre').blur();
+  await expect(facts).toContainText('13.2'); // 8 + 2.6 x 2, tagged as an estimation
+  await expect(facts).toContainText('estimation');
+  expect(await violations('app-gems'), 'gem').toEqual([]);
+  await page.goBack(); // Back leaves the Gems screen
+  await expect(page.locator('app-gems')).toBeHidden();
+
+  // comfort: kept in the draft, Rested stays unknown ("—")
+  await page.getByRole('button', { name: 'Personnage', exact: true }).click();
+  const comfort = page.getByLabel('Points de confort');
+  await comfort.fill('120');
+  await comfort.blur();
+  await page.reload();
+  await page.getByRole('button', { name: 'Personnage', exact: true }).click();
+  await expect(page.getByLabel('Points de confort')).toHaveValue('120');
+  await expect(
+    page.locator('app-build div[app-stat-row]').filter({ hasText: 'Durée de Reposé' }),
+  ).toContainText('—');
 });

@@ -68,7 +68,7 @@ textures, terrain voxels) is read by the Lua mod in `eml_mod/`, run by `emm`.
    `$GAME/mods/map_export/src/mod.lua`. For a full run, set everything to
    `true`:
    ```lua
-   local args = { translations = true, icons = true, map = true, voxels = true, items = true, skills = true }
+   local args = { translations = true, icons = true, map = true, voxels = true, items = true, skills = true, ui = true }
    ```
 3. Run the export:
    ```sh
@@ -85,6 +85,7 @@ textures, terrain voxels) is read by the Lua mod in `eml_mod/`, run by `emm`.
 | `voxels`       | `voxels/5/<x>_<y>.bin` (1 m terrain)  | extract_surface.py, extract_ores.py                   |
 | `items`        | `items/<guid>.png` (256 px)           | build_data.py (item pictures in popups)               |
 | `skills`       | `skills/<guid>.png`                   | build_skills.py (pictures of the skill nodes)         |
+| `ui`           | `ui/<guid>.png`, `ui/index.tsv`       | build_gear.py (perk icons, slot pictures, rarity, buffs, skill node frames) |
 
 ## 3. Extract the terrain
 
@@ -129,11 +130,14 @@ Writes, in `artifacts/map/`:
 | ---------------- | ------------------------------------------------------------------------------------------- |
 | `map-data.json`  | categories, markers (with the guaranteed loot of each one), biomes, item names and pictures |
 | `resources.json` | chests, plants and ores, grouped per element (loaded after the first render)                |
-| `skills.json`    | the skill tree: 243 nodes with position, class, cost, levels, texts and icon, and their links |
+| `skills.json`    | the skill tree: 243 nodes with position, class, cost, levels, texts, icon and attribute effects (the six Flame nodes: `perFlame` 0.5 = floor(Flame / 2) points, read from enshrouded.exe since the data has none), and their links |
 | `skills/`        | the icon of each active skill (96 px)                                                       |
 | `enemies.json`   | bosses and elite enemies: faction, experience, extra health per player, regions, places on the map, nearby named areas, trophy |
 | `enemies/`       | a picture of each boss (192 px, from its head or trophy item)                               |
 | `lore.json`      | the journal: lore notes (with their pages), their categories, quests with steps, givers and rewards |
+| `gear.json`      | equipable items (picture, armour shares, block, parry, weapon damage factors (base damage from the constants `genericWeaponSeed`/`powerCreepWeapon`, see `weaponBaseDamage`) and scaling attribute, tooltip stats, upgrades with icon and skill, damage perks (1196 on 475 weapons: 10 % of base damage of one kind), gem slot chance per weapon), the character balancing constants, the player's base attributes, rarity colours and the Attributes / Character screen labels |
+| `gems.json`      | weapon gems (29: name, text, rarity, tier, stats with scale factor, picture), the weapons with a gem slot (40) and the slot chances, gem forge constants, house comfort (343 furniture pieces in 16 categories with their points, 15 instruments, Rested buff and comfort constants); format in `build_gems.py` |
+| `ui/`            | character screen pictures from the mod's `ui` option (perk icons, equipment slots, rarity, buffs, skill node frames) |
 | `craft.json`     | recipes, Flame Altar levels, building pieces, stations, how each one unlocks, item category / type / food type / rarity / class / level |
 | `biomes.png`     | biome layer                                                                                 |
 | `icons/`         | category icons (game icons and the SVGs written by the script)                              |
@@ -143,9 +147,11 @@ It prints counts at the end; compare them with the previous run to spot a
 change in the game data. Current reference: 1225 markers (79 unique items,
 110 cosmetics, 107 collectibles), 2578 chests, 6632 ores, 76,742 plants,
 1198 recipes, 1324 building pieces, 14 altar levels, 78 armour sets,
-320 lore notes (564 pages), 186 quests, 2912 item pictures.
+320 lore notes (564 pages), 186 quests, 2912 item pictures,
+1394 equipable items (575 with armour, 507 weapons, 72 shields, 38 rings, all with a picture, 246 with parry),
+365 upgrades, 403 UI texts, 153 UI pictures, 117 skill nodes with attribute effects.
 
-`build_resources.py` (chests, plants, ores, special loot), `build_enemies.py` (bosses and elites), `build_skills.py` (the skill tree), `build_lore.py` (the journal) and `build_craft.py`
+`build_resources.py` (chests, plants, ores, special loot), `build_enemies.py` (bosses and elites), `build_skills.py` (the skill tree), `build_gear.py` (equipment stats; its docstring describes `gear.json`), `build_gems.py` (weapon gems and comfort, `gems.json`), `build_lore.py` (the journal) and `build_craft.py`
 (recipes, altar, building; its docstring describes `craft.json`) are used by
 `build_data.py` and are not run on their own.
 

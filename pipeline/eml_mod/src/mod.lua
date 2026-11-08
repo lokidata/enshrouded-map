@@ -4,6 +4,7 @@
 --   map/<name>.r16       raw 16-bit textures (base height map)
 --   icons/<guid>.png     map marker icons, plus icons/index.tsv (guid \t debugName)
 --   skills/<guid>.png    pictures of the skill tree nodes
+--   ui/<guid>.png        character screen pictures (perk icons, slot pictures, rarity, buffs), plus ui/index.tsv
 
 local MAP_GUID = "01bcbd07-bdbf-41c0-9999-5d58fb1a3aa1"
 local LANGUAGES = { "Fr_Fr", "En_Us" }
@@ -142,6 +143,31 @@ local function export_skill_icons()
 	print("exported " .. count .. " skill icons, skipped " .. skipped)
 end
 
+-- Character screen pictures: ui/<guid>.png and ui/index.tsv (guid \t debugName), the UI textures whose
+-- name starts with one of UI_PREFIXES (perk icons, skill node frames, equipment slot pictures, rarity
+-- markers, buff icons, attribute tab illustrations). They are all R8G8B8A8, so no block padding is needed.
+local UI_PREFIXES = { "perk_", "skillnode_", "equipmentslot_", "buff_", "debuff_", "statusIcons_", "item_property_",
+	"item_rarity", "basic_widget_rarity_stripe", "attribute_tabIllustration_", "character_level_badge_background",
+	"itemslot_backpack" }
+
+local function export_ui_textures()
+	local index = {}
+	for _, res in ipairs(game.assets.get_resources_by_type("keen::UiTextureResource")) do
+		---@type keen.UiTextureResource
+		local texture = res.data
+		for _, prefix in ipairs(UI_PREFIXES) do
+			if texture.debugName:sub(1, #prefix) == prefix and not texture.format:find("^BC") then
+				local guid = tostring(res.guid)
+				io.export("ui/" .. guid .. ".png", image.encode(decode(texture), "png"))
+				index[#index + 1] = guid .. "\t" .. texture.debugName
+				break
+			end
+		end
+	end
+	io.export("ui/index.tsv", table.concat(index, "\n"))
+	print("exported " .. #index .. " ui textures")
+end
+
 -- Raw terrain voxel tiles: voxels/<level>/<x>_<y>.bin
 local WORLD_GUID = "509feadb-4c60-425f-9c7c-deeefd9b6920"
 -- Level 5 is 1 m per voxel (used by extract_surface.py); lower levels are
@@ -169,10 +195,11 @@ local function export_voxels()
 	end
 end
 
-local args = { translations = false, icons = false, map = false, voxels = false, items = true, skills = false }
+local args = { translations = false, icons = false, map = false, voxels = false, items = true, skills = false, ui = false }
 if args.translations then export_translations() end
 if args.icons then export_icons() end
 if args.map then export_map() end
 if args.voxels then export_voxels() end
 if args.items then export_item_icons() end
 if args.skills then export_skill_icons() end
+if args.ui then export_ui_textures() end

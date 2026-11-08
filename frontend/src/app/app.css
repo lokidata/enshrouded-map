@@ -82,6 +82,9 @@ app-map[hidden] {
   display: none;
 }
 app-skills[hidden],
+app-build[hidden],
+app-equipment[hidden],
+app-gems[hidden],
 app-enemies[hidden],
 app-lore[hidden],
 app-workshop[hidden] {
