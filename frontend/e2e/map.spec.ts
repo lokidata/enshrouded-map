@@ -892,6 +892,72 @@ test('build: level, flame, equipment, protection, skills, save and reload', asyn
   await expect(build.getByRole('row', { name: /Protection physique/ })).toContainText('26');
 });
 
+test('build: a gem and its level on a weapon, shown with the weapon and saved', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByLabel("Nom d'utilisateur").fill(user);
+  await page
+    .getByRole('dialog')
+    .getByLabel('Mot de passe', { exact: true })
+    .fill('a brand new passphrase');
+  await page.getByRole('dialog').getByRole('button', { name: 'Se connecter' }).click();
+  await expect(page.locator('.who')).toContainText(user);
+  const fixture = await page.evaluate(
+    async () => (await (await fetch('gems.json')).json()).gems?.length === 2,
+  );
+  test.skip(!fixture, 'needs the fixture map');
+
+  const build = page.locator('app-build');
+  await page.locator('app-topbar').getByRole('button', { name: 'Personnage', exact: true }).click();
+  await build.getByRole('button', { name: /Arme 1/ }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog
+    .locator('.item')
+    .filter({ hasText: /Épée d'essai/ })
+    .click();
+  await dialog.getByLabel('Pierre précieuse', { exact: true }).selectOption({
+    label: 'Pierre précieuse de saignement',
+  });
+  const level = dialog.getByLabel('Niveau de la pierre');
+  await level.fill('15');
+  await level.dispatchEvent('change');
+  await expect(dialog.locator('.gempick')).toContainText('Dégâts de coupure par seconde: 14');
+  await expect(dialog.locator('.gempick')).toContainText('Durée de debuff: 7.1 s');
+  await level.fill('999');
+  await level.dispatchEvent('change');
+  await expect(level).toHaveValue('105'); // clamped to the gem's range
+  await level.fill('15');
+  await level.dispatchEvent('change');
+  await dialog.getByRole('button', { name: 'Fermer' }).click();
+  await expect(dialog).toBeHidden();
+  await expect(build.getByRole('button', { name: /Arme 1/ })).toHaveAccessibleName(/saignement 15/);
+
+  // the Damage tab: the gem under its weapon, its lines tagged as estimations
+  await build.getByRole('tab', { name: 'Dégâts' }).click();
+  await expect(build.locator('.gem-row')).toContainText('Pierre précieuse de saignement');
+  await expect(
+    build.locator('dl > div').filter({ hasText: 'Dégâts de coupure par seconde' }),
+  ).toContainText('14');
+  await expect(build.locator('dl > div').filter({ hasText: 'Durée de debuff' })).toContainText(
+    '7.1 s',
+  );
+
+  // saved with the build and back after a reload
+  await build.getByRole('button', { name: 'Builds enregistrés', exact: true }).click();
+  await build.getByLabel('Nom du build').fill('Avec pierre');
+  await build.getByRole('button', { name: 'Enregistrer' }).click();
+  await expect(build.locator('.builds')).toContainText('Avec pierre');
+  await build.getByRole('button', { name: 'Nouveau' }).click();
+  await expect(build.locator('.gem-row')).toHaveCount(0);
+  await build
+    .locator('.builds')
+    .getByRole('button', { name: /^Avec pierre/ })
+    .click();
+  await build.getByRole('tab', { name: 'Dégâts' }).click();
+  await expect(build.locator('.gem-row')).toContainText('15');
+});
+
 test('a marker done on the map shows everywhere, and the other way round', async ({ page }) => {
   await page.goto('/');
   await page.getByLabel("Nom d'utilisateur").fill(user);
@@ -1272,7 +1338,7 @@ test('gems: filters, level scaling, comfort input, back, AXE', async ({ page }) 
   await page.getByLabel('Niveau de la pierre').fill('3');
   await page.getByLabel('Niveau de la pierre').press('Enter');
   await page.getByLabel('Niveau de la pierre').blur();
-  await expect(facts).toContainText('13.2'); // 8 + 2.6 x 2, tagged as an estimation
+  await expect(facts).toContainText('6.2 s'); // 6 s + 0.5 s x 0.15 x 3, tagged as an estimation
   await expect(facts).toContainText('estimation');
   expect(await violations('app-gems'), 'gem').toEqual([]);
   await page.goBack(); // Back leaves the Gems screen

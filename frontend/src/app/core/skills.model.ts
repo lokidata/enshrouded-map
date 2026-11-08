@@ -63,5 +63,7 @@ export interface SavedBuild {
   gear: Record<string, string>;
   /** slot -> indices into the item's upgrades, in order (the app writes 0..n-1: a chain). */
   upgrades: Record<string, number[]>;
+  /** weapon slot -> the gem set in it (absent in builds saved before gems). */
+  gems?: Record<string, { id: string; level: number }>;
   updated_at: string;
 }

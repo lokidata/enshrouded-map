@@ -232,7 +232,7 @@ export class Gems {
   }
 
   protected value(s: Gem['stats'][number], level: number) {
-    const v = gemValue(s, level);
+    const v = gemValue(s, level, this.data.creep());
     return { text: formatGem(v.value, s.format), estimate: v.estimate };
   }
 

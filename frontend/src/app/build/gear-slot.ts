@@ -23,7 +23,8 @@ import {
 } from '../core/gear.logic';
 import { GameSettingsStore } from '../core/game-settings.store';
 import { GearService } from '../core/gear.service';
-import { PlannerStore } from '../core/planner.store';
+import { GemsService } from '../core/gems.service';
+import { PlannerStore, WEAPON_SLOTS } from '../core/planner.store';
 import { SlotPicker } from '../equipment/slot-picker';
 
 /** One slot of the character sheet: the item's picture (click = pick another), and its card on hover or focus. */
@@ -38,7 +39,8 @@ import { SlotPicker } from '../equipment/slot-picker';
       [attr.aria-label]="
         ('equipSlot_' + slot() | transloco) +
         ': ' +
-        (item() ? gear.text(item()!.name) : ('equipEmpty' | transloco))
+        (item() ? gear.text(item()!.name) : ('equipEmpty' | transloco)) +
+        (gem() ? ' · ' + gems.text(gem()!.gem.name) + ' ' + gem()!.level : '')
       "
       aria-haspopup="dialog"
       (click)="picking.set(true)"
@@ -51,6 +53,16 @@ import { SlotPicker } from '../equipment/slot-picker';
           height="64"
           (error)="hide($event)"
         />
+        @if (gem()?.gem?.icon; as icon) {
+          <img
+            class="gem-badge"
+            [src]="icon"
+            alt=""
+            width="22"
+            height="22"
+            (error)="hide($event)"
+          />
+        }
       } @else if (gear.slotArt(slot()); as art) {
         <img class="art" [src]="art" alt="" width="48" height="48" (error)="hide($event)" />
       }
@@ -118,6 +130,12 @@ import { SlotPicker } from '../equipment/slot-picker';
               </dd>
             </div>
           }
+          @if (gem(); as e) {
+            <div>
+              <dt>{{ 'equipGemSet' | transloco }}</dt>
+              <dd>{{ gems.text(e.gem.name) }} · {{ 'charLevel' | transloco }} {{ e.level }}</dd>
+            </div>
+          }
           @if (parry() !== null) {
             <div>
               <dt>{{ 'buildRow_parry' | transloco }}</dt>
@@ -132,6 +150,16 @@ import { SlotPicker } from '../equipment/slot-picker';
             </div>
           }
         </dl>
+        @if (gem(); as e) {
+          <p class="gem-text">
+            @if (e.lines[0]?.estimate) {
+              <span class="est" [title]="'buildGemTip' | transloco">{{
+                'buildEstimate' | transloco
+              }}</span>
+            }
+            {{ lineText(e.lines) }}
+          </p>
+        }
         @if (item()!.upgrades.length) {
           <p class="head">
             <span>{{ (item()!.damage ? 'charDamage' : 'charArmor') | transloco }}</span>
@@ -212,6 +240,12 @@ export class GearSlot {
 
   protected readonly gear = inject(GearService);
   protected readonly planner = inject(PlannerStore);
+  protected readonly gems = inject(GemsService);
+  /** The gem set in this slot (weapon slots only). */
+  protected readonly gem = computed(() => {
+    const ws = WEAPON_SLOTS.find((s) => s === this.slot());
+    return ws && this.item() ? this.gems.effect(this.planner.gems()[ws]) : null;
+  });
   private readonly host: ElementRef<HTMLElement> = inject(ElementRef);
 
   protected readonly open = signal(false);
@@ -289,6 +323,10 @@ export class GearSlot {
 
   protected out(event: FocusEvent): void {
     if (!this.host.nativeElement.contains(event.relatedTarget as Node | null)) this.open.set(false);
+  }
+
+  protected lineText(lines: { name: string; text: string }[]): string {
+    return lines.map((l) => `${l.name} ${l.text}`).join(' · ');
   }
 
   protected hide(event: Event): void {
