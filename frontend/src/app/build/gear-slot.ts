@@ -25,6 +25,7 @@ import { GameSettingsStore } from '../core/game-settings.store';
 import { GearService } from '../core/gear.service';
 import { GemsService } from '../core/gems.service';
 import { PlannerStore, WEAPON_SLOTS } from '../core/planner.store';
+import { Recommendations } from '../core/recommend.service';
 import { SlotPicker } from '../equipment/slot-picker';
 
 /** One slot of the character sheet: the item's picture (click = pick another), and its card on hover or focus. */
@@ -40,7 +41,8 @@ import { SlotPicker } from '../equipment/slot-picker';
         ('equipSlot_' + slot() | transloco) +
         ': ' +
         (item() ? gear.text(item()!.name) : ('equipEmpty' | transloco)) +
-        (gem() ? ' · ' + gems.text(gem()!.gem.name) + ' ' + gem()!.level : '')
+        (gem() ? ' · ' + gems.text(gem()!.gem.name) + ' ' + gem()!.level : '') +
+        (alert()?.now?.severity ? ' · ' + (alertWord() | transloco) : '')
       "
       aria-haspopup="dialog"
       (click)="picking.set(true)"
@@ -67,6 +69,13 @@ import { SlotPicker } from '../equipment/slot-picker';
         <img class="art" [src]="art" alt="" width="48" height="48" (error)="hide($event)" />
       }
     </button>
+    @if (alert(); as a) {
+      @if (a.now.severity) {
+      <span class="alert" [attr.data-severity]="a.now.severity" aria-hidden="true">
+        {{ a.now.severity === 'critical' ? '⛔' : '⚠' }} -{{ a.now.loss }} %
+      </span>
+      }
+    }
     @if (picking()) {
       <dialog
         #dlg
@@ -98,6 +107,15 @@ import { SlotPicker } from '../equipment/slot-picker';
           {{ 'charLevel' | transloco }} <b>{{ level() }}</b> / {{ levelMax() }}
         </p>
         <p class="rarity">{{ 'rarity_' + item()!.rarity | transloco }}</p>
+        @if (alert(); as a) {
+          <p class="alert" [attr.data-severity]="a.now.severity ?? a.base.severity">
+            <span aria-hidden="true">{{
+              (a.now.severity ?? a.base.severity) === 'critical' ? '⛔' : '⚠'
+            }}</span>
+            {{ (a.state === 'still' ? 'recoStill' : 'recoCompensated') | transloco }}
+            · {{ 'recoBase' | transloco: { level: a.base.level, loss: a.base.loss } }}
+          </p>
+        }
         <dl>
           <div>
             <dt>{{ 'charArmorPhysical' | transloco }}</dt>
@@ -240,6 +258,11 @@ export class GearSlot {
 
   protected readonly gear = inject(GearService);
   protected readonly planner = inject(PlannerStore);
+  private readonly reco = inject(Recommendations);
+  protected readonly alert = computed(() => this.reco.bySlot().get(this.slot()));
+  protected readonly alertWord = computed(() =>
+    this.alert()?.now.severity === 'critical' ? 'reco_critical' : 'reco_low',
+  );
   protected readonly gems = inject(GemsService);
   /** The gem set in this slot (weapon slots only). */
   protected readonly gem = computed(() => {

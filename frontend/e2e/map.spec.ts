@@ -892,6 +892,65 @@ test('build: level, flame, equipment, protection, skills, save and reload', asyn
   await expect(build.getByRole('row', { name: /Protection physique/ })).toContainText('26');
 });
 
+test('build: a low-level piece is flagged on its slot and in the recommendations', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByLabel("Nom d'utilisateur").fill(user);
+  await page
+    .getByRole('dialog')
+    .getByLabel('Mot de passe', { exact: true })
+    .fill('a brand new passphrase');
+  await page.getByRole('dialog').getByRole('button', { name: 'Se connecter' }).click();
+  await expect(page.locator('.who')).toContainText(user);
+  const fixture = await page.evaluate(async () =>
+    (await (await fetch('gear.json')).text()).includes('fixture_gear'),
+  );
+  test.skip(!fixture, 'needs the fixture map');
+
+  const build = page.locator('app-build');
+  await page.locator('app-topbar').getByRole('button', { name: 'Personnage', exact: true }).click();
+  const panel = page.locator('app-recommendations');
+  const setLevel = async (value: string) => {
+    await build.getByLabel('Niveau du personnage', { exact: true }).fill(value);
+    await build.getByLabel('Niveau du personnage', { exact: true }).dispatchEvent('change');
+  };
+  await setLevel('20');
+  await expect(panel.getByRole('status')).toContainText('Tout est à niveau'); // nothing worn
+  await build.getByRole('button', { name: /Tête/ }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog
+    .locator('.item')
+    .filter({ hasText: /Casque d'essai/ })
+    .click();
+  await dialog.getByRole('button', { name: 'Fermer' }).click();
+  await expect(dialog).toBeHidden();
+
+  // level 10 against 20: 173 / 323, -46 % armour, critical; the badge says it in words and in the label
+  await expect(panel.getByRole('status')).toContainText('Niveau très bas');
+  await expect(panel.getByRole('status')).toContainText('-46 %');
+  await expect(panel.getByRole('status')).toContainText('Toujours trop faible même amélioré');
+  await expect(panel.getByRole('status')).toContainText('niveau de base 10 : -46 %');
+  await expect(build.getByRole('button', { name: /^Tête.*Niveau très bas/ })).toBeVisible();
+  await expect(page.locator('app-gear-slot > .alert').first()).toContainText('-46 %');
+  const axe = await new AxeBuilder({ page })
+    .include('app-build')
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+    .analyze();
+  expect(axe.violations.map((v) => v.id)).toEqual([]);
+
+  // both upgrades: level 12, still short (-37 %), then a lower character level clears it
+  await build.getByRole('button', { name: /^Tête/ }).hover();
+  const card = build.getByRole('group', { name: "Casque d'essai" });
+  await card.getByRole('button', { name: /Armure ignée/ }).click(); // the chain: takes both
+  await expect(panel.getByRole('status')).toContainText('avec améliorations 12 : -37 %');
+  await setLevel('13'); // base 10 is still low (base 173 / 218), 12 / 13 is fine
+  await expect(panel.getByRole('status')).toContainText('les améliorations compensent');
+  await expect(page.locator('app-gear-slot > .alert')).toHaveCount(0); // no badge: the upgraded piece is fine
+  await setLevel('11'); // base 10 / 11 = 0.92 and upgraded: nothing left to flag
+  await expect(panel.getByRole('status')).toContainText('Tout est à niveau');
+});
+
 test('build: a gem and its level on a weapon, shown with the weapon and saved', async ({
   page,
 }) => {
