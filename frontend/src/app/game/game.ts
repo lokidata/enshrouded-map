@@ -266,7 +266,7 @@ import { GameSettingsStore } from '../core/game-settings.store';
     .gs-card {
       border: 1px solid var(--gold-dim);
       border-radius: 4px;
-      background: linear-gradient(180deg, #22262d, var(--panel-deep));
+      background: linear-gradient(180deg, var(--panel), var(--panel-deep));
       box-shadow: inset 0 1px 0 #ffffff0d;
     }
     .gs-nav {
@@ -284,10 +284,11 @@ import { GameSettingsStore } from '../core/game-settings.store';
       border-left: 3px solid transparent;
       background: none;
       color: var(--muted);
-      font-stretch: condensed;
       font-weight: 600;
       letter-spacing: 0.08em;
-      text-transform: uppercase;
+      font-family: var(--display-sc);
+      font-weight: 400;
+      text-transform: none;
       cursor: pointer;
     }
     .gs-nav button:hover {
@@ -295,7 +296,7 @@ import { GameSettingsStore } from '../core/game-settings.store';
       background: var(--hover);
     }
     .gs-nav button[aria-current='page'] {
-      color: #f3d58a;
+      color: var(--gold);
       border-left-color: var(--gold);
       background: linear-gradient(to right, #c9a24d33, transparent 80%);
     }
@@ -344,7 +345,7 @@ import { GameSettingsStore } from '../core/game-settings.store';
       background: linear-gradient(to right, #c9a24d26, transparent 70%);
     }
     .gs-field.modified .gs-label {
-      color: #f3d58a;
+      color: var(--gold);
     }
     .gs-label {
       font-weight: 600;
@@ -374,7 +375,7 @@ import { GameSettingsStore } from '../core/game-settings.store';
       margin-left: auto;
       border: 1px solid var(--gold-dim);
       border-radius: 12px;
-      background: #0d0f12;
+      background: #0d1117;
       position: relative;
       cursor: pointer;
     }
@@ -386,16 +387,16 @@ import { GameSettingsStore } from '../core/game-settings.store';
       width: 18px;
       height: 18px;
       border-radius: 50%;
-      background: #b8bcc4;
+      background: var(--muted);
       transition: transform 0.15s;
     }
     .gs-toggle:checked {
-      background: #6b5320;
+      background: var(--gold-dim);
       border-color: var(--gold);
     }
     .gs-toggle:checked::after {
       transform: translateX(20px);
-      background: #f3d58a;
+      background: var(--gold);
     }
     .gs-toggle:disabled {
       cursor: default;
@@ -405,7 +406,7 @@ import { GameSettingsStore } from '../core/game-settings.store';
     .gs-nav button:focus-visible,
     .gs-reset:focus-visible,
     .gs-card summary:focus-visible {
-      outline: 2px solid #f3d58a;
+      outline: 2px solid var(--gold);
       outline-offset: 2px;
     }
     .locked input[type='number']:disabled,
@@ -433,7 +434,9 @@ import { GameSettingsStore } from '../core/game-settings.store';
       border-radius: 10px;
       color: var(--muted);
       font-size: 10px;
-      text-transform: uppercase;
+      font-family: var(--display-sc);
+      font-weight: 400;
+      text-transform: none;
       letter-spacing: 0.05em;
     }
     .gs-reset {
@@ -441,8 +444,8 @@ import { GameSettingsStore } from '../core/game-settings.store';
       height: 32px;
       border: 1px solid var(--gold);
       border-radius: 4px;
-      background: linear-gradient(180deg, #3a3223, #2a2418);
-      color: #f3d58a;
+      background: linear-gradient(180deg, var(--panel), var(--panel));
+      color: var(--gold);
       font-size: 16px;
       cursor: pointer;
     }
@@ -459,16 +462,17 @@ import { GameSettingsStore } from '../core/game-settings.store';
       padding: 6px 14px;
       border: 1px solid var(--gold);
       border-radius: 4px;
-      background: linear-gradient(180deg, #3a3223, #2a2418);
-      color: #f3d58a;
-      font-stretch: condensed;
+      background: linear-gradient(180deg, var(--panel), var(--panel));
+      color: var(--gold);
       font-weight: 600;
       letter-spacing: 0.06em;
-      text-transform: uppercase;
+      font-family: var(--display-sc);
+      font-weight: 400;
+      text-transform: none;
       cursor: pointer;
     }
     .gs-btn:hover {
-      background: linear-gradient(180deg, #4a3f2a, #35301f);
+      background: linear-gradient(180deg, var(--gold-dim), var(--panel));
     }
     .gs-side {
       display: flex;
@@ -480,10 +484,11 @@ import { GameSettingsStore } from '../core/game-settings.store';
       padding: 12px 16px;
       cursor: pointer;
       color: var(--gold);
-      font-stretch: condensed;
       font-weight: 600;
       letter-spacing: 0.08em;
-      text-transform: uppercase;
+      font-family: var(--display-sc);
+      font-weight: 400;
+      text-transform: none;
       border-bottom: 1px solid transparent;
     }
     .gs-card[open] summary {
@@ -507,11 +512,11 @@ import { GameSettingsStore } from '../core/game-settings.store';
       box-sizing: border-box;
       margin-top: 4px;
       font-family: monospace;
-      font-size: 12px;
+      font-size: 14px;
       padding: 8px;
       border: 1px solid var(--border);
       border-radius: 6px;
-      background: #0d0f12;
+      background: #0d1117;
       color: var(--text);
     }
     .actions {

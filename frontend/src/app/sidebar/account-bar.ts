@@ -111,7 +111,7 @@ import { TeamStore } from '../core/team.store';
       background: var(--bg);
     }
     .menu button.danger {
-      color: #ff7b72;
+      color: var(--bad);
     }
     button {
       padding: 4px 9px;
@@ -120,7 +120,7 @@ import { TeamStore } from '../core/team.store';
       background: var(--bg);
       color: var(--text);
       cursor: pointer;
-      font-size: 12px;
+      font-size: 14px;
     }
     button.primary {
       background: var(--accent);
@@ -141,7 +141,7 @@ import { TeamStore } from '../core/team.store';
       border: 1px solid var(--border);
       border-radius: 6px;
       background: var(--panel);
-      font-size: 12px;
+      font-size: 14px;
       color: var(--muted);
     }
     .invite label {

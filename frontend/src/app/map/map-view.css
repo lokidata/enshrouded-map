@@ -10,18 +10,27 @@ app-map {
   inset: 0;
   background: #10141a;
 } /* same as the void and tile padding of render_map.py */
+.map-host::after {
+  /* the Shroud creeps in from the edges of the map; above the tiles and markers, under the controls */
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 450;
+  /* a gradient, not a blurred shadow: cheap to repaint while the map is dragged */
+  background: radial-gradient(ellipse 75% 75% at 50% 50%, transparent 60%, #0a0d12c0 100%);
+  pointer-events: none;
+}
 .coords {
   position: absolute;
-  right: 10px;
-  bottom: 10px;
+  right: 12px;
+  bottom: 12px;
   z-index: 1000;
-  background: #000a;
-  color: #eee;
-  padding: 3px 8px;
-  border-radius: 4px;
-  font:
-    12px ui-monospace,
-    monospace;
+  background: #0d1117e6;
+  border: 1px solid var(--gold-dim);
+  color: var(--text);
+  padding: 3px 9px;
+  border-radius: 2px;
+  font-size: 14px;
   pointer-events: none;
 }
 .coords:empty {
@@ -29,17 +38,18 @@ app-map {
 }
 .legend {
   position: absolute;
-  left: 10px;
-  bottom: 10px;
+  left: 12px;
+  bottom: 12px;
   z-index: 1000;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 3px 10px;
-  padding: 8px 12px;
-  border-radius: 6px;
-  background: #000b;
+  gap: 3px 12px;
+  padding: 9px 13px;
+  border: 1px solid var(--gold-dim);
+  border-radius: 2px;
+  background: #0d1117e6;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 14px;
 }
 .legend span {
   display: flex;
@@ -95,9 +105,7 @@ app-map {
 }
 .map-label {
   color: #f6ecd2;
-  font:
-    italic 600 13px Georgia,
-    serif;
+  font: italic 400 15px var(--display);
   text-shadow:
     0 0 3px #000,
     0 0 2px #000;
@@ -106,19 +114,31 @@ app-map {
   pointer-events: auto;
 }
 .map-label.region {
-  font-size: 17px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font: 400 21px var(--display-sc);
+  letter-spacing: 0.08em;
   color: #fff4d6;
 }
 .leaflet-tooltip {
-  font-size: 12px;
+  font-size: 14px;
+  border-radius: 2px;
 }
 .leaflet-popup-content-wrapper,
 .leaflet-popup-tip {
-  background: #000;
+  background: var(--panel-deep);
   color: var(--text);
-  border: 1px solid var(--border);
+  border: 1px solid var(--gold-dim);
+}
+.leaflet-popup-content-wrapper {
+  /* two bronze corners, as on every plate of the site */
+  border-radius: 2px;
+  background:
+    linear-gradient(var(--gold), var(--gold)) left top / 14px 1px no-repeat,
+    linear-gradient(var(--gold), var(--gold)) left top / 1px 14px no-repeat,
+    linear-gradient(var(--gold), var(--gold)) right bottom / 14px 1px no-repeat,
+    linear-gradient(var(--gold), var(--gold)) right bottom / 1px 14px no-repeat,
+    linear-gradient(180deg, var(--panel), var(--panel-deep));
+  background-origin: border-box;
+  box-shadow: 0 6px 22px #000b;
 }
 .leaflet-popup-content {
   margin: 10px 12px;
@@ -139,30 +159,36 @@ app-map {
   color: var(--text);
 }
 .popup-name {
-  font-weight: 600;
-  font-size: 14px;
+  color: var(--gold);
+  font: 400 19px/1.2 var(--display);
 }
 .popup-meta {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 14px;
+  font-style: italic;
   margin-top: 4px;
 }
 .popup-actions {
   margin-top: 8px;
 }
 .popup-actions button {
-  padding: 4px 9px;
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  background: var(--bg);
+  padding: 4px 11px;
+  border: 1px solid var(--gold-dim);
+  border-radius: 3px;
+  background: transparent;
   color: var(--text);
   cursor: pointer;
-  font-size: 12px;
+  font: 14px var(--ui);
+}
+.popup-actions button:hover {
+  border-color: var(--gold);
+  background: var(--gold-faint);
 }
 .popup-actions button.primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #1a1a1a;
+  color: var(--accent-ink);
+  font-weight: 700;
 }
 .popup-list {
   max-height: 96px;
@@ -176,13 +202,13 @@ app-map {
   justify-content: space-between;
   gap: 8px;
   padding: 3px 0;
-  border-top: 1px solid var(--border);
+  border-top: 1px dotted var(--gold-dim);
 }
 .popup-item {
   min-width: 0;
 }
 .popup-item-name {
-  font-size: 13px;
+  font-size: 15px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -193,13 +219,13 @@ app-map {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: #6fe06f;
-  font-size: 12px;
+  color: var(--ok);
+  font-size: 14px;
 }
 .popup-team {
   margin-top: 6px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 14px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -207,10 +233,10 @@ app-map {
 }
 .popup-actions .hint {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 14px;
 }
 .popup-actions .hint a {
-  color: var(--accent);
+  color: var(--gold);
   cursor: pointer;
   text-decoration: underline;
 }
@@ -263,11 +289,9 @@ app-map {
   text-align: left;
 }
 .popup-loot-title {
-  font-size: 12px;
-  font-weight: 600;
   color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font: 400 15px/1.2 var(--display-sc);
+  letter-spacing: 0.05em;
   margin-bottom: 2px;
 }
 .popup-loot-row {
@@ -275,7 +299,7 @@ app-map {
   align-items: center;
   gap: 8px;
   padding: 2px 0;
-  font-size: 13px;
+  font-size: 15px;
 }
 .popup-loot-name {
   min-width: 0;
@@ -285,7 +309,7 @@ app-map {
 }
 .popup-loot-amount {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 14px;
   flex-shrink: 0;
 }
 /* the stack's button stays in view while the list scrolls */
@@ -293,7 +317,7 @@ app-map {
   position: sticky;
   bottom: 0;
   padding: 6px 0 2px;
-  background: #000;
+  background: var(--panel-deep);
 }
 
 /* "Show on the map" ping, like the in-game waypoint */
@@ -303,7 +327,7 @@ app-map {
   height: 18px;
   margin: -9px 0 0 -9px;
   border-radius: 50%;
-  background: #ffd23f;
+  background: #ffb454;
   border: 2px solid #000;
   box-shadow: 0 0 6px #000;
 }
@@ -312,7 +336,7 @@ app-map {
   position: absolute;
   inset: -4px;
   border-radius: 50%;
-  border: 3px solid #ffd23f;
+  border: 3px solid #ffb454;
   animation: ping 1.4s ease-out infinite;
 }
 @keyframes ping {

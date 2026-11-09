@@ -8,7 +8,7 @@
   align-items: start;
   margin-bottom: 16px;
   padding: 16px;
-  color: #eadfc8;
+  color: var(--text);
 }
 .left {
   display: flex;
@@ -32,13 +32,11 @@
   align-items: flex-end;
   margin: 0;
   text-align: right;
-  color: #cdbfa6;
+  color: var(--muted);
 }
 .info b {
-  font:
-    700 1.5rem Georgia,
-    serif;
-  color: #f3ead6;
+  font: 400 1.5rem var(--display);
+  color: var(--text);
 }
 .right {
   display: flex;
@@ -57,18 +55,16 @@
   display: flex;
   flex-direction: column;
   margin: 0 0 12px;
-  color: #cdbfa6;
+  color: var(--muted);
 }
 .total b {
-  font:
-    700 2rem Georgia,
-    serif;
-  color: #f3ead6;
+  font: 400 2rem var(--display);
+  color: var(--text);
 }
 .level {
   padding: 12px;
-  background: rgba(28, 30, 62, 0.88);
-  border: 1px solid #6b5436;
+  background: #1a212cf0;
+  border: 1px solid var(--gold-dim);
   border-radius: 6px;
 }
 .level p {
@@ -77,23 +73,23 @@
 .bar {
   height: 8px;
   margin-bottom: 12px;
-  background: #3a3550;
+  background: var(--border);
 }
 .bar div {
   height: 100%;
-  background: #f0a63a;
+  background: var(--gold);
 }
 .pill {
   padding: 6px 14px;
   cursor: pointer;
-  color: #ffd36e;
-  background: rgba(20, 14, 8, 0.93);
-  border: 1px solid #6b5436;
+  color: var(--gold);
+  background: #0d1117f2;
+  border: 1px solid var(--gold-dim);
   border-radius: 999px;
 }
 .pill:focus-visible,
 .pill[aria-expanded='true'] {
-  outline: 2px solid #ffd36e;
+  outline: 2px solid var(--gold);
 }
 @media (max-width: 800px) {
   .sheet {
@@ -114,16 +110,16 @@
   padding: 2px 8px;
   font-size: 0.75rem;
   cursor: pointer;
-  color: #cdbfa6;
-  background: rgba(20, 14, 8, 0.93);
-  border: 1px solid #6b5436;
+  color: var(--muted);
+  background: #0d1117f2;
+  border: 1px solid var(--gold-dim);
   border-radius: 999px;
 }
 .hand[aria-pressed='true'] {
-  color: #1b130a;
-  background: #e8b84a;
-  border-color: #e8b84a;
+  color: #0d1117;
+  background: var(--gold);
+  border-color: var(--gold);
 }
 .hand:focus-visible {
-  outline: 2px solid #ffd36e;
+  outline: 2px solid var(--gold);
 }

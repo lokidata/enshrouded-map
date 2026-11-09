@@ -24,7 +24,8 @@ export class EnemiesService {
   /** The picture of an enemy by its name (either language), for markers the sources do not list (summon stones, elites). */
   readonly imageByName = computed(() => {
     const images = new Map<string, string>();
-    for (const e of this.data()?.enemies ?? []) if (e.image) for (const n of e.name) images.set(n, e.image);
+    for (const e of this.data()?.enemies ?? [])
+      if (e.image) for (const n of e.name) images.set(n, e.image);
     return images;
   });
 

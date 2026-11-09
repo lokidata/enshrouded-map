@@ -66,9 +66,11 @@ import { SkillsService } from '../core/skills.service';
     h3 {
       margin: 10px 0 6px;
       font-size: 0.85rem;
-      text-transform: uppercase;
+      font-family: var(--display-sc);
+      font-weight: 400;
+      text-transform: none;
       letter-spacing: 1px;
-      color: #d9b36a;
+      color: var(--gold);
     }
     input {
       width: 100%;
@@ -82,7 +84,7 @@ import { SkillsService } from '../core/skills.service';
       margin-bottom: 6px;
     }
     .error {
-      color: #ff9b8f;
+      color: var(--bad);
     }
     ul {
       list-style: none;
@@ -102,7 +104,7 @@ import { SkillsService } from '../core/skills.service';
       text-align: left;
       background: rgba(255, 255, 255, 0.06);
       color: inherit;
-      border: 1px solid #4a3d2a;
+      border: 1px solid var(--gold-dim);
       border-radius: 4px;
       padding: 4px 8px;
       cursor: pointer;
@@ -113,11 +115,11 @@ import { SkillsService } from '../core/skills.service';
     .drop {
       background: none;
       border: 0;
-      color: #ff9b8f;
+      color: var(--bad);
       cursor: pointer;
     }
     .empty {
-      color: #b8aa90;
+      color: var(--muted);
     }
   `,
 })

@@ -115,69 +115,84 @@ import { AccountBar } from '../sidebar/account-bar';
       z-index: 1500;
       display: flex;
       align-items: center;
-      gap: 14px;
+      gap: 16px;
       flex-shrink: 0;
-      height: 52px;
-      padding: 0 16px;
-      background: var(--panel-deep);
-      border-bottom: 2px solid var(--gold-dim);
+      height: 54px;
+      padding: 0 18px;
+      background: linear-gradient(180deg, #19212d, var(--panel-deep));
+      border-bottom: 1px solid var(--gold-dim);
+      box-shadow:
+        0 1px 0 #00000066,
+        0 6px 14px -8px #000;
     }
     h1 {
+      display: flex;
+      align-items: center;
+      gap: 9px;
       margin: 0;
-      color: #f3d58a;
-      font-size: 17px;
-      font-stretch: condensed;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
+      color: var(--gold);
+      font-size: 22px;
+      line-height: 1;
       white-space: nowrap;
+    }
+    h1::before {
+      /* the Flame: the one warm light of the page */
+      content: '';
+      width: 16px;
+      height: 22px;
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 32'%3E%3Cpath fill='%23eb9440' d='M13 1c1 6 8 9 8 18a9 9 0 0 1-18 0c0-4 2-6 4-8 0 3 1 5 3 5 1-6-1-9 3-15z'/%3E%3Cpath fill='%23ffd9a0' d='M12 17c3 2 4 4 4 6a4 4 0 0 1-8 0c0-2 2-4 4-6z'/%3E%3C/svg%3E")
+        center / contain no-repeat;
+      filter: drop-shadow(0 0 5px #eb944088);
     }
     nav {
       display: flex;
       align-self: stretch;
       gap: 2px;
+      margin-left: 8px;
     }
     nav button {
-      padding: 0 18px;
+      position: relative;
+      padding: 0 17px;
       border: 0;
-      border-bottom: 3px solid transparent;
       background: none;
       color: var(--muted);
       cursor: pointer;
-      font: inherit;
-      font-size: 13px;
-      font-weight: 600;
-      font-stretch: condensed;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
+      font: 400 17px/1 var(--display-sc);
+      letter-spacing: 0.05em;
     }
     nav button:hover {
       color: var(--text);
     }
     nav button.active {
-      background: linear-gradient(to top, #c9a24d33, transparent 70%);
-      border-bottom-color: var(--gold);
-      color: #f3d58a;
+      color: var(--gold);
+      background: linear-gradient(180deg, transparent 30%, #eb944022);
+      box-shadow: inset 0 -2px 0 var(--accent);
     }
     .spacer {
       flex: 1;
     }
     .group {
       display: flex;
-      border: 1px solid var(--border);
-      border-radius: 5px;
+      border: 1px solid var(--gold-dim);
+      border-radius: 3px;
       overflow: hidden;
     }
     .group button {
-      padding: 3px 8px;
+      padding: 3px 9px;
       border: 0;
-      background: var(--bg);
+      background: transparent;
       color: var(--muted);
       cursor: pointer;
-      font-size: 12px;
+      font: inherit;
+      font-size: 14px;
+    }
+    .group button:hover {
+      color: var(--text);
     }
     .group button.active {
       background: var(--accent);
-      color: #1a1a1a;
+      color: var(--accent-ink);
+      font-weight: 700;
     }
     button:focus-visible {
       outline: 2px solid var(--accent);
@@ -186,6 +201,10 @@ import { AccountBar } from '../sidebar/account-bar';
     @media (max-width: 700px) {
       h1 {
         display: none;
+      }
+      nav button {
+        padding: 0 11px;
+        font-size: 15px;
       }
     }
   `,

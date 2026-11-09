@@ -23,6 +23,21 @@
               {
                 "glob": "**/*",
                 "input": "public"
+              },
+              {
+                "glob": "alegreya-sans-latin-{400,500,700}-*.woff2",
+                "input": "node_modules/@fontsource/alegreya-sans/files",
+                "output": "/fonts"
+              },
+              {
+                "glob": "*-latin-*-*.woff2",
+                "input": "node_modules/@fontsource/im-fell-english/files",
+                "output": "/fonts"
+              },
+              {
+                "glob": "*-latin-*-*.woff2",
+                "input": "node_modules/@fontsource/im-fell-english-sc/files",
+                "output": "/fonts"
               }
             ],
             "styles": [
@@ -37,7 +52,7 @@
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "600kB",
+                  "maximumWarning": "650kB",
                   "maximumError": "1MB"
                 },
                 {
@@ -69,6 +84,21 @@
                   "glob": "**/*",
                   "input": "map-artifacts",
                   "output": "/"
+                },
+                {
+                  "glob": "alegreya-sans-latin-{400,500,700}-*.woff2",
+                  "input": "node_modules/@fontsource/alegreya-sans/files",
+                  "output": "/fonts"
+                },
+                {
+                  "glob": "*-latin-*-*.woff2",
+                  "input": "node_modules/@fontsource/im-fell-english/files",
+                  "output": "/fonts"
+                },
+                {
+                  "glob": "*-latin-*-*.woff2",
+                  "input": "node_modules/@fontsource/im-fell-english-sc/files",
+                  "output": "/fonts"
                 }
               ]
             }

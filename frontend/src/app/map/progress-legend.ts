@@ -47,10 +47,11 @@ function read(): boolean {
       z-index: 1000;
     }
     .box {
-      background: #000b;
-      border-radius: 6px;
+      background: #0d1117e6;
+      border: 1px solid var(--gold-dim);
+      border-radius: 2px;
       color: var(--muted);
-      font-size: 12px;
+      font-size: 14px;
       min-width: 150px;
     }
     .head {
@@ -58,8 +59,9 @@ function read(): boolean {
       padding: 5px 10px;
       border: 0;
       background: none;
-      color: var(--text);
-      font-size: 12px;
+      color: var(--gold);
+      font: 400 15px var(--display-sc);
+      letter-spacing: 0.04em;
       text-align: left;
       cursor: pointer;
     }
