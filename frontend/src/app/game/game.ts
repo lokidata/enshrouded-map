@@ -45,7 +45,8 @@ import { GameSettingsStore } from '../core/game-settings.store';
             <select
               [attr.aria-label]="'gsPreset' | transloco"
               [value]="store.preset()"
-              (change)="store.preset.set($any($event.target).value)"
+              [disabled]="!store.canEdit()"
+              (change)="store.setPreset($any($event.target).value)"
             >
               @for (p of presets; track p) {
                 <option [value]="p" [selected]="store.preset() === p">
@@ -54,17 +55,41 @@ import { GameSettingsStore } from '../core/game-settings.store';
               }
             </select>
           </label>
-          <button type="button" class="gs-btn" (click)="store.resetAll()">
+          <button
+            type="button"
+            class="gs-btn"
+            [disabled]="!store.canEdit()"
+            (click)="store.resetAll()"
+          >
             {{ 'gsResetAll' | transloco }}
           </button>
         </header>
-        @if (store.preset() !== 'Custom') {
+        <div class="gs-save" role="status">
+          <span class="note">{{ 'gsScope_' + store.scope() | transloco }}</span>
+          @if (!store.canEdit()) {
+            <span class="note">{{ 'gsViewOnly' | transloco }}</span>
+          } @else {
+            <button
+              type="button"
+              class="gs-btn"
+              [disabled]="!store.dirty() || store.saving()"
+              (click)="store.save()"
+            >
+              {{ 'gsSave' | transloco }}
+            </button>
+            <span class="note">{{ (store.dirty() ? 'gsUnsaved' : 'gsSaved') | transloco }}</span>
+          }
+          @if (store.saveFailed()) {
+            <span class="note">{{ 'gsSaveFailed' | transloco }}</span>
+          }
+        </div>
+        @if (store.canEdit() && store.preset() !== 'Custom') {
           <p class="note">{{ 'gsReadOnly' | transloco }}</p>
         }
         @if (!store.presetKnown()) {
           <p class="note" role="status">{{ 'gsPresetUnknown' | transloco }}</p>
         }
-        <div class="gs-rows">
+        <fieldset class="gs-rows" [disabled]="!store.canEdit()">
           @for (d of byGroup(group()); track d.key) {
             <div class="gs-field" [class.modified]="!isDefault(d)">
               <label class="gs-label" [for]="'gs-' + d.key">{{ text(d.label) }}</label>
@@ -140,7 +165,7 @@ import { GameSettingsStore } from '../core/game-settings.store';
               <small class="hint" [id]="'gs-h-' + d.key">{{ hint(d) }}</small>
             </div>
           }
-        </div>
+        </fieldset>
       </main>
 
       <aside class="gs-side">
@@ -151,6 +176,7 @@ import { GameSettingsStore } from '../core/game-settings.store';
               {{ 'gsServerName' | transloco }}
               <input
                 type="text"
+                [disabled]="!store.canEdit()"
                 [value]="store.name()"
                 (input)="store.setName($any($event.target).value)"
               />
@@ -161,6 +187,7 @@ import { GameSettingsStore } from '../core/game-settings.store';
                 type="number"
                 min="1"
                 [max]="maxSlots"
+                [disabled]="!store.canEdit()"
                 [value]="store.slotCount()"
                 (change)="slots($event)"
               />
@@ -204,7 +231,7 @@ import { GameSettingsStore } from '../core/game-settings.store';
               ></textarea>
             </label>
             <div class="actions">
-              <button type="button" class="gs-btn" (click)="check()">
+              <button type="button" class="gs-btn" [disabled]="!store.canEdit()" (click)="check()">
                 {{ 'gsImportCheck' | transloco }}
               </button>
             </div>
@@ -330,6 +357,16 @@ import { GameSettingsStore } from '../core/game-settings.store';
     }
     .gs-rows {
       padding: 6px 18px;
+      margin: 0;
+      border: 0;
+      min-width: 0;
+    }
+    .gs-save {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      margin: 10px 18px 0;
     }
     .gs-field {
       display: grid;

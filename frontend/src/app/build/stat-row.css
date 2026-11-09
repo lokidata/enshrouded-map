@@ -39,6 +39,11 @@ dd:focus-visible {
   border: 1px solid var(--gold);
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
 }
+/* in the left column the tooltip opens towards the page (to the right): aligned on the right edge it ran off the left of the page */
+:host-context(.left) .tip {
+  left: 0;
+  right: auto;
+}
 .tip > span {
   display: flex;
   justify-content: flex-end;

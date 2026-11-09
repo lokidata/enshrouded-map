@@ -14,6 +14,7 @@ import {
   headline,
   rankGain,
   lineSum,
+  shroudLineMinutes,
   pieceArmor,
   protection,
   statSums,
@@ -35,6 +36,10 @@ import {
   weaponClassPct,
   weaponDamage,
   weaponGuard,
+  weaponItemDamage,
+  ammoItemDamage,
+  attackSeconds,
+  weaponDps,
 } from './gear.logic';
 import { damageRows, formatRow, miscRows, regenRows, weaponRows } from '../build/build-rows';
 
@@ -144,6 +149,13 @@ describe('gear logic', () => {
   it('armour of a piece: round(share * (offset + gradient * level)), highest level', () => {
     expect(pieceArmor(c, chest)).toEqual({ physical: 24, fire: 5 }); // 0.14*173 = 24.2, 0.03*173 = 5.2
     expect(armorTotals(c, [chest, chest]).physical).toBe(48);
+  });
+  it("adds the worn items' Time in the Shroud lines (ms, two spellings) as minutes", () => {
+    const line = (value: number, spelling: string) =>
+      [`${spelling}|Duration`, { name: [spelling, spelling], format: 'Duration', value }] as const;
+    const sums = new Map([line(30000, 'Time In The Shroud'), line(-60000, 'Time in the Shroud')]);
+    expect(shroudLineMinutes(sums)).toBe(-0.5);
+    expect(shroudLineMinutes(new Map())).toBe(0);
   });
   it('adds stat lines by name and format, and knows when nothing is known', () => {
     const sums = statSums([chest, ring]);
@@ -418,16 +430,28 @@ describe('weapons', () => {
     expect(weaponBaseDamage({}, 46)).toBeNull();
   });
 
-  it('damage = base x factor x attribute and class bonuses', () => {
-    expect(weaponDamage(k, axe, 55, 0)).toEqual({
+  it('damage: the item as the game shows it, then attribute x class x (1 + mods) for a hit', () => {
+    expect(weaponItemDamage(k, axe)).toBe(60); // trunc(40 x 1.5 x speed 1)
+    expect(weaponDamage(k, axe, 55, 0, 0)).toEqual({
       base: 40,
       factor: 1.5,
+      speed: 1,
+      item: 60,
+      ammo: 0,
       attr: 55,
       cls: 0,
+      mods: 0,
+      perks: 0,
       total: 93,
     });
-    expect(weaponDamage(k, axe, 0, 10)!.total).toBe(66);
-    expect(weaponDamage(k, shield, 55, 0)).toBeNull();
+    expect(weaponDamage(k, axe, 0, 0, 10)!.total).toBe(66);
+    // the gear's Melee Damage line multiplies the hit: 60 x 1.55 x 1.15 x 1.10 = 117.6, not 60 x (1 + 0.65) x 1.15
+    expect(weaponDamage(k, axe, 55, 10, 15)!.total).toBe(118);
+    // the speed factor is part of the item's number (daggers 0.65): trunc(40 x 1 x 0.65) = 26
+    expect(weaponItemDamage(k, { ...axe, damage: { ...axe.damage!, mod: 1, speed: 0.65 } })).toBe(
+      26,
+    );
+    expect(weaponDamage(k, shield, 55, 0, 0)).toBeNull();
     expect(
       weaponClassPct(
         axe,
@@ -436,6 +460,46 @@ describe('weapons', () => {
       ),
     ).toBe(10);
     expect(weaponClassPct(axe, undefined, {})).toBe(0);
+  });
+
+  it('an arrow adds its own damage to the bow, DPS = hit / attack time', () => {
+    const bow = {
+      ...axe,
+      type: 'Bow',
+      lvl: [20, 20] as [number, number],
+      damage: {
+        mod: 0.5,
+        speed: 1.1,
+        hands: 1,
+        attr: 'dexterity',
+        types: {},
+        charge: 0.6,
+        fire: 0.5,
+      },
+    };
+    const arrow = {
+      name: ['f', 'Arrow'] as [string, string],
+      type: 'Arrow' as const,
+      rarity: 'Common',
+      lvl: [20, 20] as [number, number],
+      damage: { mod: 0.5, speed: 1, types: { pierce: 1 } },
+      stats: [],
+      upgrades: [],
+    };
+    expect(weaponItemDamage(k, bow)).toBe(22); // the number the bow shows: no arrow in it
+    expect(ammoItemDamage(k, arrow)).toBe(20);
+    expect(ammoItemDamage(k, { ...arrow, damage: undefined })).toBeNull();
+    const shot = weaponDamage(k, bow, 0, 0, 0, 0, arrow)!;
+    expect(shot.ammo).toBe(20);
+    expect(shot.total).toBe(42); // (22 + 20) x (the arrow's kind 1.0)
+    expect(weaponDamage(k, bow, 0, 0, 0)!.total).toBe(22);
+    expect(attackSeconds(bow)).toBe(1.1);
+    expect(attackSeconds({ ...axe, type: 'Daggers' })).toBe(0.4);
+    expect(
+      attackSeconds({ ...axe, type: 'Staff', damage: { ...bow.damage, charge: 0, fire: 0 } }),
+    ).toBeNull();
+    expect(weaponDps(42, 1.1)).toBe(38.2);
+    expect(weaponDps(42, null)).toBeNull();
   });
 
   it('the shield only goes with a one-handed weapon of a weapon slot', () => {

@@ -8,6 +8,7 @@ import { LoreService } from './lore.service';
 import { PlannerStore } from './planner.store';
 import { GearService } from './gear.service';
 import { GamePresetsService } from './game-presets.service';
+import { GameSettingsStore } from './game-settings.store';
 import { GemsService } from './gems.service';
 import { SkillsService } from './skills.service';
 import { FilterStore } from './filter.store';
@@ -37,12 +38,23 @@ export class SessionService {
   private readonly gems = inject(GemsService);
   private readonly presets = inject(GamePresetsService);
   private readonly planner = inject(PlannerStore);
+  private readonly gameSettings = inject(GameSettingsStore);
 
   private saved: string | null = null;
   private pending: string | null = null;
   private timer: ReturnType<typeof setTimeout> | undefined;
 
+  /** Team and role the game configuration was read for: a change (joined, left, handed over) reads it again. */
+  private configFor = '';
+
   constructor() {
+    effect(() => {
+      const key = this.teamKey();
+      if (this.auth.user() && key !== this.configFor) {
+        this.configFor = key;
+        void this.gameSettings.load();
+      }
+    });
     effect(() => {
       const json = JSON.stringify({ filters: this.filters.overrides() });
       if (!this.auth.user() || json === this.saved) return;
@@ -128,9 +140,11 @@ export class SessionService {
     this.gems.clear();
     this.presets.clear();
     this.planner.clear();
+    this.gameSettings.clear();
     this.views.set('map');
     this.filters.reset();
     this.saved = this.pending = null;
+    this.configFor = '';
     this.auth.dialog.set('login');
   }
 
@@ -161,8 +175,15 @@ export class SessionService {
     this.auth.isAdmin.set(info.is_admin);
     this.auth.user.set(info.username);
     await this.team.load();
+    await this.gameSettings.load();
+    this.configFor = this.teamKey();
     if (this.enemies.openFromHash()) this.views.set('enemies');
     if (this.planner.openFromHash()) this.views.set('skills');
+  }
+
+  private teamKey(): string {
+    const t = this.team.team();
+    return t ? `${t.id}:${t.is_owner}` : '';
   }
 
   private async flush(): Promise<void> {

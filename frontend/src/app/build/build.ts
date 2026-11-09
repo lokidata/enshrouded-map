@@ -11,6 +11,8 @@ import {
   levelPoints,
   restedMinutes,
   lineSum,
+  attackSeconds,
+  shroudLineMinutes,
   shroudMinutes,
   xpToNext,
   xpTotal,
@@ -29,6 +31,7 @@ import {
   upgraded,
   weaponClassPct,
   weaponDamage,
+  weaponDps,
   weaponGuard,
   WORLD_KEY,
   worldFactor,
@@ -86,6 +89,8 @@ interface Row {
   label: string | null;
   value: string;
   estimate: boolean;
+  /** The i18n key of what the estimation tag says (default: the generic note). */
+  estTip?: string;
   parts: TipPart[];
   desc: string | null;
 }
@@ -98,12 +103,6 @@ interface Row {
     @if (gear.data()) {
       <div class="stage">
         <nav class="actions" [attr.aria-label]="'buildActions' | transloco">
-          <button type="button" class="pill" (click)="views.set('equipment')">
-            {{ 'buildEquipment' | transloco }}
-          </button>
-          <button type="button" class="pill" (click)="views.set('skills')">
-            {{ 'skills' | transloco }}
-          </button>
           <button
             type="button"
             class="pill"
@@ -111,6 +110,12 @@ interface Row {
             (click)="saves.set(!saves())"
           >
             {{ 'skillBuilds' | transloco }}
+          </button>
+          <button type="button" class="pill" (click)="views.set('equipment')">
+            {{ 'buildEquipment' | transloco }}
+          </button>
+          <button type="button" class="pill" (click)="views.set('skills')">
+            {{ 'skills' | transloco }}
           </button>
         </nav>
         @if (saves()) {
@@ -224,7 +229,6 @@ interface Row {
                 app-stat-row
                 labelKey="buildRow_passage"
                 [value]="'' + (planner.flame() || '—')"
-                [estimate]="true"
                 [parts]="passage().parts"
                 [desc]="passage().desc"
               ></div>
@@ -232,8 +236,6 @@ interface Row {
                 app-stat-row
                 labelKey="buildRow_shroudTime"
                 [value]="shroud() ? shroud() + ' min' : '—'"
-                [estimate]="!!shroud()"
-                estTip="buildShroudTip"
                 [parts]="shroudTime().parts"
                 [desc]="shroudTime().desc"
               ></div>
@@ -280,7 +282,6 @@ interface Row {
                               [labelKey]="'skillAttr_' + a.key"
                               [value]="'' + a.total"
                               [estimate]="a.estimate"
-                              estTip="buildFlameSkillTip"
                               [parts]="a.parts"
                               [desc]="a.desc"
                             ></div>
@@ -295,6 +296,7 @@ interface Row {
                               [labelKey]="'buildRow_' + r.key"
                               [value]="r.value"
                               [estimate]="r.estimate"
+                              [estTip]="r.estTip ?? 'buildEstimateTip'"
                               [parts]="r.parts"
                               [desc]="r.desc"
                             ></div>
@@ -355,6 +357,19 @@ interface Row {
                         <h3>{{ 'buildPerWeapon' | transloco }}</h3>
                         @for (w of weapons(); track w.slot) {
                           <h4>{{ 'equipSlot_' + w.slot | transloco }} · {{ w.name }}</h4>
+                          @if (w.bow && arrows().length) {
+                            <label class="arrow-pick">
+                              {{ 'buildArrow' | transloco }}
+                              <select [value]="planner.arrow() ?? ''" (change)="pickArrow($event)">
+                                <option value="">{{ 'buildNoArrow' | transloco }}</option>
+                                @for (a of arrows(); track a.id) {
+                                  <option [value]="a.id" [selected]="planner.arrow() === a.id">
+                                    {{ a.name }} ({{ a.lvl }})
+                                  </option>
+                                }
+                              </select>
+                            </label>
+                          }
                           <dl>
                             <div
                               app-stat-row
@@ -363,6 +378,15 @@ interface Row {
                               [estimate]="w.damage !== '—'"
                               estTip="buildWeaponDamageTip"
                               [parts]="w.damageParts"
+                            ></div>
+                            <div
+                              app-stat-row
+                              labelKey="buildDps"
+                              [value]="w.dps"
+                              [estimate]="w.dps !== '—'"
+                              estTip="buildDpsTip"
+                              [parts]="w.dpsParts"
+                              [desc]="w.dps === '—' ? ('buildDpsNone' | transloco) : null"
                             ></div>
                             <div
                               app-stat-row
@@ -552,10 +576,14 @@ export class Build {
   protected readonly points = computed(() => levelPoints(this.planner.level()));
   protected readonly altars = computed(() => altars(this.planner.flame()));
   protected readonly frost = computed(() => frostProtection(this.planner.flame()));
-  /** Flame (wiki, estimation) + the Inner Fires skill (FogResistance_MaxAdder, in seconds). */
+  /** Flame + the worn items' lines + the Inner Fires skill (FogResistance_MaxAdder, in seconds): confirmed in game 2026-11-09. */
   protected readonly shroud = computed(() => {
     const m = shroudMinutes(this.planner.flame(), this.factor('shroud'));
-    return m === null ? null : round1(m + (this.fx()['FogResistance_MaxAdder'] ?? 0) / 60);
+    return m === null
+      ? null
+      : round1(
+          m + (this.fx()['FogResistance_MaxAdder'] ?? 0) / 60 + shroudLineMinutes(this.sums()),
+        );
   });
   private readonly player = computed(() => this.gear.data()?.player);
   /** What the taken skill nodes add to the game's attributes. */
@@ -633,14 +661,14 @@ export class Build {
       row('health', `${v.health}`, false),
       row('mana', `${v.mana}`, false),
       row('stamina', `${v.stamina}`, false),
-      row('melee', pct(v.melee), true, 'damageMelee'),
+      row('melee', pct(v.melee), false, 'damageMelee'),
       row('ranged', pct(v.ranged), false, 'damageRanged'),
-      row('magic', pct(v.magic), true, 'damageMagic'),
+      row('magic', pct(v.magic), false, 'damageMagic'),
       row('oxygen', `${v.oxygen}s`, false),
     ];
   });
 
-  /** Passage level = Flame level; Shroud time = 4 min + Flame level + Inner Fires (estimations, wiki). */
+  /** Passage level = Flame level (confirmed in game 2026-11-09). */
   protected readonly passage = computed(() => ({
     parts: tipParts([{ key: 'flame', value: this.planner.flame() }], (n) => `${n}`),
     desc: this.tip('fogResistance'),
@@ -657,7 +685,10 @@ export class Build {
       ),
       ...this.worldTip('shroud'),
       ...tipParts(
-        [{ key: 'skills', value: (this.fx()['FogResistance_MaxAdder'] ?? 0) / 60 }],
+        [
+          { key: 'equipment', value: shroudLineMinutes(this.sums()) },
+          { key: 'skills', value: (this.fx()['FogResistance_MaxAdder'] ?? 0) / 60 },
+        ],
         (n) => `${round1(n)}m`,
       ),
     ],
@@ -718,6 +749,22 @@ export class Build {
    * Each weapon worn: its damage (base exact, the rest an estimation, see weaponDamage) and what it gives to defend
    * with the shield when it is one-handed (weaponGuard).
    */
+  /** The arrows of gear.json, weakest first: what the bow's arrow list offers. */
+  protected readonly arrows = computed(() =>
+    Object.entries(this.gear.data()?.ammo ?? {})
+      .filter(([, a]) => a.type === 'Arrow')
+      .map(([id, a]) => ({ id, name: this.gear.text(a.name), lvl: a.lvl[0] }))
+      .sort((x, y) => x.lvl - y.lvl || x.name.localeCompare(y.name)),
+  );
+  /** The arrow that counts in the bow's damage and DPS. */
+  private readonly arrowItem = computed(() => {
+    const id = this.planner.arrow();
+    return id ? this.gear.data()?.ammo?.[id] : undefined;
+  });
+  protected pickArrow(event: Event): void {
+    this.planner.setArrow((event.target as HTMLSelectElement).value || null);
+  }
+
   protected readonly weapons = computed(() => {
     const c = this.constants();
     const items = this.gear.data()?.items ?? {};
@@ -725,28 +772,39 @@ export class Build {
     const ups = this.planner.upgrades();
     const at = (slot: SlotKey) => this.slotItem(slot);
     const shield = at('shield');
-    const v = vitals(
-      c,
-      Object.fromEntries(this.attrs().map((a) => [a.key, a.total])) as Parameters<typeof vitals>[1],
-      this.sums(),
-      this.fx(),
-    );
-    const byAttr: Record<string, number> = {
-      strength: v.melee,
-      dexterity: v.ranged,
-      intelligence: v.magic,
+    const totals = Object.fromEntries(this.attrs().map((a) => [a.key, a.total])) as Parameters<
+      typeof vitals
+    >[1];
+    const vp = vitalParts(c, totals, this.sums(), this.fx());
+    // the attribute's share (5 % a point) and the gear + skills mod apart: a hit multiplies them
+    const split = (parts: { value: number }[]) => ({
+      attr: parts[0]?.value ?? 0,
+      mods: parts.slice(1).reduce((n, p) => n + p.value, 0),
+    });
+    const byAttr: Record<string, { attr: number; mods: number }> = {
+      strength: split(vp.melee),
+      dexterity: split(vp.ranged),
+      intelligence: split(vp.magic),
     };
-    const pct = (n: number) => `${n >= 0 ? '+' : ''}${round1(n)}%`;
     return (['weapon1', 'weapon2', 'weapon3', 'ranged'] as const).flatMap((slot) => {
       const item = at(slot);
       if (!item?.damage) return [];
       const attr = item.damage.attr;
+      const bonus = (attr && byAttr[attr]) || { attr: 0, mods: 0 };
+      const perkShare = (items[gear[slot] ?? '']?.upgrades ?? [])
+        .slice(0, ups[slot] ?? 0)
+        .reduce((n, u) => n + (u.damage?.share ?? 0), 0);
       const d = weaponDamage(
         c,
         item,
-        attr ? (byAttr[attr] ?? 0) : 0,
+        bonus.attr,
+        bonus.mods,
         weaponClassPct(item, this.player(), this.fx()),
+        perkShare,
+        item.type === 'Bow' ? this.arrowItem() : undefined,
       );
+      const seconds = attackSeconds(item);
+      const dps = d ? weaponDps(d.total, seconds) : null;
       const g = weaponGuard(c, slot, item, shield, this.factor('parry'));
       // the damage perks taken, apart: how they add to the hit is in the game's code, not in its data
       const perks = (items[gear[slot] ?? '']?.upgrades ?? [])
@@ -762,12 +820,28 @@ export class Build {
           slot,
           name: this.gear.text(item.name),
           damage: d ? `${d.total}` : '—',
+          bow: item.type === 'Bow',
+          dps: dps === null ? '—' : `${dps}`,
+          dpsParts:
+            d && seconds
+              ? [
+                  { key: 'tipDpsHit', text: `${d.total}` },
+                  { key: 'tipDpsTime', text: `${round2(seconds)} s` },
+                ]
+              : [],
           damageParts: d
             ? [
                 { key: 'tipWeaponBase', text: `${d.base} (${item.lvl[1]})` },
                 { key: 'equipDamageFactor', text: `×${d.factor}` },
-                ...(attr && d.attr ? [{ key: `skillAttr_${attr}`, text: pct(d.attr) }] : []),
-                ...(d.cls ? [{ key: 'tipWeaponClass', text: pct(d.cls) }] : []),
+                ...(d.speed !== 1 ? [{ key: 'tipWeaponSpeed', text: `×${d.speed}` }] : []),
+                { key: 'tipWeaponItem', text: `${d.item}` },
+                ...(d.ammo ? [{ key: 'tipWeaponArrow', text: `+${d.ammo}` }] : []),
+                ...(attr && d.attr
+                  ? [{ key: `skillAttr_${attr}`, text: `×${round2(1 + d.attr / 100)}` }]
+                  : []),
+                ...(d.cls ? [{ key: 'tipWeaponClass', text: `×${round2(1 + d.cls / 100)}` }] : []),
+                ...(d.mods ? [{ key: 'tipEquipment', text: `×${round2(1 + d.mods / 100)}` }] : []),
+                ...(d.perks ? [{ key: 'tipWeaponPerks', text: `+${round2(d.perks * 100)}%` }] : []),
               ]
             : [],
           shield: g.shield,
@@ -850,7 +924,8 @@ export class Build {
       key: 'frostDuration',
       label: names ? this.gear.text(names) : null,
       value: t >= 60 ? `${Math.floor(t / 60)} min ${t % 60} s` : `${t}s`,
-      estimate: false,
+      estimate: true,
+      estTip: 'buildFrostTip',
       parts: [
         { key: 'tipFrostResistance', text: `${r}` },
         {
