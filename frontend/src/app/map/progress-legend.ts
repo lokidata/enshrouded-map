@@ -47,10 +47,11 @@ function read(): boolean {
       z-index: 1000;
     }
     .box {
-      background: #000b;
-      border-radius: 6px;
+      background: var(--ink-glass);
+      border: 1px solid var(--gold-dim);
+      border-radius: 2px;
       color: var(--muted);
-      font-size: 12px;
+      font-size: 14px;
       min-width: 150px;
     }
     .head {
@@ -58,8 +59,9 @@ function read(): boolean {
       padding: 5px 10px;
       border: 0;
       background: none;
-      color: var(--text);
-      font-size: 12px;
+      color: var(--gold);
+      font: 400 15px var(--display-sc);
+      letter-spacing: 0.04em;
       text-align: left;
       cursor: pointer;
     }
@@ -79,22 +81,22 @@ function read(): boolean {
       width: 12px;
       height: 12px;
       border-radius: 50%;
-      background: #ccc;
+      background: var(--text);
       border: 2px solid var(--halo);
       box-shadow: 0 0 4px var(--halo);
       flex-shrink: 0;
     }
     i.alone {
-      --halo: #3b82f6;
+      --halo: var(--halo-alone);
     }
     i.mine {
-      --halo: #b36cf0;
+      --halo: var(--halo-mine);
     }
     i.others {
-      --halo: #ffa53a;
+      --halo: var(--halo-others);
     }
     i.all {
-      --halo: #6fe06f;
+      --halo: var(--halo-all);
     }
   `,
 })

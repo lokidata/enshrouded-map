@@ -71,9 +71,9 @@ import { SlotPicker } from '../equipment/slot-picker';
     </button>
     @if (alert(); as a) {
       @if (a.now.severity) {
-      <span class="alert" [attr.data-severity]="a.now.severity" aria-hidden="true">
-        {{ a.now.severity === 'critical' ? '⛔' : '⚠' }} -{{ a.now.loss }} %
-      </span>
+        <span class="alert" [attr.data-severity]="a.now.severity" aria-hidden="true">
+          {{ a.now.severity === 'critical' ? '⛔' : '⚠' }} -{{ a.now.loss }} %
+        </span>
       }
     }
     @if (picking()) {

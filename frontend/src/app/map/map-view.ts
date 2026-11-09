@@ -44,12 +44,18 @@ const DOT_ICON_MIN_RADIUS = 7;
 const STACKED_CATS = new Set(['unique', 'cosmetic', 'collectible']);
 const STACK_RADIUS = 3;
 // Halo of a POI: blue = only I marked it, violet = me and some others, orange = others did and I did not, green = everyone did.
-const HALO_COLORS: Record<Halo, string> = {
-  none: '#000',
-  alone: '#3b82f6', // not the light blue glow of fast-travel icons (#7cc4ff)
-  mine: '#b36cf0',
-  others: '#ffa53a',
-  all: '#6fe06f',
+// The colours are the `--halo-*` tokens of styles.css (the canvas needs them as strings): read once, on first use.
+let haloColors: Record<Halo, string> | undefined;
+const haloColor = (halo: Halo): string => {
+  const css = getComputedStyle(document.documentElement);
+  haloColors ??= {
+    none: '#000',
+    alone: css.getPropertyValue('--halo-alone').trim(),
+    mine: css.getPropertyValue('--halo-mine').trim(),
+    others: css.getPropertyValue('--halo-others').trim(),
+    all: css.getPropertyValue('--halo-all').trim(),
+  };
+  return haloColors[halo];
 };
 
 interface Placed {
@@ -479,7 +485,7 @@ export class MapView {
       fillOpacity: mine ? 0.6 : 0.95,
       fillColor: mine ? '#ccc' : r.data.color,
       opacity: halo === 'none' ? 0.8 : 1,
-      color: HALO_COLORS[halo],
+      color: haloColor(halo),
       weight: halo === 'none' ? 1 : 2.5,
     });
   }

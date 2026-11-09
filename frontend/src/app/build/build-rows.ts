@@ -30,7 +30,6 @@ const regen = (key: string, name: string, attr: string, text: string): RowDef =>
   attr,
   text,
   plain: true, // matches the game's screen without food or Rested (19 / 10 / 50 checked); those buffs add more
-
 });
 const delay = (key: string, name: string, attr: string, text: string): RowDef => ({
   key,

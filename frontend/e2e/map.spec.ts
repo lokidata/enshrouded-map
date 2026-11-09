@@ -265,7 +265,7 @@ test('team: create, add a player, invite a new one, see who marked what', async 
   await expect(carl.getByRole('dialog').getByRole('listitem')).toHaveCount(3);
   await expect(carl.getByRole('button', { name: "Quitter l'équipe" })).toHaveCSS(
     'background-color',
-    'rgb(192, 57, 43)',
+    'rgb(184, 69, 59)',
   );
   // leaving asks for a confirmation: refusing changes nothing
   carl.once('dialog', (d) => void d.dismiss());

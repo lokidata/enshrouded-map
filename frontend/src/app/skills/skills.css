@@ -7,7 +7,7 @@
   height: 100%;
   min-height: 480px;
   overflow: hidden;
-  color: #eadfc8;
+  color: var(--text);
 }
 .tree {
   width: 100%;
@@ -21,33 +21,31 @@
 }
 .ring {
   fill: none;
-  stroke: rgba(230, 180, 255, 0.25);
+  stroke: color-mix(in srgb, var(--magic-pale) 25%, transparent);
   stroke-width: 6;
 }
 line {
-  stroke: rgba(200, 170, 230, 0.22);
+  stroke: color-mix(in srgb, var(--magic-pale) 22%, transparent);
   stroke-width: 7;
 }
 line.on {
-  stroke: #e04fd0;
+  stroke: var(--magic-deep);
   stroke-width: 11;
-  filter: drop-shadow(0 0 8px #e04fd0);
+  filter: drop-shadow(0 0 8px var(--magic-deep));
 }
 .spec {
-  font:
-    700 120px Georgia,
-    serif;
+  font: 400 120px var(--display);
   letter-spacing: 6px;
-  fill: #cdbfa6;
+  fill: var(--muted);
 }
 .spec.Ranger {
-  fill: #7fd37a;
+  fill: var(--ok);
 }
 .spec.Mage {
-  fill: #6fa8ff;
+  fill: var(--mana);
 }
 .spec.Warrior {
-  fill: #ef6a5a;
+  fill: var(--bad);
 }
 g.skill {
   cursor: pointer;
@@ -55,30 +53,30 @@ g.skill {
 }
 g.skill circle {
   fill: url(#medal);
-  stroke: #8a6a3c;
+  stroke: var(--gold-dim);
   stroke-width: 7;
 }
 g.skill.locked circle {
-  stroke: #3a3328;
+  stroke: var(--gold-dim);
   opacity: 0.7;
 }
 g.skill.available circle {
-  stroke: #d9b36a;
+  stroke: var(--gold);
 }
 g.skill.taken circle {
-  fill: #a0388f;
-  stroke: #ffc4f4;
+  fill: var(--magic-dark);
+  stroke: var(--magic-pale);
   stroke-width: 10;
-  filter: drop-shadow(0 0 10px #ff7be8) drop-shadow(0 0 26px #e04fd0);
+  filter: drop-shadow(0 0 10px var(--magic)) drop-shadow(0 0 26px var(--magic-deep));
 }
 g.skill.taken.Active circle,
 g.skill.taken image {
-  filter: drop-shadow(0 0 12px #ffc4f4);
+  filter: drop-shadow(0 0 12px var(--magic-pale));
 }
 g.skill.root circle {
-  fill: #ff7be8;
+  fill: var(--magic);
   stroke: #fff;
-  filter: drop-shadow(0 0 16px #ff7be8);
+  filter: drop-shadow(0 0 16px var(--magic));
 }
 g.skill.dim {
   opacity: 0.2;
@@ -88,7 +86,7 @@ g.skill.picked circle {
   stroke: #fff;
 }
 .lvl {
-  font: 700 44px sans-serif;
+  font: 400 44px var(--ui);
   fill: #fff;
   stroke: #000;
   stroke-width: 8px;
@@ -103,9 +101,9 @@ g.skill.picked circle {
   gap: 10px;
   align-items: center;
   padding: 8px 14px;
-  background: rgba(20, 14, 8, 0.8);
-  border: 1px solid #6b5436;
-  border-radius: 6px;
+  background: color-mix(in srgb, var(--ink) 80%, transparent);
+  border: 1px solid var(--gold-dim);
+  border-radius: 3px;
 }
 .points .emblem {
   width: 46px;
@@ -114,12 +112,14 @@ g.skill.picked circle {
 .points .small {
   font-size: 0.7rem;
   letter-spacing: 1px;
-  text-transform: uppercase;
-  color: #cdbfa6;
+  font-family: var(--display-sc);
+  font-weight: 400;
+  text-transform: none;
+  color: var(--muted);
 }
 .points .big {
   font-size: 1.6rem;
-  color: #ffd36e;
+  color: var(--gold);
   margin-left: 6px;
 }
 .attrs {
@@ -128,9 +128,9 @@ g.skill.picked circle {
   right: 12px;
   width: 230px;
   padding: 8px 12px;
-  background: rgba(20, 14, 8, 0.8);
-  border: 1px solid #6b5436;
-  border-radius: 6px;
+  background: color-mix(in srgb, var(--ink) 80%, transparent);
+  border: 1px solid var(--gold-dim);
+  border-radius: 3px;
 }
 .attr {
   display: flex;
@@ -140,7 +140,9 @@ g.skill.picked circle {
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 .attr .name {
-  text-transform: uppercase;
+  font-family: var(--display-sc);
+  font-weight: 400;
+  text-transform: none;
   letter-spacing: 1px;
   font-size: 0.8rem;
 }
@@ -148,14 +150,14 @@ g.skill.picked circle {
   font-weight: 700;
 }
 .delta {
-  color: #7fe27a;
+  color: var(--ok);
   font-style: normal;
   margin-left: 6px;
 }
 .flame {
   flex-basis: 100%;
   font-size: 0.7rem;
-  color: #7fe27a;
+  color: var(--ok);
 }
 .tools {
   position: absolute;
@@ -171,7 +173,7 @@ g.skill.picked circle {
   bottom: 8px;
   margin: 0;
   font-size: 0.75rem;
-  color: #b8aa90;
+  color: var(--muted);
   text-align: right;
   max-width: 40%;
 }
@@ -183,16 +185,18 @@ g.skill.picked circle {
   max-height: 60%;
   overflow: auto;
   padding: 12px;
-  background: rgba(20, 14, 8, 0.93);
-  border: 1px solid #6b5436;
-  border-radius: 6px;
+  background: color-mix(in srgb, var(--ink) 93%, transparent);
+  border: 1px solid var(--gold-dim);
+  border-radius: 3px;
 }
 .sheet h3 {
   margin: 10px 0 6px;
   font-size: 0.85rem;
-  text-transform: uppercase;
+  font-family: var(--display-sc);
+  font-weight: 400;
+  text-transform: none;
   letter-spacing: 1px;
-  color: #d9b36a;
+  color: var(--gold);
 }
 .sheet input {
   width: 100%;
@@ -206,7 +210,7 @@ g.skill.picked circle {
   margin-bottom: 6px;
 }
 .error {
-  color: #ff9b8f;
+  color: var(--bad);
 }
 ul {
   list-style: none;
@@ -221,8 +225,8 @@ ul {
   text-align: left;
   background: rgba(255, 255, 255, 0.06);
   color: inherit;
-  border: 1px solid #4a3d2a;
-  border-radius: 4px;
+  border: 1px solid var(--gold-dim);
+  border-radius: 3px;
   padding: 4px 8px;
   cursor: pointer;
 }
@@ -232,7 +236,7 @@ ul {
   padding: 2px 0;
 }
 .empty {
-  color: #b8aa90;
+  color: var(--muted);
 }
 .taken button {
   width: 100%;
@@ -244,29 +248,29 @@ ul {
   max-width: calc(100% - 16px);
   z-index: 5;
   pointer-events: none;
-  background: #14100b;
-  border: 2px solid #6b5436;
+  background: var(--ink);
+  border: 2px solid var(--gold-dim);
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
-  font-family: Georgia, serif;
+  font-family: var(--display);
 }
 .popup header {
   display: flex;
   gap: 12px;
   align-items: center;
   padding: 10px 14px;
-  background: #2b1f12;
+  background: var(--panel);
 }
 .popup h2 {
   margin: 0;
   font-size: 1.15rem;
-  color: #f2e6cc;
+  color: var(--text);
 }
 .medal {
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: #3a2b18;
-  border: 2px solid #8a6a3c;
+  background: var(--panel);
+  border: 2px solid var(--gold-dim);
   display: grid;
   place-items: center;
   flex: none;
@@ -274,7 +278,7 @@ ul {
 .status {
   margin: 2px 0 0;
   font-size: 0.8rem;
-  color: #e6d8b8;
+  color: var(--text);
   display: flex;
   align-items: center;
   gap: 5px;
@@ -282,10 +286,10 @@ ul {
 .status.available,
 .status.taken,
 .status.full {
-  color: #8fe08a;
+  color: var(--ok);
 }
 .status.budget {
-  color: #ff9b8f;
+  color: var(--bad);
 }
 .lock {
   width: 14px;
@@ -295,7 +299,7 @@ ul {
   padding: 12px 14px;
   font-size: 0.95rem;
   line-height: 1.45;
-  color: #e6dcc6;
+  color: var(--text);
 }
 .popup .body p {
   margin: 0 0 8px;
@@ -306,21 +310,21 @@ ul {
 }
 .italic {
   font-style: italic;
-  color: #cdbfa6;
+  color: var(--muted);
 }
 .impact {
-  color: #8fe08a;
+  color: var(--ok);
 }
 .popup footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 8px 14px;
-  background: #1d150c;
-  border-top: 1px solid #4a3d2a;
+  background: var(--ink);
+  border-top: 1px solid var(--gold-dim);
 }
 kbd {
-  border: 1px solid #8a6a3c;
+  border: 1px solid var(--gold-dim);
   border-radius: 3px;
   padding: 0 6px;
   font-size: 0.75rem;
@@ -329,10 +333,10 @@ kbd {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: #8fe08a;
+  color: var(--ok);
 }
 .cost.short {
-  color: #ff9b8f;
+  color: var(--bad);
 }
 .cost svg {
   width: 22px;

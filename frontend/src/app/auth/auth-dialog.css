@@ -1,37 +1,105 @@
 dialog {
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--panel);
+  /* a plate with two bronze corners, like the cards of the pages */
+  border: 1px solid var(--gold-dim);
+  border-radius: 2px;
+  background: var(--plate-corners), linear-gradient(180deg, var(--panel), var(--panel-deep));
+  background-origin: border-box;
+  box-shadow: 0 18px 50px #000c;
   color: var(--text);
-  padding: 18px 20px;
-  width: min(320px, calc(100vw - 32px));
+  padding: 22px 24px;
+  width: min(360px, calc(100vw - 32px));
 }
 dialog::backdrop {
-  background: #0008;
+  /* the Shroud over the page: a slow drift, the only ambient motion of the site */
+  background:
+    radial-gradient(
+      ellipse 70% 50% at 20% 30%,
+      color-mix(in srgb, var(--haze-violet) 53%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse 60% 45% at 80% 70%,
+      color-mix(in srgb, var(--haze-blue) 53%, transparent),
+      transparent 70%
+    ),
+    var(--grain), var(--veil-edge);
+  background-size:
+    160% 160%,
+    160% 160%,
+    auto,
+    auto;
+  /* few steps: a slow drift needs no 60 repaints a second */
+  animation: drift 70s steps(350) infinite alternate;
+}
+@keyframes drift {
+  from {
+    background-position:
+      0% 0%,
+      100% 100%,
+      0 0,
+      0 0;
+  }
+  to {
+    background-position:
+      100% 60%,
+      0% 30%,
+      0 0,
+      0 0;
+  }
+}
+.logo {
+  width: 84px;
+  height: 84px;
+  margin: 0 auto 10px;
+  background: var(--gold);
+  /* the icon is white on black: its luminance is the shape of the emblem */
+  mask: url('/enshrouded-icon.png') center / contain no-repeat;
+  mask-mode: luminance;
+  filter: drop-shadow(0 0 10px var(--ember-glow));
 }
 h2 {
-  margin: 0 0 12px;
-  font-size: 16px;
+  position: relative;
+  margin: 0 0 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--gold-dim);
+  color: var(--gold);
+  font: 400 25px/1.15 var(--display);
+}
+h2::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -4px;
+  width: 7px;
+  height: 7px;
+  background: var(--gold);
+  transform: rotate(45deg);
 }
 label {
   display: block;
-  font-size: 12px;
+  font: 400 15px/1.2 var(--display-sc);
+  letter-spacing: 0.04em;
   color: var(--muted);
-  margin-top: 10px;
+  margin-top: 12px;
 }
 input {
   width: 100%;
   margin-top: 4px;
-  padding: 7px 9px;
-  border-radius: 6px;
+  padding: 8px 10px;
+  border-radius: 3px;
   border: 1px solid var(--border);
-  background: var(--bg);
+  background: var(--ink);
+  box-shadow: inset 0 1px 3px #0008;
   color: var(--text);
+  font: 15px var(--ui);
+}
+input:focus {
+  border-color: var(--gold);
 }
 .error {
-  color: #ff7b72;
-  font-size: 12px;
-  min-height: 16px;
+  color: var(--bad);
+  font-size: 14px;
+  min-height: 18px;
   margin-top: 10px;
 }
 .actions {
@@ -41,60 +109,71 @@ input {
   margin-top: 8px;
 }
 button {
-  padding: 4px 9px;
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  background: var(--bg);
+  padding: 5px 13px;
+  border: 1px solid var(--gold-dim);
+  border-radius: 3px;
+  background: transparent;
   color: var(--text);
   cursor: pointer;
-  font-size: 12px;
+  font: 15px var(--ui);
+}
+button:hover {
+  border-color: var(--gold);
+  background: var(--gold-faint);
 }
 button.primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #1a1a1a;
+  color: var(--accent-ink);
+  font-weight: 700;
+}
+button.primary:hover {
+  background: var(--accent-hover);
 }
 .switch {
-  margin-top: 12px;
-  font-size: 12px;
+  margin-top: 14px;
+  font-size: 14px;
   color: var(--muted);
 }
 button.link {
   border: 0;
   background: none;
-  color: var(--accent);
+  color: var(--gold);
   padding: 0;
   text-decoration: underline;
 }
 h3 {
-  margin: 14px 0 0;
-  font-size: 13px;
+  margin: 16px 0 0;
+  font: 400 17px/1.2 var(--display);
+  color: var(--gold);
 }
 h3:first-of-type {
   margin-top: 0;
 }
 section {
-  margin-top: 16px;
+  margin-top: 18px;
   padding-top: 4px;
-  border-top: 1px solid var(--border);
+  border-top: 1px dotted var(--gold-dim);
 }
 select {
   width: 100%;
   margin-top: 4px;
-  padding: 7px 9px;
-  border-radius: 6px;
+  padding: 8px 10px;
+  border-radius: 3px;
   border: 1px solid var(--border);
-  background: var(--bg);
+  background: var(--ink);
   color: var(--text);
+  font: 15px var(--ui);
 }
 .ok {
-  color: #6fe06f;
-  font-size: 12px;
+  color: var(--ok);
+  font-size: 14px;
   margin-top: 6px;
 }
 .hint {
   margin: 6px 0 0;
-  font-size: 12px;
+  font-size: 14px;
+  font-style: italic;
   color: var(--muted);
 }
 ul.members {
@@ -110,17 +189,17 @@ ul.members li {
   padding: 3px 0;
 }
 button.danger {
-  border-color: #c0392b;
-  background: #c0392b;
+  border-color: var(--danger);
+  background: var(--danger);
   color: #fff;
 }
 button.danger:hover {
-  background: #a93226;
+  background: var(--danger-hover);
 }
 .warn {
   margin: 0;
-  font-size: 13px;
-  color: #ff7b72;
+  font-size: 15px;
+  color: var(--bad);
 }
 .footer {
   display: flex;
@@ -138,6 +217,7 @@ dialog {
   position: relative;
 }
 button.x {
+  z-index: 1; /* above the heading, which is positioned for its diamond */
   position: absolute;
   top: 8px;
   right: 8px;

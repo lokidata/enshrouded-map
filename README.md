@@ -53,4 +53,4 @@ Argon2id passwords, server-side sessions, CSRF protection, rate limiting, invita
 
 ## License
 
-[MIT](LICENSE). Third-party skills under `.agents/` keep their own licenses.
+[MIT](LICENSE). Third-party skills under `.agents/` keep their own licenses. The fonts (IM Fell English, IM Fell English SC, Alegreya Sans) are under the SIL Open Font License; their licenses are in `frontend/public/fonts-licenses/`.

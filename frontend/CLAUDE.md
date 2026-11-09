@@ -57,3 +57,15 @@ You are an expert in TypeScript, Angular, and scalable web application developme
 - Use the `providedIn: 'root'` option for singleton services
 - Prefer the `@Service` decorator over `@Injectable({providedIn: 'root'})` for new singleton services (Angular v22+)
 - Use the `inject()` function instead of constructor injection
+
+## Design system: "Codex of the Shroud"
+
+Every screen, dialog and popup follows the same identity. It is enforced by `npm run lint` (`scripts/check-design.mjs`, also run in CI and `make check`), so a style that brings its own colour, font or big radius fails the build.
+
+- **Tokens only.** Colours, fonts and the plate corners live in `src/styles.css` (`:root`). In component styles use `var(--bg|--panel|--panel-deep|--ink|--text|--muted|--gold|--gold-dim|--accent|--ok|--bad|--shroud|...)`. Need a new colour: add a token there with a comment, do not write a hex in a component. Black and white (with alpha) are allowed for shadows and outlines. Real data colours (category colours, rarity) stay in their data files, listed in the guard.
+- **Colour roles.** Cold blue-slate ground (the Shroud), bronze (`--gold`, `--gold-dim`) for lines and page titles, ember (`--accent`) only for what is active, open or focused. Never use ember as decoration.
+- **Type.** `--display` (IM Fell English) for titles and long reading, `--display-sc` (IM Fell English SC) for labels and tabs, in small capitals: never `text-transform: uppercase`. `--ui` (Alegreya Sans) for everything else, `--mono` for code. The fonts have one weight: no `font-weight: 700` on `--display*`.
+- **Plates.** A card, dialog or popup has `border: 1px solid ...`, a radius of at most 3px (50% and 999px for dots and pills), and the two bronze corners: `background: var(--plate-corners), linear-gradient(180deg, var(--panel), var(--panel-deep)); background-origin: border-box;` (`--plate-corners-lit` when hovered or chosen). Section titles (`h2`) get the diamond on the rule (see `workshop/workshop.css`).
+- **Shared look.** The screens other than the map share `workshop/workshop.css` (global, scoped by `app-workshop, app-lore, ...`): add new screens to its scope list instead of restyling buttons, fields and tabs.
+- **Performance.** No `background-attachment: fixed`, no large blurred shadows, no 60 fps animation of big gradients (use `steps()`); they made the e2e suite 4x slower in headless Chromium.
+- **Deliberate exception**: write `design-ok` in a comment on the same line (rare; say why).
