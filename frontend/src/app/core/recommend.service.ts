@@ -16,6 +16,7 @@ export class Recommendations {
       this.planner.upgrades(),
       this.planner.itemLevels(),
       this.planner.level(),
+      this.planner.flame(),
     ),
   );
   readonly bySlot = computed(() => new Map<string, Alert>(this.alerts().map((a) => [a.slot, a])));

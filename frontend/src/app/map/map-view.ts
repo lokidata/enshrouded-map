@@ -575,18 +575,39 @@ export class MapView {
     const picture = m.item && this.itemPicture(m.item, 'popup-picture');
     if (picture) root.prepend(picture);
     // a boss or an elite: the picture of its head
-    const portrait = id && this.enemies.imageByMark().get(id);
-    if (portrait) {
-      const img = el('img', 'popup-portrait');
-      img.src = portrait;
-      img.alt = '';
-      root.prepend(img);
+    const portraits = this.portraits(m, id);
+    if (!picture && !portraits.length) {
+      const fallback = this.categoryPicture(m.cat, 'popup-picture popup-category');
+      if (fallback) {
+        root.prepend(fallback);
+        root.classList.add('popup-tall');
+      }
+    }
+    if (portraits.length) {
+      const row = el('div', 'popup-portraits');
+      for (const src of portraits) {
+        const img = el('img', 'popup-portrait');
+        img.src = src;
+        img.alt = '';
+        row.append(img);
+      }
+      root.prepend(row);
       root.classList.add('popup-tall');
     }
     const title = m.item ? 'alsoGuaranteed' : 'guaranteedItems';
     if (m.loot?.length) root.append(this.lootList(m.loot, this.lang.t(title)));
     if (picture || m.loot?.length) root.classList.add('popup-tall');
     return root;
+  }
+
+  /** Heads of the mobs of a boss, elite or summon stone marker: by mark id, else by the names (a stone names its mobs with " · "). */
+  private portraits(m: MapMarker, id: string | null | undefined): string[] {
+    const byMark = id && this.enemies.imageByMark().get(id);
+    if (byMark) return [byMark];
+    if (!['boss', 'elite', 'summon'].includes(m.cat)) return [];
+    const byName = this.enemies.imageByName();
+    const found = m.name[this.lang.index()].split(' · ').map((n) => byName.get(n));
+    return [...new Set(found.filter((src): src is string => !!src))].slice(0, 3);
   }
 
   /** The loot markers shown together with this one, itself included. */
@@ -603,7 +624,9 @@ export class MapView {
     const list = el('div', 'popup-list');
     for (const q of stack) {
       const row = el('div', 'popup-row');
-      const picture = q.m.item && this.itemPicture(q.m.item, 'popup-icon');
+      const picture =
+        (q.m.item && this.itemPicture(q.m.item, 'popup-icon')) ||
+        this.categoryPicture(q.m.cat, 'popup-icon');
       if (picture) row.append(picture);
       const label = el('div', 'popup-item');
       label.append(
@@ -637,6 +660,16 @@ export class MapView {
     return img;
   }
 
+  /** The category's icon, decorative, for popups with no dedicated picture; null for a category with none. */
+  private categoryPicture(cat: string, className: string): HTMLImageElement | null {
+    const icon = this.mapData.data.categories[cat]?.icon;
+    if (!icon) return null;
+    const img = el('img', className);
+    img.src = icon;
+    img.alt = '';
+    return img;
+  }
+
   /** Items always found here, with their picture and amount (not markable). */
   private lootList(loot: readonly LootEntry[], title: string): HTMLElement {
     const i = this.lang.index();
@@ -663,6 +696,11 @@ export class MapView {
       this.mapData.data.categories[r.cat].label[i] + size,
       dot.markId,
     );
+    const fallback = this.categoryPicture(r.cat, 'popup-picture popup-category');
+    if (fallback) {
+      root.prepend(fallback);
+      root.classList.add('popup-tall');
+    }
     const loot = r.data.loot?.[dot.index];
     if (loot?.length) {
       root.append(this.lootList(loot, this.lang.t('guaranteedItems')));

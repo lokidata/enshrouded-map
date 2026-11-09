@@ -10,6 +10,30 @@ export const CRITICAL_RATIO = 0.7;
 const ARMOUR_SLOTS: readonly SlotKey[] = ['head', 'chest', 'legs', 'hands', 'feet'];
 const WEAPON_SLOTS: readonly SlotKey[] = ['weapon1', 'weapon2', 'weapon3', 'ranged'];
 
+/**
+ * Highest enemy/loot level of each Shroud tier, from the game's spawn data (SceneEntityChunkResource spawn levels,
+ * tier N = the Shroud level the Flame N can cross, 1..10; Flame 11 removes the Shroud). The Flame N -> tier N rule is
+ * a strong deduction, not read in enshrouded.exe. shortcut: static table, regenerate it if the game changes its zones.
+ */
+const TIER_MAX_LEVEL: Readonly<Record<number, number>> = {
+  1: 5,
+  2: 9,
+  3: 15,
+  4: 20,
+  5: 27,
+  6: 30,
+  7: 35,
+  8: 39,
+  9: 45,
+  10: 50,
+};
+/**
+ * The level of gear expected at a Flame: the best of the tier opened before it (the zone that has just opened is
+ * not yet farmed, so its loot is not expected). Flame 1 expects level 1; null below 1 (unknown). Our rule.
+ */
+export const flameLevelCap = (flame: number): number | null =>
+  flame < 1 ? null : flame < 2 ? 1 : (TIER_MAX_LEVEL[Math.min(11, Math.floor(flame)) - 1] ?? 50);
+
 export type Severity = 'low' | 'critical';
 /** One reading of a piece against the character's level. */
 export interface Reading {
@@ -23,7 +47,10 @@ export interface Reading {
 export interface Alert {
   slot: SlotKey;
   kind: 'armor' | 'damage';
+  /** The level the piece is compared with: the character's, or the best level the Flame gives access to if lower. */
   target: number;
+  /** Set when the Flame's expected gear level is below the character's level (the target is then that level), else null. */
+  capped: { cap: number; player: number; flame: number } | null;
   /** Base level, no upgrade taken. */
   base: Reading;
   /** With the upgrades taken: what the character has. */
@@ -53,8 +80,11 @@ function assess(
   id: string,
   taken: number,
   baseLevel: number | undefined,
-  target: number,
+  player: number,
+  flame: number,
 ): Alert | null {
+  const cap = flameLevelCap(flame);
+  const target = cap !== null && cap < player ? cap : player;
   const c = data.constants;
   const item = data.items[id];
   if (!item || !Number.isFinite(target)) return null;
@@ -84,6 +114,7 @@ function assess(
     slot,
     kind,
     target,
+    capped: target < player ? { cap: target, player, flame } : null,
     base,
     now,
     state: now.severity ? 'still' : 'compensated',
@@ -98,12 +129,13 @@ export function recommend(
   upgrades: Upgrades,
   itemLevels: Upgrades,
   playerLevel: number,
+  flame = 0,
 ): Alert[] {
   if (!data) return [];
   return [...ARMOUR_SLOTS, ...WEAPON_SLOTS].flatMap((slot) => {
     const id = gear[slot];
     const a = id
-      ? assess(data, slot, id, upgrades[slot] ?? 0, itemLevels[slot], playerLevel)
+      ? assess(data, slot, id, upgrades[slot] ?? 0, itemLevels[slot], playerLevel, flame)
       : null;
     return a ? [a] : [];
   });

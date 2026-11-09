@@ -41,11 +41,14 @@ import { Recommendations } from '../core/recommend.service';
                             baseLoss: a.base.loss,
                             now: a.now.level,
                             nowLoss: a.now.loss,
-                            target: a.target
+                            target: a.target,
                           }
                   }}
                   · {{ 'recoLoss' + a.kind | transloco }}
                 </p>
+                @if (a.capped; as c) {
+                  <p class="advice">{{ 'recoCapped' | transloco: c }}</p>
+                }
                 <p class="advice">
                   {{ (a.state === 'still' ? 'recoStill' : 'recoCompensated') | transloco }}
                   @if (a.upgrades; as u) {

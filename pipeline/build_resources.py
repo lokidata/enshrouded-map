@@ -39,6 +39,18 @@ PLANT_ITEMS = [
     "Material_T3_MushroomDrop_GreenMushroomMeat", "Material_T4_MushroomDrop_BrittleShroudFlakes",
     "Material_T5_MushroomDrop_FrozenShroudSolids", "Material_T6_MushroomDrop_PinkMushroomMeat",
     "Material_T1_FogTerrain_ActiveMycelium",
+    # Herbs, crops and flowers (added after a survey of every placed template
+    # that drops a Material/Consumable: flax, chamomile... were missing).
+    # After the older entries, so templates giving several items keep their name.
+    "Material_T2_Flax", "Material_T2_Chamomile", "Material_T2_Indigo_Plant", "Food_T1_raw_herb_StJohnsWort",
+    "Food_T2_raw_herb_StingingNettle", "Food_T3_raw_herb_Sage_Leaves", "Food_T7_raw_herb_Thyme",
+    "Food_T4_raw_herb_DevilsClaw", "Food_T5_raw_herb_Gentian", "Material_T5_Wolfsbane", "Material_T3_Rooibos",
+    "Material_T4_Saffron", "Material_T4_Desert_Flower", "Material_T6_Daylily_Flower", "Material_T6_PaperReed",
+    "Food_T6_raw_herb_Algae", "Food_T3_raw_sweets_SugarCane", "Food_T2_raw_fruit_Strawberry",
+    "Food_T2_raw_vegetable_ForestBeet", "Food_T6_raw_bad_vegetable_Taro", "Food_T3_raw_vegetable_RedPepper",
+    "Food_T6_raw_mushroom_Shiitake", "Food_T7_raw_bad_vegetable_Beans", "Food_T6_raw_vegetable_Ginger",
+    "Food_T1_raw_grain_Corncob", "Food_T1_raw_vegetable_Tomato", "Material_T6_raw_CoffeeBeans",
+    "Food_T7_raw_fruit_Pomegranate", "Material_T6_raw_Rice", "Material_T3_Wheat_Grains",
 ]
 # Voxel ore material id -> item mined from it.
 ORE_ITEMS = {
