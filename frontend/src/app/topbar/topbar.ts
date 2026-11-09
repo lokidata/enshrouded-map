@@ -119,7 +119,7 @@ import { AccountBar } from '../sidebar/account-bar';
       flex-shrink: 0;
       height: 54px;
       padding: 0 18px;
-      background: linear-gradient(180deg, #19212d, var(--panel-deep));
+      background: linear-gradient(180deg, var(--panel), var(--panel-deep));
       border-bottom: 1px solid var(--gold-dim);
       box-shadow:
         0 1px 0 #00000066,
@@ -142,7 +142,7 @@ import { AccountBar } from '../sidebar/account-bar';
       height: 22px;
       background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 32'%3E%3Cpath fill='%23eb9440' d='M13 1c1 6 8 9 8 18a9 9 0 0 1-18 0c0-4 2-6 4-8 0 3 1 5 3 5 1-6-1-9 3-15z'/%3E%3Cpath fill='%23ffd9a0' d='M12 17c3 2 4 4 4 6a4 4 0 0 1-8 0c0-2 2-4 4-6z'/%3E%3C/svg%3E")
         center / contain no-repeat;
-      filter: drop-shadow(0 0 5px #eb944088);
+      filter: drop-shadow(0 0 5px var(--ember-glow));
     }
     nav {
       display: flex;
@@ -165,7 +165,7 @@ import { AccountBar } from '../sidebar/account-bar';
     }
     nav button.active {
       color: var(--gold);
-      background: linear-gradient(180deg, transparent 30%, #eb944022);
+      background: linear-gradient(180deg, transparent 30%, var(--ember-tint));
       box-shadow: inset 0 -2px 0 var(--accent);
     }
     .spacer {
@@ -199,12 +199,27 @@ import { AccountBar } from '../sidebar/account-bar';
       outline-offset: -2px;
     }
     @media (max-width: 700px) {
+      /* a phone: the title goes, the entries get a row of their own and scroll sideways */
+      :host {
+        flex-wrap: wrap;
+        height: auto;
+        padding: 6px 12px 0;
+        row-gap: 2px;
+      }
       h1 {
         display: none;
       }
+      nav {
+        order: 3;
+        flex-basis: 100%;
+        height: 40px;
+        margin: 0;
+        overflow-x: auto;
+      }
       nav button {
-        padding: 0 11px;
-        font-size: 15px;
+        padding: 0 13px;
+        font-size: 16px;
+        white-space: nowrap;
       }
     }
   `,

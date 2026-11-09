@@ -76,10 +76,58 @@
   --ok: #86d28d;
   --bad: #ff8f86;
 
+  --accent-hover: #f5a259;
+  --danger: #b8453b;
+  --danger-hover: #a03a31;
+  --ok-dim: #3f8a4d;
+  /* ink: the dark of fields, wells and glass panels */
+  --bad-wash: #3a1a1c;
+  --bad-ink: #ffdcd8;
+  --haze-violet: #3a2f5c;
+  --haze-blue: #26405c;
+  --shroud-deep: #4a2a6a;
+  --ink: #0d1117;
+  --ink-deep: #0b0f14;
+  --ink-glass: #0d1117e6;
+  --panel-glass: #1a212cf0;
+  --veil-edge: #0a0d12c0;
+  --void: #10141a; /* same as the void and tile padding of render_map.py */
+  /* ember tints */
+  --ember-glow: #eb944088;
+  --ember-wash: #eb944030;
+  --ember-tint: #eb944018;
+  /* map: halo of a POI by who marked it, the ping, the labels */
+  --halo-alone: #3b82f6;
+  --halo-mine: #b36cf0;
+  --halo-others: #ffa53a;
+  --halo-all: #6fe06f;
+  --halo-travel: #7cc4ff;
+  --ping: #ffb454;
+  --label: #f6ecd2;
+  --label-region: #fff4d6;
+  /* skill tree: the magenta of the lit nodes, the blue of mana */
+  --magic: #ff7be8;
+  --magic-deep: #e04fd0;
+  --magic-pale: #ffc4f4;
+  --magic-dark: #a0388f;
+  --mana: #6fa8ff;
+
   --display: 'IM Fell English', 'Iowan Old Style', Palatino, Georgia, serif;
   --display-sc: 'IM Fell English SC', 'IM Fell English', Palatino, Georgia, serif;
   --ui: 'Alegreya Sans', 'Segoe UI', system-ui, sans-serif;
+  --mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
 
+  /* a plate has two bronze corners (top left, bottom right), as if cut from a larger sheet */
+  --plate-corners:
+    linear-gradient(var(--gold), var(--gold)) left top / 14px 1px no-repeat,
+    linear-gradient(var(--gold), var(--gold)) left top / 1px 14px no-repeat,
+    linear-gradient(var(--gold), var(--gold)) right bottom / 14px 1px no-repeat,
+    linear-gradient(var(--gold), var(--gold)) right bottom / 1px 14px no-repeat;
+  --plate-corners-lit:
+    linear-gradient(var(--accent), var(--accent)) left top / 14px 1px no-repeat,
+    linear-gradient(var(--accent), var(--accent)) left top / 1px 14px no-repeat,
+    linear-gradient(var(--accent), var(--accent)) right bottom / 14px 1px no-repeat,
+    linear-gradient(var(--accent), var(--accent)) right bottom / 1px 14px no-repeat;
   /* a thin film grain, so the flat colours read as paper and stone */
   --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .8 0 0 0 0 .75 0 0 0 0 .6 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
   /* the mist of every page but the map: a cold light from above, a violet haze low on the left */
@@ -105,6 +153,13 @@ body {
 }
 ::selection {
   background: #eb944066;
+}
+/* form controls do not inherit the font by themselves (the notice toast is a button) */
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
 }
 h1,
 h2,

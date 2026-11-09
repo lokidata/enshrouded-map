@@ -12,7 +12,7 @@ check-backend:
 	  && uv run pip-audit && uv run pytest -q
 
 check-frontend:
-	cd frontend && npm audit --omit=dev && npx ng lint && npx ng build && npx ng test --watch=false && npx playwright test
+	cd frontend && npm audit --omit=dev && npm run lint && npx ng build && npx ng test --watch=false && npx playwright test
 
 check-security: gitleaks scan
 

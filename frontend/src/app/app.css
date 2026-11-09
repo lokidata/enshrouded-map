@@ -24,8 +24,8 @@ aside {
   padding: 8px 14px;
   border: 1px solid var(--bad);
   border-radius: 3px;
-  background: #3a1a1c;
-  color: #ffdcd8;
+  background: var(--bad-wash);
+  color: var(--bad-ink);
   font-size: 15px;
   box-shadow: 0 6px 20px #000a;
 }

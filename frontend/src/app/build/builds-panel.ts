@@ -105,12 +105,12 @@ import { SkillsService } from '../core/skills.service';
       background: rgba(255, 255, 255, 0.06);
       color: inherit;
       border: 1px solid var(--gold-dim);
-      border-radius: 4px;
+      border-radius: 3px;
       padding: 4px 8px;
       cursor: pointer;
     }
     li > button.active {
-      border-color: #ff7be8;
+      border-color: var(--magic);
     }
     .drop {
       background: none;

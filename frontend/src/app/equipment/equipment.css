@@ -58,9 +58,9 @@ ul {
   text-align: left;
   padding: 6px 8px;
   color: inherit;
-  background: #1a212cf0;
+  background: var(--panel-glass);
   border: 1px solid var(--gold-dim);
-  border-radius: 4px;
+  border-radius: 3px;
   cursor: pointer;
 }
 .slot img,
@@ -81,19 +81,19 @@ ul {
 }
 .slot.on,
 .item.on {
-  border-color: #ff7be8;
+  border-color: var(--magic);
 }
 .picker {
-  background: #1a212cf0;
+  background: var(--panel-glass);
   border: 1px solid var(--gold-dim);
-  border-radius: 6px;
+  border-radius: 3px;
   padding: 12px;
 }
 .current {
   margin-bottom: 12px;
   padding: 8px;
   border: 1px solid var(--gold-dim);
-  border-radius: 4px;
+  border-radius: 3px;
 }
 .lines {
   display: grid;
@@ -111,8 +111,8 @@ ul {
 .filters select {
   padding: 6px 8px;
   border: 1px solid var(--gold-dim);
-  border-radius: 4px;
-  background: #0d1117;
+  border-radius: 3px;
+  background: var(--ink);
   color: var(--text);
 }
 .filters input {

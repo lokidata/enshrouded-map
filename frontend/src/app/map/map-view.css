@@ -3,12 +3,12 @@ app-map {
   display: block;
   flex: 1;
   min-width: 0;
-  background: #10141a;
+  background: var(--void);
 }
 .map-host {
   position: absolute;
   inset: 0;
-  background: #10141a;
+  background: var(--void);
 } /* same as the void and tile padding of render_map.py */
 .map-host::after {
   /* the Shroud creeps in from the edges of the map; above the tiles and markers, under the controls */
@@ -17,7 +17,7 @@ app-map {
   inset: 0;
   z-index: 450;
   /* a gradient, not a blurred shadow: cheap to repaint while the map is dragged */
-  background: radial-gradient(ellipse 75% 75% at 50% 50%, transparent 60%, #0a0d12c0 100%);
+  background: radial-gradient(ellipse 75% 75% at 50% 50%, transparent 60%, var(--veil-edge) 100%);
   pointer-events: none;
 }
 .coords {
@@ -25,7 +25,7 @@ app-map {
   right: 12px;
   bottom: 12px;
   z-index: 1000;
-  background: #0d1117e6;
+  background: var(--ink-glass);
   border: 1px solid var(--gold-dim);
   color: var(--text);
   padding: 3px 9px;
@@ -47,7 +47,7 @@ app-map {
   padding: 9px 13px;
   border: 1px solid var(--gold-dim);
   border-radius: 2px;
-  background: #0d1117e6;
+  background: var(--ink-glass);
   color: var(--muted);
   font-size: 14px;
 }
@@ -66,7 +66,7 @@ app-map {
   filter: drop-shadow(0 0 2px #000) drop-shadow(0 0 1px #000);
 }
 .marker-icon.fast-travel {
-  filter: drop-shadow(0 0 3px #7cc4ff) drop-shadow(0 0 1px #000);
+  filter: drop-shadow(0 0 3px var(--halo-travel)) drop-shadow(0 0 1px #000);
 }
 /* done elements stay on the map as faint "ghosts" */
 .marker-icon.done {
@@ -75,16 +75,16 @@ app-map {
 }
 /* halo of a POI: blue = only I marked it, violet = me and some others, orange = others did and I did not, green = everyone did */
 .marker-icon.halo-alone {
-  --halo: #3b82f6;
+  --halo: var(--halo-alone);
 }
 .marker-icon.halo-mine {
-  --halo: #b36cf0;
+  --halo: var(--halo-mine);
 }
 .marker-icon.halo-others {
-  --halo: #ffa53a;
+  --halo: var(--halo-others);
 }
 .marker-icon.halo-all {
-  --halo: #6fe06f;
+  --halo: var(--halo-all);
 }
 .marker-icon.halo-alone,
 .marker-icon.halo-mine,
@@ -104,7 +104,7 @@ app-map {
   opacity: 1;
 }
 .map-label {
-  color: #f6ecd2;
+  color: var(--label);
   font: italic 400 15px var(--display);
   text-shadow:
     0 0 3px #000,
@@ -116,7 +116,7 @@ app-map {
 .map-label.region {
   font: 400 21px var(--display-sc);
   letter-spacing: 0.08em;
-  color: #fff4d6;
+  color: var(--label-region);
 }
 .leaflet-tooltip {
   font-size: 14px;
@@ -131,12 +131,7 @@ app-map {
 .leaflet-popup-content-wrapper {
   /* two bronze corners, as on every plate of the site */
   border-radius: 2px;
-  background:
-    linear-gradient(var(--gold), var(--gold)) left top / 14px 1px no-repeat,
-    linear-gradient(var(--gold), var(--gold)) left top / 1px 14px no-repeat,
-    linear-gradient(var(--gold), var(--gold)) right bottom / 14px 1px no-repeat,
-    linear-gradient(var(--gold), var(--gold)) right bottom / 1px 14px no-repeat,
-    linear-gradient(180deg, var(--panel), var(--panel-deep));
+  background: var(--plate-corners), linear-gradient(180deg, var(--panel), var(--panel-deep));
   background-origin: border-box;
   box-shadow: 0 6px 22px #000b;
 }
@@ -327,7 +322,7 @@ app-map {
   height: 18px;
   margin: -9px 0 0 -9px;
   border-radius: 50%;
-  background: #ffb454;
+  background: var(--ping);
   border: 2px solid #000;
   box-shadow: 0 0 6px #000;
 }
@@ -336,7 +331,7 @@ app-map {
   position: absolute;
   inset: -4px;
   border-radius: 50%;
-  border: 3px solid #ffb454;
+  border: 3px solid var(--ping);
   animation: ping 1.4s ease-out infinite;
 }
 @keyframes ping {

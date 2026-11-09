@@ -63,9 +63,9 @@
 }
 .level {
   padding: 12px;
-  background: #1a212cf0;
+  background: var(--panel-glass);
   border: 1px solid var(--gold-dim);
-  border-radius: 6px;
+  border-radius: 3px;
 }
 .level p {
   margin: 0 0 6px;
@@ -83,7 +83,7 @@
   padding: 6px 14px;
   cursor: pointer;
   color: var(--gold);
-  background: #0d1117f2;
+  background: var(--ink-glass);
   border: 1px solid var(--gold-dim);
   border-radius: 999px;
 }
@@ -111,12 +111,12 @@
   font-size: 0.75rem;
   cursor: pointer;
   color: var(--muted);
-  background: #0d1117f2;
+  background: var(--ink-glass);
   border: 1px solid var(--gold-dim);
   border-radius: 999px;
 }
 .hand[aria-pressed='true'] {
-  color: #0d1117;
+  color: var(--ink);
   background: var(--gold);
   border-color: var(--gold);
 }

@@ -5,6 +5,8 @@
   (close)="auth.dialog.set(null)"
 >
   <form (submit)="submit($event)">
+    <!-- the emblem of the game (the public tab icon), drawn in bronze through a mask -->
+    <div class="logo" aria-hidden="true"></div>
     <h2 id="auth-title">
       {{
         (auth.dialog() === 'setup'

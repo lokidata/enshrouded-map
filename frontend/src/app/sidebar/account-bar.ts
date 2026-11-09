@@ -98,7 +98,7 @@ import { TeamStore } from '../core/team.store';
       gap: 2px;
       padding: 4px;
       border: 1px solid var(--border);
-      border-radius: 6px;
+      border-radius: 3px;
       background: var(--panel);
     }
     .menu button {
@@ -116,7 +116,7 @@ import { TeamStore } from '../core/team.store';
     button {
       padding: 4px 9px;
       border: 1px solid var(--border);
-      border-radius: 5px;
+      border-radius: 3px;
       background: var(--bg);
       color: var(--text);
       cursor: pointer;
@@ -125,7 +125,7 @@ import { TeamStore } from '../core/team.store';
     button.primary {
       background: var(--accent);
       border-color: var(--accent);
-      color: #1a1a1a;
+      color: var(--accent-ink);
     }
     .invite {
       position: absolute;
@@ -139,7 +139,7 @@ import { TeamStore } from '../core/team.store';
       align-items: end;
       padding: 10px;
       border: 1px solid var(--border);
-      border-radius: 6px;
+      border-radius: 3px;
       background: var(--panel);
       font-size: 14px;
       color: var(--muted);
@@ -151,7 +151,7 @@ import { TeamStore } from '../core/team.store';
       width: 100%;
       margin-top: 2px;
       padding: 5px 7px;
-      border-radius: 5px;
+      border-radius: 3px;
       border: 1px solid var(--border);
       background: var(--bg);
       color: var(--text);

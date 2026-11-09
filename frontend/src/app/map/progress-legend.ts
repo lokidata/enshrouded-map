@@ -47,7 +47,7 @@ function read(): boolean {
       z-index: 1000;
     }
     .box {
-      background: #0d1117e6;
+      background: var(--ink-glass);
       border: 1px solid var(--gold-dim);
       border-radius: 2px;
       color: var(--muted);
@@ -81,22 +81,22 @@ function read(): boolean {
       width: 12px;
       height: 12px;
       border-radius: 50%;
-      background: #ccc;
+      background: var(--text);
       border: 2px solid var(--halo);
       box-shadow: 0 0 4px var(--halo);
       flex-shrink: 0;
     }
     i.alone {
-      --halo: #3b82f6;
+      --halo: var(--halo-alone);
     }
     i.mine {
-      --halo: #b36cf0;
+      --halo: var(--halo-mine);
     }
     i.others {
-      --halo: #ffa53a;
+      --halo: var(--halo-others);
     }
     i.all {
-      --halo: #6fe06f;
+      --halo: var(--halo-all);
     }
   `,
 })

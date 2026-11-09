@@ -2,12 +2,7 @@ dialog {
   /* a plate with two bronze corners, like the cards of the pages */
   border: 1px solid var(--gold-dim);
   border-radius: 2px;
-  background:
-    linear-gradient(var(--gold), var(--gold)) left top / 18px 1px no-repeat,
-    linear-gradient(var(--gold), var(--gold)) left top / 1px 18px no-repeat,
-    linear-gradient(var(--gold), var(--gold)) right bottom / 18px 1px no-repeat,
-    linear-gradient(var(--gold), var(--gold)) right bottom / 1px 18px no-repeat,
-    linear-gradient(180deg, var(--panel), var(--panel-deep));
+  background: var(--plate-corners), linear-gradient(180deg, var(--panel), var(--panel-deep));
   background-origin: border-box;
   box-shadow: 0 18px 50px #000c;
   color: var(--text);
@@ -17,8 +12,17 @@ dialog {
 dialog::backdrop {
   /* the Shroud over the page: a slow drift, the only ambient motion of the site */
   background:
-    radial-gradient(ellipse 70% 50% at 20% 30%, #3a2f5c88, transparent 70%),
-    radial-gradient(ellipse 60% 45% at 80% 70%, #26405c88, transparent 70%), var(--grain), #0a0d12ee;
+    radial-gradient(
+      ellipse 70% 50% at 20% 30%,
+      color-mix(in srgb, var(--haze-violet) 53%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse 60% 45% at 80% 70%,
+      color-mix(in srgb, var(--haze-blue) 53%, transparent),
+      transparent 70%
+    ),
+    var(--grain), var(--veil-edge);
   background-size:
     160% 160%,
     160% 160%,
@@ -42,6 +46,16 @@ dialog::backdrop {
       0 0,
       0 0;
   }
+}
+.logo {
+  width: 84px;
+  height: 84px;
+  margin: 0 auto 10px;
+  background: var(--gold);
+  /* the icon is white on black: its luminance is the shape of the emblem */
+  mask: url('/enshrouded-icon.png') center / contain no-repeat;
+  mask-mode: luminance;
+  filter: drop-shadow(0 0 10px var(--ember-glow));
 }
 h2 {
   position: relative;
@@ -74,7 +88,7 @@ input {
   padding: 8px 10px;
   border-radius: 3px;
   border: 1px solid var(--border);
-  background: #0d1117;
+  background: var(--ink);
   box-shadow: inset 0 1px 3px #0008;
   color: var(--text);
   font: 15px var(--ui);
@@ -114,7 +128,7 @@ button.primary {
   font-weight: 700;
 }
 button.primary:hover {
-  background: #f5a259;
+  background: var(--accent-hover);
 }
 .switch {
   margin-top: 14px;
@@ -147,7 +161,7 @@ select {
   padding: 8px 10px;
   border-radius: 3px;
   border: 1px solid var(--border);
-  background: #0d1117;
+  background: var(--ink);
   color: var(--text);
   font: 15px var(--ui);
 }
@@ -175,12 +189,12 @@ ul.members li {
   padding: 3px 0;
 }
 button.danger {
-  border-color: #b8453b;
-  background: #b8453b;
+  border-color: var(--danger);
+  background: var(--danger);
   color: #fff;
 }
 button.danger:hover {
-  background: #a03a31;
+  background: var(--danger-hover);
 }
 .warn {
   margin: 0;

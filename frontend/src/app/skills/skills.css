@@ -21,17 +21,17 @@
 }
 .ring {
   fill: none;
-  stroke: rgba(230, 180, 255, 0.25);
+  stroke: color-mix(in srgb, var(--magic-pale) 25%, transparent);
   stroke-width: 6;
 }
 line {
-  stroke: rgba(200, 170, 230, 0.22);
+  stroke: color-mix(in srgb, var(--magic-pale) 22%, transparent);
   stroke-width: 7;
 }
 line.on {
-  stroke: #e04fd0;
+  stroke: var(--magic-deep);
   stroke-width: 11;
-  filter: drop-shadow(0 0 8px #e04fd0);
+  filter: drop-shadow(0 0 8px var(--magic-deep));
 }
 .spec {
   font: 400 120px var(--display);
@@ -42,7 +42,7 @@ line.on {
   fill: var(--ok);
 }
 .spec.Mage {
-  fill: #6fa8ff;
+  fill: var(--mana);
 }
 .spec.Warrior {
   fill: var(--bad);
@@ -64,19 +64,19 @@ g.skill.available circle {
   stroke: var(--gold);
 }
 g.skill.taken circle {
-  fill: #a0388f;
-  stroke: #ffc4f4;
+  fill: var(--magic-dark);
+  stroke: var(--magic-pale);
   stroke-width: 10;
-  filter: drop-shadow(0 0 10px #ff7be8) drop-shadow(0 0 26px #e04fd0);
+  filter: drop-shadow(0 0 10px var(--magic)) drop-shadow(0 0 26px var(--magic-deep));
 }
 g.skill.taken.Active circle,
 g.skill.taken image {
-  filter: drop-shadow(0 0 12px #ffc4f4);
+  filter: drop-shadow(0 0 12px var(--magic-pale));
 }
 g.skill.root circle {
-  fill: #ff7be8;
+  fill: var(--magic);
   stroke: #fff;
-  filter: drop-shadow(0 0 16px #ff7be8);
+  filter: drop-shadow(0 0 16px var(--magic));
 }
 g.skill.dim {
   opacity: 0.2;
@@ -86,7 +86,7 @@ g.skill.picked circle {
   stroke: #fff;
 }
 .lvl {
-  font: 700 44px sans-serif;
+  font: 400 44px var(--ui);
   fill: #fff;
   stroke: #000;
   stroke-width: 8px;
@@ -101,9 +101,9 @@ g.skill.picked circle {
   gap: 10px;
   align-items: center;
   padding: 8px 14px;
-  background: rgba(13, 17, 23, 0.8);
+  background: color-mix(in srgb, var(--ink) 80%, transparent);
   border: 1px solid var(--gold-dim);
-  border-radius: 6px;
+  border-radius: 3px;
 }
 .points .emblem {
   width: 46px;
@@ -128,9 +128,9 @@ g.skill.picked circle {
   right: 12px;
   width: 230px;
   padding: 8px 12px;
-  background: rgba(13, 17, 23, 0.8);
+  background: color-mix(in srgb, var(--ink) 80%, transparent);
   border: 1px solid var(--gold-dim);
-  border-radius: 6px;
+  border-radius: 3px;
 }
 .attr {
   display: flex;
@@ -185,9 +185,9 @@ g.skill.picked circle {
   max-height: 60%;
   overflow: auto;
   padding: 12px;
-  background: rgba(13, 17, 23, 0.93);
+  background: color-mix(in srgb, var(--ink) 93%, transparent);
   border: 1px solid var(--gold-dim);
-  border-radius: 6px;
+  border-radius: 3px;
 }
 .sheet h3 {
   margin: 10px 0 6px;
@@ -226,7 +226,7 @@ ul {
   background: rgba(255, 255, 255, 0.06);
   color: inherit;
   border: 1px solid var(--gold-dim);
-  border-radius: 4px;
+  border-radius: 3px;
   padding: 4px 8px;
   cursor: pointer;
 }
@@ -248,7 +248,7 @@ ul {
   max-width: calc(100% - 16px);
   z-index: 5;
   pointer-events: none;
-  background: #0d1117;
+  background: var(--ink);
   border: 2px solid var(--gold-dim);
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
   font-family: var(--display);
@@ -320,7 +320,7 @@ ul {
   justify-content: space-between;
   align-items: center;
   padding: 8px 14px;
-  background: #0d1117;
+  background: var(--ink);
   border-top: 1px solid var(--gold-dim);
 }
 kbd {

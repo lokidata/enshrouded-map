@@ -13,7 +13,7 @@
   padding: 0;
   cursor: pointer;
   color: inherit;
-  background: #243042f0;
+  background: var(--hover);
   border: 2px solid var(--rar);
   border-radius: 3px;
 }
@@ -38,7 +38,7 @@
   padding: 16px 18px;
   text-align: left;
   color: var(--text);
-  background: #0d1117f5;
+  background: var(--ink-glass);
   border: 1px solid var(--gold-dim);
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
 }
@@ -171,7 +171,7 @@ ol button:focus-visible {
   max-height: 88vh;
   padding: 16px;
   color: var(--text);
-  background: #0d1117;
+  background: var(--ink);
   border: 1px solid var(--gold-dim);
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
   overflow: auto;
@@ -208,7 +208,7 @@ ol button:focus-visible {
   font-size: 0.7rem;
   text-align: center;
   white-space: nowrap;
-  background: #0d1117f5;
+  background: var(--ink-glass);
   border-radius: 0 0 3px 3px;
   pointer-events: none;
 }

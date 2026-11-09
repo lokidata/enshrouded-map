@@ -4,9 +4,9 @@
 .reco {
   padding: 10px 16px;
   color: var(--text);
-  background: #1a212cf0;
+  background: var(--panel-glass);
   border: 1px solid var(--gold-dim);
-  border-radius: 6px;
+  border-radius: 3px;
 }
 summary {
   cursor: pointer;
@@ -25,9 +25,9 @@ summary:focus-visible {
 .count {
   margin-left: 6px;
   padding: 0 7px;
-  color: #0d1117;
+  color: var(--ink);
   background: var(--gold);
-  border-radius: 9px;
+  border-radius: 3px;
 }
 .help {
   margin: 8px 0;

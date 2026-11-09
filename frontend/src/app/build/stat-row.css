@@ -35,7 +35,7 @@ dd:focus-visible {
   font-weight: 400;
   text-align: left;
   color: var(--text);
-  background: #0d1117f5;
+  background: var(--ink-glass);
   border: 1px solid var(--gold);
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
 }
