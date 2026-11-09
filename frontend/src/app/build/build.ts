@@ -7,7 +7,10 @@ import {
   attributeTotals,
   flameSkillBonus,
   frostProtection,
+  frostSeconds,
   levelPoints,
+  restedMinutes,
+  lineSum,
   shroudMinutes,
   xpToNext,
   xpTotal,
@@ -190,7 +193,7 @@ interface Row {
               <div
                 app-stat-row
                 labelKey="buildRestedDuration"
-                value="—"
+                [value]="rested()"
                 [parts]="comfortParts()"
                 [desc]="'buildRestedNote' | transloco"
               ></div>
@@ -806,7 +809,8 @@ export class Build {
       Object.entries(this.defs).map(([group, defs]) => [
         group,
         defs.map((d): Row => {
-          const value = rowValue(d, player, fx, sums);
+          // the game computes with 0 frost resistance, so no "—" when no worn piece has the line
+          const value = rowValue(d, player, fx, sums) ?? (d.key === 'frost' ? 0 : null);
           const p = rowParts(d, player, fx, sums);
           const f = (n: number) => formatRow(round2(n), { ...d, plain: true });
           return {
@@ -831,8 +835,37 @@ export class Build {
     ) as Record<Group, Row[]>;
   });
 
+  /** Frost resistance duration (exact formula; the resistance counts the worn items only: food and fires add to it in game). */
+  private readonly frostDuration = computed<Row | null>(() => {
+    const c = this.constants();
+    const r = lineSum(this.sums(), ['Frost Resistance'], 'Normal') ?? 0;
+    const s = frostSeconds(c, r, this.factor('bodyHeat'));
+    if (s === null) return null;
+    const names =
+      this.gear.data()?.texts?.[
+        '/rpgTerms/attributes/freezeResistRemainingDuration/displayInfo/label'
+      ];
+    const t = Math.round(s);
+    return {
+      key: 'frostDuration',
+      label: names ? this.gear.text(names) : null,
+      value: t >= 60 ? `${Math.floor(t / 60)} min ${t % 60} s` : `${t}s`,
+      estimate: false,
+      parts: [
+        { key: 'tipFrostResistance', text: `${r}` },
+        {
+          key: 'tipFrostFormula',
+          text: `(${r} + 1) × ${c['freezeDurationFactor']} − ${c['freezeDurationOffset']}`,
+        },
+        ...this.worldTip('bodyHeat'),
+      ],
+      desc: this.tip('freezeResistRemainingDuration'),
+    };
+  });
+
   protected rows(group: Group): Row[] {
-    return this.table()[group];
+    const frost = group === 'misc' ? this.frostDuration() : null;
+    return frost ? [...this.table()[group], frost] : this.table()[group];
   }
 
   private label(d: RowDef, texts: Record<string, Names> | undefined) {
@@ -849,17 +882,32 @@ export class Build {
     input.value = `${this.planner.level()}`;
   }
 
-  /** What the data gives for Rested: the points entered and the constants, never a derived duration. */
+  /** Rested duration, exact (game formula); the comfort level is the points entered, capped at 255. */
+  private readonly restedMin = computed(() => {
+    const c = this.gems.data()?.comfort?.constants ?? {};
+    if (c['comfortBase'] === undefined || c['comfortFactor'] === undefined) return null;
+    return restedMinutes(
+      c['comfortBase'],
+      c['comfortFactor'],
+      this.planner.comfort(),
+      5 + (this.fx()['Rested_MinDuration'] ?? 0),
+    );
+  });
+  protected readonly rested = computed(() => {
+    const m = this.restedMin();
+    return m === null ? '—' : `${Math.floor(m)} min ${Math.round((m % 1) * 60)} s`;
+  });
   protected readonly comfortParts = computed<TipPart[]>(() => {
     const c = this.gems.data()?.comfort?.constants ?? {};
     return [
-      { key: 'tipComfort', text: `${this.planner.comfort()}` },
+      { key: 'tipComfort', text: `${Math.min(255, this.planner.comfort())}` },
       ...(c['comfortBase'] !== undefined
         ? [{ key: 'tipComfortBase', text: `${c['comfortBase']}` }]
         : []),
       ...(c['comfortFactor'] !== undefined
         ? [{ key: 'tipComfortFactor', text: `${round2(c['comfortFactor'])}` }]
         : []),
+      { key: 'tipRestedMin', text: `${5 + (this.fx()['Rested_MinDuration'] ?? 0)} min` },
     ];
   });
 

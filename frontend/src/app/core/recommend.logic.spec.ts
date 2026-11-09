@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { GearData, GearItem } from './gear.model';
-import { CRITICAL_RATIO, LOW_RATIO, recommend, severity } from './recommend.logic';
+import { CRITICAL_RATIO, LOW_RATIO, flameLevelCap, recommend, severity } from './recommend.logic';
 
 const constants = {
   armorOffset: 23,
@@ -88,6 +88,28 @@ describe('recommend', () => {
     expect(run({ r: { ...armour(1), slot: 'Ring' } }, { ring1: 'r', shield: 'r' }, 50)).toEqual([]);
     expect(recommend(null, { head: 'a' }, {}, {}, 20)).toEqual([]);
     expect(run({}, { head: 'zz' }, 20)).toEqual([]);
-    expect(recommend({ constants: {}, items: { a: armour(1) } }, { head: 'a' }, {}, {}, 20)).toEqual([]);
+    expect(
+      recommend({ constants: {}, items: { a: armour(1) } }, { head: 'a' }, {}, {}, 20),
+    ).toEqual([]);
+  });
+});
+
+describe('flame cap', () => {
+  const items = { a: armour(9) };
+  it('expects the best level of the tier opened before the Flame, null below 1', () => {
+    expect(flameLevelCap(1)).toBe(1);
+    expect(flameLevelCap(2)).toBe(5);
+    expect(flameLevelCap(4)).toBe(15);
+    expect(flameLevelCap(11)).toBe(50);
+    expect(flameLevelCap(0)).toBeNull();
+  });
+  it('does not flag gear of the previous tier when the Flame has just risen', () => {
+    const r = (flame: number) => recommend(data(items), { head: 'a' }, {}, {}, 40, flame);
+    expect(r(0)[0]?.target).toBe(40);
+    expect(r(2)).toEqual([]);
+    expect(r(3)).toEqual([]); // level 9 = best of tier 2
+    expect(r(4)[0]?.target).toBe(15);
+    expect(r(4)[0]?.capped).toEqual({ cap: 15, player: 40, flame: 4 });
+    expect(r(11)[0]?.capped).toBeNull();
   });
 });

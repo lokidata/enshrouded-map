@@ -230,12 +230,25 @@ app-map {
   height: 56px;
   margin: 0 auto 4px;
 }
+.popup-picture.popup-category {
+  width: 36px;
+  height: 36px;
+}
+.popup-portraits {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  margin-bottom: 4px;
+}
 .popup-portrait {
   display: block;
   width: 96px;
   height: 96px;
-  margin: 0 auto 4px;
   object-fit: contain;
+}
+.popup-portraits:has(> :nth-child(2)) .popup-portrait {
+  width: 72px;
+  height: 72px;
 }
 .popup-icon {
   width: 32px;

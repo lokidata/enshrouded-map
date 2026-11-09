@@ -367,6 +367,8 @@ test('loot items in one chest are listed in a single popup', async ({ page }) =>
   await page.locator('img.leaflet-marker-icon[src*="unique"]').click({ force: true });
   await expect(page.locator('.popup-name')).toHaveText('2 objets ici');
   await expect(page.locator('.popup-row')).toHaveCount(2);
+  // each row shows its item's picture or, failing that, its category icon
+  await expect(page.locator('.popup-row img.popup-icon')).toHaveCount(2);
   await expect(page.locator('.popup-row').filter({ hasText: 'Chapeau de test' })).toContainText(
     'Cosmétique',
   );
@@ -1360,7 +1362,7 @@ test('browser Back and Forward walk through the views', async ({ page }) => {
   await expect(current).toHaveText('Lore');
 });
 
-test('comfort points are kept in the draft and Rested stays unknown', async ({ page }) => {
+test('comfort points are kept in the draft and give the Rested duration', async ({ page }) => {
   await page.goto('/');
   await page.getByLabel("Nom d'utilisateur").fill(user);
   await page
@@ -1370,7 +1372,7 @@ test('comfort points are kept in the draft and Rested stays unknown', async ({ p
   await page.getByRole('dialog').getByRole('button', { name: 'Se connecter' }).click();
   await expect(page.locator('.who')).toContainText(user);
 
-  // comfort: kept in the draft, Rested stays unknown ("—")
+  // comfort: kept in the draft; 34 x ln(1 + 0.04 x 120) + 5 = 64.8 min
   await page.getByRole('button', { name: 'Personnage', exact: true }).click();
   const comfort = page.getByLabel('Points de confort');
   await comfort.fill('120');
@@ -1380,7 +1382,7 @@ test('comfort points are kept in the draft and Rested stays unknown', async ({ p
   await expect(page.getByLabel('Points de confort')).toHaveValue('120');
   await expect(
     page.locator('app-build div[app-stat-row]').filter({ hasText: 'Durée de Reposé' }),
-  ).toContainText('—');
+  ).toContainText('64 min');
 });
 
 test('game: edit, export, import, reload, AXE', async ({ page }) => {

@@ -5,6 +5,8 @@ import {
   flameSkillBonus,
   levelPoints,
   shroudMinutes,
+  frostSeconds,
+  restedMinutes,
   xpToNext,
   xpTotal,
   attributeTotals,
@@ -461,5 +463,30 @@ describe('weapons', () => {
     expect(perkDamage(k, upgraded(k, great, 5), 0.1)).toBe(5.1); // level 16: 10 % of 51
     expect(rankDamage({}, great, 0)).toBeNull();
     expect(perkDamage(k, shield, 0.1)).toBeNull();
+  });
+});
+
+describe('frostSeconds', () => {
+  const c = { freezeDurationFactor: 95, freezeDurationOffset: 75 };
+  it('is 95 x resistance + 20 s at the default world', () => {
+    expect(frostSeconds(c, 0)).toBe(20);
+    expect(frostSeconds(c, 4)).toBe(400);
+    expect(frostSeconds(c, 10)).toBe(970);
+  });
+  it('scales with the body heat factor and needs the constants', () => {
+    expect(frostSeconds(c, 4, 0.5)).toBe(200);
+    expect(frostSeconds({}, 4)).toBeNull();
+  });
+});
+
+describe('restedMinutes', () => {
+  it('matches the game formula (34 x ln(1 + 0.04 C) + 5 min)', () => {
+    expect(restedMinutes(34, 0.04, 0)).toBeCloseTo(5, 3);
+    expect(restedMinutes(34, 0.04, 10)).toBeCloseTo(16.44, 2);
+    expect(restedMinutes(34, 0.04, 50)).toBeCloseTo(42.35, 2);
+  });
+  it('caps comfort at 255 and adds Well Rested', () => {
+    expect(restedMinutes(34, 0.04, 9999)).toBeCloseTo(restedMinutes(34, 0.04, 255), 6);
+    expect(restedMinutes(34, 0.04, 0, 11)).toBeCloseTo(11, 3);
   });
 });

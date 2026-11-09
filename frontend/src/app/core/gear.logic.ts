@@ -160,6 +160,7 @@ export const WORLD_KEY = {
   oxygen: 'playerDivingTimeFactor',
   shroud: 'shroudTimeFactor',
   parry: 'enemyStaminaFactor',
+  bodyHeat: 'playerBodyHeatFactor',
 } as const;
 
 /**
@@ -510,6 +511,35 @@ export const frostProtection = (flame: number): boolean => flame >= 8;
  */
 export const shroudMinutes = (flame: number, factor = 1): number | null =>
   flame >= 1 ? roundAway(f((240 + 60 * flame) * f(factor))) / 60 : null;
+
+/**
+ * Seconds of frost resistance (the game's "Durée de la résistance au gel", enshrouded.exe 0x140E90870, exact):
+ * ((resistance + 1) x freezeDurationFactor - freezeDurationOffset) x the world's body heat factor. Resistance =
+ * the worn items' Frost Resistance lines (food and nearby fires add to it in game, not modelled). Null without constants.
+ */
+export function frostSeconds(c: Constants, resistance: number, factor = 1): number | null {
+  const k = c['freezeDurationFactor'];
+  const o = c['freezeDurationOffset'];
+  return k === undefined || o === undefined ? null : ((resistance + 1) * k - o) * factor;
+}
+
+/**
+ * Duration of the Rested buff in minutes (enshrouded.exe 0x140e7abd0, exact, float32): the Comfort attribute (the
+ * sum of the best furniture of each category + music, capped 0..255) gives ln(1 + comfortFactor x C) x comfortBase
+ * + Rested_MinDuration (5 min, +2 per rank of "Well Rested"), then x Rested_DurationMod (1, no source found).
+ */
+export function restedMinutes(
+  base: number,
+  factor: number,
+  comfort: number,
+  minDuration = 5,
+  mod = 1,
+): number {
+  const c = Math.min(255, Math.max(0, comfort));
+  const min = f(f(Math.log(f(f(c * factor) + 1))) * base + minDuration);
+  const ns = Math.trunc(f(min * 6e10));
+  return Math.trunc(f(f(ns * 1e-9) * f(mod)) * 1e9) / 6e10;
+}
 
 /**
  * The six skills that add one attribute point per two Flame levels. Exact (enshrouded.exe): Flame >> 1, added once
