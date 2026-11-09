@@ -67,6 +67,8 @@ export class PlannerStore {
   /** Comfort points of the player's house (not saved in builds). */
   readonly comfort = signal(this.draft.comfort);
   readonly gear = signal<Gear>(this.draft.gear);
+  /** The arrow the DPS counts with a bow (an `ammo` guid of gear.json); one type only. Saved in builds as gear.arrow. */
+  readonly arrow = signal<string | null>(this.draft.arrow);
   /** How many of each worn piece's upgrades are taken. */
   readonly upgrades = signal<Upgrades>(this.draft.upgrades);
   /** The gem set in each weapon slot, at its level. */
@@ -122,6 +124,13 @@ export class PlannerStore {
 
   reset(): void {
     this.setAll({}, 1, 0, {}, {}, {});
+    this.arrow.set(null);
+    this.writeDraft();
+  }
+
+  setArrow(id: string | null): void {
+    this.arrow.set(id);
+    this.writeDraft();
   }
 
   setLevel(level: number): void {
@@ -206,10 +215,12 @@ export class PlannerStore {
       tree ? fromSaved(tree, build.nodes) : {},
       build.level,
       build.flame,
-      build.gear,
+      Object.fromEntries(Object.entries(build.gear).filter(([k]) => k !== 'arrow')),
       fromIndices(build.upgrades ?? {}),
       readGems(build.gems ?? {}),
     );
+    this.arrow.set((build.gear as Record<string, string>)['arrow'] ?? null);
+    this.writeDraft();
   }
 
   async load(): Promise<void> {
@@ -235,7 +246,7 @@ export class PlannerStore {
       nodes: toSaved(this.levels()),
       level: this.level(),
       flame: this.flame(),
-      gear: this.gear(),
+      gear: { ...this.gear(), ...(this.arrow() ? { arrow: this.arrow()! } : {}) },
       upgrades: toIndices(this.upgrades()),
       gems: this.gems(),
     };
@@ -316,6 +327,7 @@ export class PlannerStore {
     flame: number;
     comfort: number;
     gear: Gear;
+    arrow: string | null;
     upgrades: Upgrades;
     gems: Gems;
   } {
@@ -336,6 +348,7 @@ export class PlannerStore {
         flame: clamp(Number(raw['flame']) || 0, 0, 50),
         comfort: clamp(Number(raw['comfort']) || 0, 0, 100000),
         gear,
+        arrow: typeof raw['arrow'] === 'string' ? raw['arrow'] : null,
         upgrades: Object.fromEntries(
           Object.entries((raw['upgrades'] ?? {}) as Record<string, unknown>).filter(
             ([k, v]) =>
@@ -348,7 +361,16 @@ export class PlannerStore {
         gems: readGems((raw['gems'] ?? {}) as Record<string, unknown>),
       };
     } catch {
-      return { levels: {}, level: 1, flame: 0, comfort: 0, gear: {}, upgrades: {}, gems: {} };
+      return {
+        levels: {},
+        level: 1,
+        flame: 0,
+        comfort: 0,
+        gear: {},
+        arrow: null,
+        upgrades: {},
+        gems: {},
+      };
     }
   }
 
@@ -362,6 +384,7 @@ export class PlannerStore {
           flame: this.flame(),
           comfort: this.comfort(),
           gear: this.gear(),
+          arrow: this.arrow(),
           upgrades: this.upgrades(),
           gems: this.gems(),
         }),

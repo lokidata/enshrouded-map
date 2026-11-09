@@ -110,12 +110,15 @@ g.skill.picked circle {
   height: 46px;
 }
 .points .small {
-  font-size: 0.7rem;
+  font-size: 0.85rem;
   letter-spacing: 1px;
   font-family: var(--display-sc);
   font-weight: 400;
   text-transform: none;
   color: var(--muted);
+}
+.points b {
+  margin-left: 6px;
 }
 .points .big {
   font-size: 1.6rem;
@@ -160,12 +163,29 @@ g.skill.picked circle {
   color: var(--ok);
 }
 .tools {
+  /* the toolbar sits at the top, between the points panel and the attributes */
   position: absolute;
-  left: 12px;
-  bottom: 12px;
+  top: 12px;
+  left: 250px;
+  right: 262px;
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
+  justify-content: center;
+}
+@media (max-width: 900px) {
+  .tools {
+    left: 12px;
+    right: 12px;
+  }
+  .points,
+  .attrs {
+    top: 64px;
+  }
+  .sheet {
+    top: 204px;
+    max-height: calc(100% - 216px);
+  }
 }
 .hint {
   position: absolute;
@@ -180,9 +200,9 @@ g.skill.picked circle {
 .sheet {
   position: absolute;
   left: 12px;
-  bottom: 56px;
+  top: 152px; /* under the points panel, near the toolbar button that opened it */
   width: min(340px, calc(100% - 24px));
-  max-height: 60%;
+  max-height: calc(100% - 164px);
   overflow: auto;
   padding: 12px;
   background: color-mix(in srgb, var(--ink) 93%, transparent);

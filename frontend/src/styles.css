@@ -119,15 +119,15 @@
 
   /* a plate has two bronze corners (top left, bottom right), as if cut from a larger sheet */
   --plate-corners:
-    linear-gradient(var(--gold), var(--gold)) left top / 14px 1px no-repeat,
-    linear-gradient(var(--gold), var(--gold)) left top / 1px 14px no-repeat,
-    linear-gradient(var(--gold), var(--gold)) right bottom / 14px 1px no-repeat,
-    linear-gradient(var(--gold), var(--gold)) right bottom / 1px 14px no-repeat;
+    linear-gradient(var(--gold), var(--gold)) left top / 14px 2px no-repeat,
+    linear-gradient(var(--gold), var(--gold)) left top / 2px 14px no-repeat,
+    linear-gradient(var(--gold), var(--gold)) right bottom / 14px 2px no-repeat,
+    linear-gradient(var(--gold), var(--gold)) right bottom / 2px 14px no-repeat;
   --plate-corners-lit:
-    linear-gradient(var(--accent), var(--accent)) left top / 14px 1px no-repeat,
-    linear-gradient(var(--accent), var(--accent)) left top / 1px 14px no-repeat,
-    linear-gradient(var(--accent), var(--accent)) right bottom / 14px 1px no-repeat,
-    linear-gradient(var(--accent), var(--accent)) right bottom / 1px 14px no-repeat;
+    linear-gradient(var(--accent), var(--accent)) left top / 14px 2px no-repeat,
+    linear-gradient(var(--accent), var(--accent)) left top / 2px 14px no-repeat,
+    linear-gradient(var(--accent), var(--accent)) right bottom / 14px 2px no-repeat,
+    linear-gradient(var(--accent), var(--accent)) right bottom / 2px 14px no-repeat;
   /* a thin film grain, so the flat colours read as paper and stone */
   --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .8 0 0 0 0 .75 0 0 0 0 .6 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
   /* the mist of every page but the map: a cold light from above, a violet haze low on the left */

@@ -1445,6 +1445,30 @@ test('game: edit, export, import, reload, AXE', async ({ page }) => {
   await expect(preview).toHaveValue(new RegExp(escapeRe('"name": "Imported"')));
 });
 
+test('game: the configuration is saved on the server and survives a cleared browser', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByLabel("Nom d'utilisateur").fill(user);
+  await page
+    .getByRole('dialog')
+    .getByLabel('Mot de passe', { exact: true })
+    .fill('a brand new passphrase');
+  await page.getByRole('dialog').getByRole('button', { name: 'Se connecter' }).click();
+  await expect(page.locator('.who')).toContainText(user);
+  await page.getByRole('button', { name: 'Partie', exact: true }).click();
+  const health = page.getByLabel('Santé des joueurs', { exact: true });
+  await page.getByLabel('Préréglage', { exact: true }).selectOption('Custom');
+  await health.fill('3');
+  await health.blur();
+  await page.getByRole('button', { name: 'Enregistrer' }).click();
+  await expect(page.getByRole('button', { name: 'Enregistrer' })).toBeDisabled();
+  await page.evaluate(() => localStorage.removeItem('gameSettings'));
+  await page.reload();
+  await page.getByRole('button', { name: 'Partie', exact: true }).click();
+  await expect(health).toHaveValue('3');
+});
+
 test('game: a preset can be changed, a field edit turns it into Custom, reset all goes back to Default', async ({
   page,
 }) => {

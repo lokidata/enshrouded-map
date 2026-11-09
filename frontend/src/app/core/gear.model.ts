@@ -29,6 +29,9 @@ export interface GearItem {
     hands: number;
     attr: string | null;
     types: Partial<Record<DamageKind, number>>;
+    /** Ranged weapons: seconds of the shot's charge and fire (a shot takes charge + fire). */
+    charge?: number;
+    fire?: number;
   };
   /** Weapons: chance it has a gem slot (1 = always), unlocked once every upgrade is taken. */
   gem?: number;
@@ -65,6 +68,28 @@ export interface GearData {
   /** Pictures of the game's UI by texture name: ui/<guid>.png. */
   ui?: Record<string, string>;
   items: Record<string, GearItem>;
+  /** Arrows (bow ammunition) and spells, by item guid (same ids as craft.json). */
+  ammo?: Record<string, Ammo>;
+}
+
+/** Ammunition: its own damage setup, added to the weapon's in a shot. Absent damage = no damage (Flare Arrow). */
+export interface Ammo {
+  name: Names;
+  type: 'Arrow' | 'Spell';
+  rarity: string;
+  /** Fixed level: min = max. */
+  lvl: [number, number];
+  icon?: string;
+  damage?: {
+    mod: number;
+    speed: number;
+    types: Partial<Record<DamageKind, number>>;
+    charge?: number;
+    fire?: number;
+  };
+  stats: readonly GearStat[];
+  upgrades: readonly GearUpgrade[];
+  desc?: Names;
 }
 
 /** The slots a build can fill, as the API stores them (`gear` of api/v1/builds). */

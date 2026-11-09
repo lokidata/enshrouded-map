@@ -102,6 +102,22 @@ class TeamMember(Base):
     joined_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
 
+class GameConfig(Base):
+    """A saved game configuration: the team's (only its owner writes it) or a lone player's."""
+
+    __tablename__ = "game_configs"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    team_id: Mapped[int | None] = mapped_column(
+        ForeignKey("teams.id", ondelete="CASCADE"), unique=True, default=None
+    )
+    user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), unique=True, default=None
+    )
+    data: Mapped[dict[str, Any]] = mapped_column(JSON)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
 class Passkey(Base):
     """A WebAuthn credential of a player: signs them in without a password."""
 

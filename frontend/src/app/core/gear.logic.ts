@@ -1,6 +1,6 @@
 import { ATTRS, Tree } from './skills.logic';
 import { AttrKey, Levels } from './skills.model';
-import { ArmorKind, Gear, GearItem, GearStat, SlotKey, Upgrades } from './gear.model';
+import { Ammo, ArmorKind, Gear, GearItem, GearStat, SlotKey, Upgrades } from './gear.model';
 
 type Constants = Record<string, number>;
 
@@ -341,8 +341,10 @@ export interface Vitals {
  * Main characteristics. Exact (checked against the game's Attributes screen, no food buff): health, mana, stamina =
  * base + per point x attribute + the worn items' lines + their upgrades' lines (the game's tooltip lists the items'
  * own lines as "Equipment" and leaves the upgrades' out, they are still in its total), ranged damage = 0.05 x
- * dexterity, oxygen. ESTIMATES: melee and magic damage (0.05 per point of strength / intelligence + the equipment's
- * lines). Damage is in %.
+ * dexterity, oxygen. melee and magic damage too (enshrouded.exe 0x140d1c990, read from the code: 0.05 x
+ * points + the worn items' "Melee/Magic Damage" lines (+ the Mage Apprentice skill for magic), the player's base 1.0 is
+ * cancelled by the screen's relativeToValue). Food and buffs (Blood Rage, Lunar Howl...) also add in game: not modelled.
+ * Damage is in %.
  */
 export type PartKey = 'player' | 'equipment' | 'upgrades' | 'skills' | 'flame' | AttrKey;
 export interface Part {
@@ -512,6 +514,10 @@ export const frostProtection = (flame: number): boolean => flame >= 8;
 export const shroudMinutes = (flame: number, factor = 1): number | null =>
   flame >= 1 ? roundAway(f((240 + 60 * flame) * f(factor))) / 60 : null;
 
+/** The worn items' "Time in the Shroud" lines (both spellings occur in the data), in minutes: the lines are in ms. */
+export const shroudLineMinutes = (sums: ReadonlyMap<string, StatSum>): number =>
+  (lineSum(sums, ['Time In The Shroud', 'Time in the Shroud'], 'Duration') ?? 0) / 60000;
+
 /**
  * Seconds of frost resistance (the game's "Durée de la résistance au gel", enshrouded.exe 0x140E90870, exact):
  * ((resistance + 1) x freezeDurationFactor - freezeDurationOffset) x the world's body heat factor. Resistance =
@@ -647,26 +653,114 @@ export interface WeaponDamage {
   base: number;
   /** The item's damage factor (dmgMod: x1.5 on the two-handed ones). */
   factor: number;
-  /** The scaling attribute's bonus in % (the Melee / Ranged / Magic damage row of its attribute). */
+  /** The item's speed factor (speedMod: 0.65 daggers, 0.666 wands...). */
+  speed: number;
+  /** The number the game shows for the item (tooltip, card, tile: trunc(base x dmgMod x speedMod)): exact. */
+  item: number;
+  /** What the arrow adds to the shot's damage (0 without one), same formula at the arrow's own level: exact. */
+  ammo: number;
+  /** The scaling attribute's bonus in %: 5 per point (a hit multiplies by 1 + this). */
   attr: number;
-  /** The weapon-class bonus in %. */
+  /** The weapon-class bonus in % (a hit multiplies by 1 + this). */
   cls: number;
-  /** base x factor x (1 + attr) x (1 + cls), rounded: ESTIMATE (how the game combines them is not verified). */
+  /** The Melee / Ranged / Magic Damage lines of the gear and skills, in %, without the attribute share. */
+  mods: number;
+  /** Shares of the damage perks taken (they add to the 1.0 split of the damage kinds). */
+  perks: number;
+  /** A hit without critical, target or armour: ESTIMATE (the structure is read from the code, see weaponDamage). */
   total: number;
 }
 
-/** Damage of one weapon; null when it has no damage setup or the data lacks the constants. */
+/** What an arrow adds to a shot: trunc(trunc(base(L)) x mod x speed) at the arrow's own level (0x1403f2110); null without damage. */
+export function ammoItemDamage(c: Constants, arrow: Ammo): number | null {
+  const base = arrow.damage ? weaponBaseDamage(c, arrow.lvl[0]) : null;
+  if (base === null || !arrow.damage) return null;
+  return Math.trunc(Math.fround(Math.fround(base * arrow.damage.mod) * arrow.damage.speed));
+}
+
+/** Seconds of a light attack chain, per hit, without skills (the mean of the chain's follow-up times in the game's sequences). */
+const MELEE_SECONDS: Record<string, number> = {
+  OneHandedSword: 1.9 / 3,
+  OneHandedAxe: 1.9 / 3,
+  OneHandedClub: 1.9 / 3,
+  TwoHandedAxe: 2.9 / 3,
+  TwoHandedHammer: 2.9 / 3,
+  TwoHandedGreatsword: 3.032 / 3,
+  Daggers: 0.4,
+};
+
+/**
+ * Seconds one attack takes, from the game's data: a ranged shot = charge + fire (enshrouded.exe 0x140476700, the
+ * weapon's "Draw Speed" and "Throw Interval"), a melee hit = the mean of the light chain's follow-up times of its
+ * family. Null when it cannot be told: staves (the time is the spell's), fists, channelled things.
+ */
+export function attackSeconds(item: GearItem): number | null {
+  const d = item.damage;
+  if (!d) return null;
+  if (d.charge !== undefined && d.fire !== undefined && d.charge + d.fire > 0)
+    return Math.round((d.charge + d.fire) * 1000) / 1000;
+  return MELEE_SECONDS[item.type ?? ''] ?? null;
+}
+
+/** Damage per second of the light attacks: a hit / the attack time, to 0.1; null without a time. ESTIMATE. */
+export const weaponDps = (hit: number, seconds: number | null): number | null =>
+  seconds ? Math.round((hit / seconds) * 10) / 10 : null;
+
+/**
+ * What the game shows for the weapon itself (enshrouded.exe 0x140e779a0, used by the tooltip, the upgrade card and the
+ * slot tile, float32): trunc(trunc(seed x creep x L + seed) x dmgMod x speedMod). Exact; no attribute, no class.
+ */
+export function weaponItemDamage(c: Constants, item: GearItem): number | null {
+  const base = item.damage ? weaponBaseDamage(c, item.lvl[1]) : null;
+  if (base === null || !item.damage) return null;
+  return Math.trunc(Math.fround(Math.fround(base * item.damage.mod) * item.damage.speed));
+}
+
+/**
+ * Damage of one weapon; null when it has no damage setup or the data lacks the constants. A hit (applyDamage
+ * 0x1403dbdc0, structure read from the code): item damage x (1 + 0.05 x attribute points) x the weapon class
+ * (WeaponCategoryDamageMod, a product) x (1 + the headline Melee/Ranged/Magic Mod and the type mods, an SUM): the
+ * gear's "Melee Damage" lines multiply the hit, they do not add to the Strength share. The damage perks add their
+ * share to the split of the kinds (1.0). Not verified: the combo factor, the final rounding, critical hits,
+ * target and armour. `attrPct`/`modsPct`/`clsPct` are in %.
+ */
 export function weaponDamage(
   c: Constants,
   item: GearItem,
   attrPct: number,
+  modsPct: number,
   clsPct: number,
+  perkShare = 0,
+  arrow?: Ammo,
 ): WeaponDamage | null {
   const base = item.damage ? weaponBaseDamage(c, item.lvl[1]) : null;
-  if (base === null || !item.damage) return null;
-  const factor = item.damage.mod;
-  const total = Math.round(base * factor * (1 + attrPct / 100) * (1 + clsPct / 100));
-  return { base, factor, attr: attrPct, cls: clsPct, total };
+  const shown = weaponItemDamage(c, item);
+  if (base === null || shown === null || !item.damage) return null;
+  // a shot adds the arrow's damage to the bow's before the split by kind (enshrouded.exe 0x1403f0fb0); bows have
+  // no kind of their own, the arrow gives it
+  const ammo = arrow ? (ammoItemDamage(c, arrow) ?? 0) : 0;
+  const sum = (t: Partial<Record<string, number>> | undefined): number =>
+    Object.values(t ?? {}).reduce<number>((n, v) => n + (v ?? 0), 0);
+  const kinds = sum(item.damage.types) + sum(arrow?.damage?.types) || 1;
+  const total = Math.round(
+    (shown + ammo) *
+      (kinds + perkShare) *
+      (1 + attrPct / 100) *
+      (1 + clsPct / 100) *
+      (1 + modsPct / 100),
+  );
+  return {
+    base,
+    factor: item.damage.mod,
+    speed: item.damage.speed,
+    item: shown,
+    ammo,
+    attr: attrPct,
+    cls: clsPct,
+    mods: modsPct,
+    perks: perkShare,
+    total,
+  };
 }
 
 export interface WeaponGuard {

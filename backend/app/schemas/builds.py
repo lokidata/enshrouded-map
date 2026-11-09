@@ -22,6 +22,7 @@ SLOTS = frozenset(
         "weapon3",
         "shield",
         "ranged",
+        "arrow",  # the ammunition the DPS counts with the bow (an ammo guid of gear.json)
     ]
 )  # equipment slots
 MAX_UPGRADES = 8  # per piece (the data has 5 at most)

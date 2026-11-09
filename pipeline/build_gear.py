@@ -24,8 +24,25 @@
                                                  weapons); the screen shows another number, see below
                     "damage": {"mod": damage factor, "speed": speed factor, "hands": 1 | 2,
                                "attr": attribute key the weapon scales with (skills.json "attr") | None,
-                               "types": {kind: share}},   kinds of DAMAGE, only the non-zero ones
-                    "stats": [stat], "upgrades": [upgrade]}}}
+                               "types": {kind: share},    kinds of DAMAGE, only the non-zero ones
+                               "charge": s, "fire": s},   ranged weapons (bows, wands, staffs, throwables): the
+                                                          shot's charge and fire durations, see "ammo" below
+                    "stats": [stat], "upgrades": [upgrade]}},
+   "ammo": {guid: {"name": [fr, en], "type": "Arrow" | "Spell", "rarity", "lvl": [min, max] (min = max),
+                   "icon": "items/<guid>.png" | absent,
+                   "damage": {"mod", "speed", "types", "charge"?, "fire"?} | absent (Flare Arrow),
+                   "stats": [stat] (Mana Cost of eternal arrows and spells, Charge Time...),
+                   "upgrades": [upgrade] (eternal arrows), "desc": [fr, en] | absent}}}
+                   the arrows (bow ammunition) and spells (staff ammunition), same ids as craft.json
+
+  A shot (enshrouded.exe): the impact gets the weapon (ImpactItemConfig.usedItem) and the ammunition
+  (ImpactItemConfig.ammunitionItem, 0x1403f5fb0 -> 0x1403f2110); each one's integer damage is
+  trunc(trunc(base(L)) x mod x speed) at its own level (weapon: its level; ammunition: lvl, 0x140e8f480), base(L) =
+  weaponBaseDamage; the hit (0x1403f0fb0) is D = weapon's + ammunition's and the damage of a kind is
+  D x (weapon's share + the weapon's damage perks' shares + ammunition's share). Bows have no share: an arrow's
+  kind is the shot's kind. Shot time: charge = max(weapon, ammunition) x RangedCombat_*_ChargeDurationMod, fire =
+  max(...) x RangedCombat_*_FireDurationMod (Arrow or Spell, 0x140476700); "Draw Speed" / "Throw Interval" are
+  charge / fire. For every bow, wand and spell with both, speed = charge + fire (s).
 
   upgrade = {"name": [fr, en] | None, "armor": {kind: share}, "stats": [stat],
              "icon": "ui/<guid>.png" | None, "desc": [fr, en] | absent, "skill": skills.json node id | absent}
@@ -105,6 +122,14 @@ TEXTS = ("/rpgTerms/attributes/", "/rpgTerms/rarity", "/rpgTerms/comfort", "/rpg
          "/rpgTerms/perkAttributes/", "/inventory/damagePerkDescription", "/inventory/gemSlotHeader",
          "/inventory/lockedGemSlot")
 FLOAT = 3902764048  # impact value type of a float (the others read here are integers)
+# impact config ids enshrouded.exe reads as a ranged shot's charge and fire durations in s (0x140475780)
+TIMING = {1469785687: "charge", 1101517683: "fire"}
+
+
+def timing(d):
+    """The item's ranged charge / fire durations: {"charge": s, "fire": s}, only the ones it sets."""
+    return {TIMING[c["$value"]["configId"]["value"]]: round(c["$value"]["value"], 4)
+            for c in d["impactValues"]["simple"] if c["$value"]["configId"]["value"] in TIMING}
 
 
 def shares(distribution, names):
@@ -251,12 +276,26 @@ def build_gear(src, locas, export=None, out=None):
             perk["skill"] = skill
         perks[d["$guid"]] = perk
 
-    items = {}
+    items, ammo = {}, {}
     for p in glob.glob(f"{src}/ItemInfo/*.json"):
         with open(p, encoding="utf-8") as f:
             d = json.load(f)
         slot = SLOTS.get((d.get("equipment") or {}).get("slot"))
         name = loca(fnv_guid(d["name"])) if d.get("name") else None
+        if name and d["category"] == "Ammunition" and d.get("ammunitionType") in ("Arrow", "Spell"):
+            shot = {"name": name, "type": d["ammunitionType"], "rarity": d["rarity"],
+                    "lvl": [d["itemLevelRange"]["minLevel"], d["itemLevelRange"]["maxLevel"]]}
+            if export and write_item_picture(export, out, d["$guid"]):
+                shot["icon"] = f"items/{d['$guid']}.png"
+            if d["damageSetup"]["isSet"]:
+                setup = d["damageSetup"]
+                shot["damage"] = {"mod": round(setup["dmgMod"], 4), "speed": round(setup["speedMod"], 4),
+                                  "types": shares(setup["distribution"], DAMAGE), **timing(d)}
+            shot["stats"] = stats(d["uiValues"])
+            shot["upgrades"] = [perks[g] for g in d["perkReferences"] if g in perks]
+            if d["description"] and loca(fnv_guid(d["description"])):
+                shot["desc"] = loca(fnv_guid(d["description"]))
+            ammo[d["$guid"]] = shot
         if not slot or not name or d["category"] not in ("Equipment", "Weapons"):
             continue
         item = {"name": name, "slot": slot, "rarity": d["rarity"],
@@ -281,7 +320,7 @@ def build_gear(src, locas, export=None, out=None):
                          if c["$type"] == "keen::impact::AttributeReferenceConfig"), None)
             item["damage"] = {"mod": round(setup["dmgMod"], 4), "speed": round(setup["speedMod"], 4),
                               "hands": 2 if item["type"].startswith("TwoHanded") else 1, "attr": attr,
-                              "types": shares(setup["distribution"], DAMAGE)}
+                              "types": shares(setup["distribution"], DAMAGE), **timing(d)}
         item["stats"] = stats(d["uiValues"])
         item["upgrades"] = [perks[g] for g in d["perkReferences"] if g in perks]
         items[d["$guid"]] = item
@@ -293,7 +332,8 @@ def build_gear(src, locas, export=None, out=None):
           f"{sum(bool(i.get('damage', {}).get('attr')) for i in items.values())} weapons with a scaling attribute, "
           f"{len(perks)} upgrades, {sum('icon' in i for i in items.values())} pictures, "
           f"{sum('parry' in i for i in items.values())} with parry, "
-          f"{sum(1 for i in items.values() for u in i['upgrades'] if 'damage' in u)} damage perks, {len(texts)} texts, {len(pictures)} ui pictures",
+          f"{sum(1 for i in items.values() for u in i['upgrades'] if 'damage' in u)} damage perks, {len(texts)} texts, {len(pictures)} ui pictures, "
+          f"{sum(a['type'] == 'Arrow' for a in ammo.values())} arrows and {sum(a['type'] == 'Spell' for a in ammo.values())} spells",
           flush=True)
     return {"constants": constants, "player": player_base(src, parts), "rested": program_constants(programs[rested], ids),
-            "colors": colors, "texts": texts, "ui": pictures, "items": items}
+            "colors": colors, "texts": texts, "ui": pictures, "items": items, "ammo": ammo}
