@@ -12,6 +12,6 @@ Goal: one page holding the configuration of the player's game/server, starting f
 - [x] **Import**: load an existing server file (file picker + paste), validate (JSON, known keys, ranges), show unknown/ignored keys and what changed against the default, then apply.
 - [x] **Use in the calculations**: wire the settings the formulas depend on, for example Shroud time (world factor in "Temps dans la Brume"), enemy stamina for the parry (`weaponParry`: the screen's 26 needs about 0.85-0.88 instead of 1), damage/health factors, XP rate. Show in the tooltips which setting changes a value.
 - [x] **Tests**: Vitest (parse/validate/export round trip, defaults), Playwright (edit, export, import, reload), backend tests if stored server side.
-- [ ] **Docs**: `CLAUDE.md` paragraph + `pipeline/README.md` counts.
+- [x] **Docs**: functional rules in `docs/RULES.md`, README and `pipeline/README.md` counts.
 
 Open questions: which settings the server file really exposes in the current game version; whether the user wants the settings saved in their account or only in the browser.
