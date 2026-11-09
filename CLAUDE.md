@@ -3,6 +3,7 @@
 Migration of a working prototype into a real app. The plan (approved, in French) is in `docs/PLAN.md`; follow it step by step.
 
 ## Current state
+- Functional rules of every screen (accounts, teams, map, workshop, lore, enemies, character formulas, recommendations, game settings) are in `docs/RULES.md`: update it when a rule changes.
 - The migration of the original prototype (a single `index.html` + a stdlib `server.py`) is finished and the prototype was removed (it stays in the git history before commit "Remove legacy prototype").
 - `artifacts/map/`: generated map data (tiles/{z}/{x}_{y}.jpg, icons/, biomes.png, overview.jpg, map-data.json + resources.json). Must not go into git.
 - `pipeline/`: offline extraction scripts. They need the game install, `emm.exe` and ~6.5 GB of raw data that only exist on the Windows PC (D:\DEV\enshrouded_extract). They cannot run here; only edit them. `build_data.py` writes `map-data.json` + `resources.json` (reference counts: see `pipeline/README.md`).
