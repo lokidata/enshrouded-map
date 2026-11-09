@@ -1467,6 +1467,10 @@ test('game: the configuration is saved on the server and survives a cleared brow
   await page.reload();
   await page.getByRole('button', { name: 'Partie', exact: true }).click();
   await expect(health).toHaveValue('3');
+  // the account is shared with the next tests: put the saved configuration back to the default
+  await page.getByRole('button', { name: 'Tout rétablir' }).click();
+  await page.getByRole('button', { name: 'Enregistrer' }).click();
+  await expect(page.getByRole('button', { name: 'Enregistrer' })).toBeDisabled();
 });
 
 test('game: a preset can be changed, a field edit turns it into Custom, reset all goes back to Default', async ({
