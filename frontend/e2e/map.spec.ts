@@ -42,7 +42,9 @@ const user = `e2e${Date.now()}`;
 const password = 'correct horse battery';
 const setupToken = process.env['SETUP_TOKEN']!; // set by the Playwright config or by `make e2e-stack`
 
-test('register, mark an element, and find everything again after a reload', async ({ page }) => {
+test('register, mark an element, and find everything again after a reload @cross', async ({
+  page,
+}) => {
   const violations: string[] = [];
   page.on(
     'console',
@@ -86,10 +88,19 @@ test('register, mark an element, and find everything again after a reload', asyn
   await expect(page.getByRole('button', { name: 'Unmark' })).toBeVisible();
   await expect(boss.locator('.count').first()).toHaveText(/^1\//);
 
-  // let the debounced filter save go out, then reload
-  await page.waitForResponse(
-    (r) => r.url().includes('/api/v1/settings') && r.request().method() === 'PUT',
-  );
+  // let the debounced filter save go out (waiting for its response is a race: in a fast browser it is
+  // already sent), then reload
+  await expect
+    .poll(() =>
+      page.evaluate(async () =>
+        JSON.stringify(
+          ((await (await fetch('api/v1/settings')).json()) as { settings?: unknown }).settings,
+        ),
+      ),
+    )
+    // only the fast-travel markers differ from the defaults: the bosses are shown by default, so showing them
+    // again drops their override
+    .toBe('{"filters":{"fastTravel|*":false}}');
   await page.reload();
   await expect(page.locator('.who')).toContainText(`${user} · 1`);
   await expect(
@@ -122,7 +133,7 @@ test('register, mark an element, and find everything again after a reload', asyn
   await expect(page.getByRole('dialog').getByRole('heading')).toHaveText('Log in');
 });
 
-test('an account can only be created from a single-use invitation link', async ({
+test('an account can only be created from a single-use invitation link @cross', async ({
   page,
   browser,
 }) => {
@@ -173,7 +184,7 @@ test('an account can only be created from a single-use invitation link', async (
   await expect(late.getByRole('dialog').getByRole('heading')).toHaveText('Se connecter');
 });
 
-test('change my password, show it while typing, and reset someone else’s with a link', async ({
+test('change my password, show it while typing, and reset someone else’s with a link @cross', async ({
   page,
   browser,
 }) => {
@@ -500,7 +511,9 @@ test('the administrator can delete another account', async ({ page, browser }) =
   await expect(temp.getByRole('dialog').getByRole('alert')).toContainText('incorrect');
 });
 
-test('workshop: recipes, unlock tick, show on the map, altar, calculator', async ({ page }) => {
+test('workshop: recipes, unlock tick, show on the map, altar, calculator @cross', async ({
+  page,
+}) => {
   await page.goto('/');
   await page.getByLabel("Nom d'utilisateur").fill(user);
   await page
@@ -534,6 +547,42 @@ test('workshop: recipes, unlock tick, show on the map, altar, calculator', async
   await card.getByLabel('Débloquée').check();
   await expect(page.locator('.who')).toHaveText(who!); // a known recipe is not a marked map element
 
+  // discovered or not: the recipe ticked above is "discovered", the axe is not
+  await page.getByRole('button', { name: 'Non découvertes' }).click();
+  await expect(plank()).toHaveCount(0);
+  await page.getByRole('button', { name: 'Découvertes', exact: true }).click();
+  await expect(plank()).toHaveCount(1);
+  await page.getByRole('button', { name: 'Tout', exact: true }).click();
+  // the three buttons share one line, right under the search field
+  const filter = page.locator('app-status-filter button');
+  const tops = await filter.evaluateAll((els) =>
+    els.map((e) => Math.round(e.getBoundingClientRect().top)),
+  );
+  expect(new Set(tops).size, 'one line').toBe(1);
+  const searchBottom = await page
+    .locator('app-workshop')
+    .getByRole('searchbox')
+    .evaluate((e) => e.getBoundingClientRect().bottom);
+  expect(tops[0]).toBeGreaterThanOrEqual(searchBottom);
+  expect(tops[0]).toBeLessThan(searchBottom + 40);
+
+  // the recipes of two levels of one item are one card, with a badge and a choice by level
+  await search('bâton');
+  const staff = page
+    .locator('app-entry-card')
+    .filter({ has: page.getByRole('heading', { name: 'Bâton de test', exact: true }) });
+  await expect(staff).toHaveCount(1);
+  await expect(staff).toContainText('2 variantes');
+  const staffLevels = staff
+    .getByRole('group', { name: 'Variantes de la recette' })
+    .getByRole('button');
+  await expect(staffLevels).toHaveCount(2);
+  await expect(staffLevels.first()).toContainText('Niveau 12');
+  await expect(staff).toContainText('× 1'); // first variant: 1 wood
+  await staffLevels.nth(1).click();
+  await expect(staff).toContainText('× 2');
+  await search('planche');
+
   // the tick is saved: still there after a reload
   await expect(async () => {
     await page.reload();
@@ -565,6 +614,35 @@ test('workshop: recipes, unlock tick, show on the map, altar, calculator', async
   await expect(page.locator('app-entry-card', { hasText: 'Planche de test × 2' })).toBeVisible();
   await expect(page.locator('app-entry-card', { hasText: 'Hache de test' })).toBeVisible(); // used in
   await page.getByRole('button', { name: 'Retour' }).click();
+  // building items have their own page: they are not listed in Objets
+  await search('bloc de test');
+  await expect(page.locator('.item-grid')).toContainText('Aucun résultat');
+  await expect(page.locator('.item-grid')).not.toContainText('Bloc de test');
+  // discovered items: the plank is made by the recipe ticked above, the axe is not made by any known recipe
+  await search('');
+  await page.getByRole('button', { name: 'Non découvertes' }).click();
+  await expect(page.locator('.item-grid')).not.toContainText('Planche de test');
+  await expect(page.locator('.item-grid')).toContainText('Hache de test');
+  await page.getByRole('button', { name: 'Découvertes', exact: true }).click();
+  await expect(page.locator('.item-grid')).toContainText('Planche de test');
+  await expect(page.locator('.item-grid')).not.toContainText('Hache de test');
+  await page.getByRole('button', { name: 'Tout', exact: true }).click();
+  // discovered items have the green frame on their tile, not only inside the card
+  await expect(page.locator('.item-card', { hasText: 'Planche de test' })).toHaveClass(/known/);
+  await expect(page.locator('.item-card', { hasText: 'Mur de test' })).not.toHaveClass(/known/);
+  // two levels of the same item: one tile with a badge, the variants are on its page
+  await search('bâton');
+  const axes = page.locator('.item-card', { hasText: 'Bâton de test' });
+  await expect(axes).toHaveCount(1);
+  await expect(axes).toContainText('2 variantes');
+  await axes.click();
+  const levels = page.getByRole('group', { name: "Variantes de l'objet" }).getByRole('button');
+  await expect(levels).toHaveCount(2);
+  await expect(levels.first()).toHaveAttribute('aria-pressed', 'true');
+  await levels.nth(1).click();
+  await expect(levels.nth(1)).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('button', { name: 'Retour' }).click();
+  await search('');
   // armour sets: grouped in one card, the page lists the pieces and how to get them
   await search('tenue');
   await expect(page.locator('.item-grid li')).toHaveCount(1);
@@ -597,7 +675,25 @@ test('workshop: recipes, unlock tick, show on the map, altar, calculator', async
   await page.getByLabel('Type', { exact: true }).selectOption('');
   await page.getByRole('tab', { name: 'Établis' }).click();
   await page.getByRole('button', { name: /Établi de test/ }).click();
-  await expect(page.locator('app-entry-card', { hasText: 'Hache de test' })).toBeVisible();
+  await expect(
+    page
+      .locator('app-entry-card')
+      .filter({ has: page.getByRole('heading', { name: 'Hache de test', exact: true }) }),
+  ).toBeVisible();
+  // the discovery filter works on the stations too: the axe recipe is not discovered
+  await page.getByRole('button', { name: 'Découvertes', exact: true }).click();
+  await expect(
+    page
+      .locator('app-entry-card')
+      .filter({ has: page.getByRole('heading', { name: 'Hache de test', exact: true }) }),
+  ).toHaveCount(0);
+  await page.getByRole('button', { name: 'Non découvertes' }).click();
+  await expect(
+    page
+      .locator('app-entry-card')
+      .filter({ has: page.getByRole('heading', { name: 'Hache de test', exact: true }) }),
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Tout', exact: true }).click();
   await page.getByRole('tab', { name: 'Recettes' }).click();
   await page.getByRole('button', { name: 'Tableau' }).click();
   await expect(page.getByRole('row', { name: /Hache de test/ })).toContainText('Établi de test');
@@ -609,6 +705,16 @@ test('workshop: recipes, unlock tick, show on the map, altar, calculator', async
   await expect(cards.filter({ hasText: 'Mur de test' })).toContainText('Planche');
   await expect(cards.filter({ hasText: 'Bloc de test' })).toContainText('Planche');
   await expect(cards.first()).toContainText('Bloc de test'); // by name
+  // two recipes for the same piece are one card with a choice, each variant says what tells it apart
+  const wall = cards.filter({ hasText: 'Mur de test' });
+  await expect(wall).toHaveCount(1);
+  const variants = wall.getByRole('group', { name: 'Variantes de la recette' }).getByRole('button');
+  await expect(variants).toHaveCount(2);
+  await expect(variants.first()).toContainText('matériaux');
+  await expect(wall).toContainText('Planche'); // the first variant
+  await variants.nth(1).click();
+  await expect(wall).toContainText('Bois de test');
+  await expect(wall).not.toContainText('Planche');
   // the groups are the category list (no separate group menu)
   await expect(page.getByLabel('Groupe')).toHaveCount(0);
   await page.getByRole('button', { name: /^Décoration/ }).click();
@@ -1385,7 +1491,7 @@ test('comfort points are kept in the draft and give the Rested duration', async 
   ).toContainText('64 min');
 });
 
-test('game: edit, export, import, reload, AXE', async ({ page }) => {
+test('game: edit, export, import, reload, AXE @cross', async ({ page }) => {
   await page.goto('/');
   await page.getByLabel("Nom d'utilisateur").fill(user);
   await page
@@ -1609,7 +1715,7 @@ function fog(): Buffer {
   return b;
 }
 
-test('save import: a character save ticks its recipes and quests', async ({ page }) => {
+test('save import: a character save ticks its recipes and quests @cross', async ({ page }) => {
   await page.goto('/');
   await page.getByLabel("Nom d'utilisateur").fill(user);
   await page
@@ -1706,4 +1812,35 @@ test('save import: a character save ticks its recipes and quests', async ({ page
   await expect(page.locator('img.leaflet-marker-icon[src*="unique"]')).toHaveCount(1); // z = 800: explored
   await page.getByLabel('Seulement la zone explorée (sauvegarde importée)').uncheck();
   await expect(async () => expect(await icons.count()).toBe(before)).toPass();
+});
+
+test('opening the workshop or the lore does not move their content @cross', async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.addInitScript(() => {
+    (window as unknown as { __cls: number }).__cls = 0;
+    new PerformanceObserver((list) => {
+      for (const e of list.getEntries())
+        (window as unknown as { __cls: number }).__cls += (e as unknown as { value: number }).value;
+    }).observe({ type: 'layout-shift', buffered: true });
+  });
+  await page.goto('/');
+  await page.getByLabel("Nom d'utilisateur").fill(user);
+  await page
+    .getByRole('dialog')
+    .getByLabel('Mot de passe', { exact: true })
+    .fill('a brand new passphrase');
+  await page.getByRole('dialog').getByRole('button', { name: 'Se connecter' }).click();
+  await expect(page.locator('.who')).toContainText(user);
+  const shift = (): Promise<number> =>
+    page.evaluate(() => (window as unknown as { __cls: number }).__cls);
+  for (const [entry, tabs] of [
+    ['Atelier', 'workshop'],
+    ['Lore', 'lore'],
+  ] as const) {
+    const before = await shift();
+    await page.getByRole('button', { name: entry, exact: true }).click();
+    await expect(page.locator(`app-${tabs} [role="tablist"]`)).toBeVisible();
+    await page.waitForTimeout(800); // late fonts and images would shift it now
+    expect(await shift(), entry).toBeLessThan(before + 0.001);
+  }
 });

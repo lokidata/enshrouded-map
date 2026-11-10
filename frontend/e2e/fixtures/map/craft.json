@@ -27,7 +27,8 @@
     },
     "b": {
       "name": ["Bloc de test", "Test block"],
-      "icon": null
+      "icon": null,
+      "cat": "building"
     },
     "h": {
       "name": ["Casque de test", "Test helmet"],
@@ -52,6 +53,20 @@
     "q": {
       "name": ["Objet lié", "Linked item"],
       "icon": null
+    },
+    "v1": {
+      "name": ["Bâton de test", "Test staff"],
+      "icon": null,
+      "cat": "tools",
+      "rarity": "Rare",
+      "lvl": 12
+    },
+    "v2": {
+      "name": ["Bâton de test", "Test staff"],
+      "icon": null,
+      "cat": "tools",
+      "rarity": "Rare",
+      "lvl": 22
     }
   },
   "stations": {
@@ -180,6 +195,14 @@
         {
           "item": "a0000000-0000-4000-8000-00000000000a",
           "count": 1
+        },
+        {
+          "item": "v1",
+          "count": 1
+        },
+        {
+          "item": "v2",
+          "count": 1
         }
       ],
       "seconds": 2,
@@ -187,6 +210,46 @@
         "type": "item",
         "items": ["a0000000-0000-4000-8000-00000000000a"],
         "text": ["Obtenir : Carte au trésor", "Get: Treasure map"]
+      }
+    },
+    {
+      "id": "a1111111-1111-4111-8111-111111111111",
+      "name": ["Bâton de test", "Test staff"],
+      "output": {
+        "item": "v1",
+        "count": 1
+      },
+      "station": null,
+      "inputs": [
+        {
+          "item": "w",
+          "count": 1
+        }
+      ],
+      "seconds": 0,
+      "unlock": {
+        "type": "flame",
+        "text": ["Flamme niveau 2", "Flame level 2"]
+      }
+    },
+    {
+      "id": "a2222222-2222-4222-8222-222222222222",
+      "name": ["Bâton de test", "Test staff"],
+      "output": {
+        "item": "v2",
+        "count": 1
+      },
+      "station": null,
+      "inputs": [
+        {
+          "item": "w",
+          "count": 2
+        }
+      ],
+      "seconds": 0,
+      "unlock": {
+        "type": "flame",
+        "text": ["Flamme niveau 2", "Flame level 2"]
       }
     }
   ],
@@ -264,6 +327,36 @@
       },
       "group": "Deco",
       "tier": "T3",
+      "sources": {
+        "groups": [
+          {
+            "cat": "chest",
+            "name": ["Coffre de test", "Test chest"]
+          }
+        ]
+      }
+    },
+    {
+      "id": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+      "name": ["Mur de test", "Test wall"],
+      "output": {
+        "item": "m",
+        "count": 1
+      },
+      "station": null,
+      "inputs": [
+        {
+          "item": "w",
+          "count": 3
+        }
+      ],
+      "seconds": 0,
+      "unlock": {
+        "type": "none",
+        "text": ["Sans condition", "No condition"]
+      },
+      "group": "Blocks",
+      "tier": "T1",
       "sources": {
         "groups": [
           {

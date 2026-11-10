@@ -35,6 +35,11 @@ export class Found {
     return { done: ids.filter((id) => marks.has(id)).length, total: ids.length };
   }
 
+  /** An item is discovered when one of its places on the map is marked, or a recipe that makes it is known. */
+  itemKnown(item: string, makers: readonly Entry[]): boolean {
+    return this.itemProgress(item).done > 0 || makers.some((e) => this.known(e));
+  }
+
   /** The item that unlocks a recipe, when it is the only one and it is on the map; null otherwise. */
   unlockItem(entry: Entry): string | null {
     const items = entry.unlock.items ?? [];

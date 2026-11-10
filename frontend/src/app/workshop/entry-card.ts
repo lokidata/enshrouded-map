@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, signal } from '@angular/core';
+import { Component, computed, inject, input, model, signal } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { calculate } from '../core/craft.calc';
 import { CraftService } from '../core/craft.service';
@@ -14,7 +14,12 @@ import { ItemChip } from './item-chip';
   selector: 'app-entry-card',
   imports: [TranslocoPipe, ItemChip],
   template: `
-    <article class="entry" [class.known]="known()">
+    <article class="entry" [class.known]="known()" [class.multi]="variants().length > 1">
+      @if (variants().length > 1) {
+        <span class="variants-badge">
+          {{ 'wsVariantsBadge' | transloco: { n: variants().length } }}
+        </span>
+      }
       <header>
         @if (entry().output; as out) {
           @if (craft.icon(out.item); as icon) {
@@ -43,6 +48,24 @@ import { ItemChip } from './item-chip';
           {{ 'wsKnown' | transloco }}
         </label>
       </header>
+      @if (variants().length > 1) {
+        <div class="variants" role="group" [attr.aria-label]="'wsVariants' | transloco">
+          @for (v of variants(); track v.id; let i = $index) {
+            <button
+              type="button"
+              class="pill"
+              [class.known]="found.known(v)"
+              [attr.aria-pressed]="variant() === i"
+              (click)="variant.set(i)"
+            >
+              {{ variantLabel(v) }}
+              @if (found.known(v)) {
+                <span aria-hidden="true"> ✓</span>
+              }
+            </button>
+          }
+        </div>
+      }
       <ul class="inputs">
         @for (input of entry().inputs; track $index) {
           <li>
@@ -81,6 +104,10 @@ import { ItemChip } from './item-chip';
 })
 export class EntryCard {
   readonly entry = input.required<Entry | BlockEntry>();
+  /** Other ways to make the same piece (another bench, another cost): a choice is offered when there are several. */
+  readonly variants = input<readonly (Entry | BlockEntry)[]>([]);
+  /** Index of the shown variant; the parent passes the matching `entry`. */
+  readonly variant = model(0);
 
   protected readonly craft = inject(CraftService);
   protected readonly found = inject(Found);
@@ -102,6 +129,18 @@ export class EntryCard {
 
   protected readonly known = computed(() => this.found.known(this.entry()));
   protected readonly tier = computed(() => (this.entry() as BlockEntry).tier);
+
+  /** What tells a variant apart: the level of what it makes when they all differ, else its bench and how many kinds of materials it takes. */
+  protected variantLabel(v: Entry): string {
+    const level = this.levelOf(v);
+    if (level && this.variants().every((o) => o === v || this.levelOf(o) !== level))
+      return this.lang.t('wsLevel', { n: level });
+    return `${this.craft.stationName(v.station)} · ${this.lang.t('wsMaterials', { n: v.inputs.length })}`;
+  }
+
+  private levelOf(v: Entry): number {
+    return (v.output && this.craft.data()?.items[v.output.item]?.lvl) || 0;
+  }
 
   /** "Any of: A, B, C" for an ingredient that several items can fill. */
   protected anyOf(input: Input): string {

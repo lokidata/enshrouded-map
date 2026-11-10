@@ -1,7 +1,7 @@
 E2E_SETUP_TOKEN = e2e-setup-token-0123
 E2E_COMPOSE = docker compose -f docker-compose.yml -f compose.e2e.yml
 
-.PHONY: check check-backend check-frontend check-security lock stack e2e-stack scan
+.PHONY: e2e-browsers check check-backend check-frontend check-security lock stack e2e-stack scan
 
 # Code quality, tests, dependencies, secrets, images. e2e-stack is separate: it wipes the compose database.
 check: check-backend check-frontend check-security
@@ -13,6 +13,11 @@ check-backend:
 
 check-frontend:
 	cd frontend && npm audit --omit=dev && npm run lint && npx ng build && npx ng test --watch=false && npx playwright test
+
+# Firefox and WebKit run the tests tagged @cross, each with its own API and database.
+e2e-browsers:
+	cd frontend && npx playwright install --with-deps firefox webkit \
+	  && E2E_BROWSER=firefox npx playwright test && E2E_BROWSER=webkit npx playwright test
 
 check-security: gitleaks scan
 

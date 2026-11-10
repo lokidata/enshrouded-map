@@ -42,6 +42,10 @@ Migration of a working prototype into a real app. The plan (approved, in French)
 ## Save import (issue #40, phase 1 partial)
 - `frontend/src/app/save-import/` (`ksd.ts`, `knowledge.ts`, `save-import.logic.ts`, `save-import-dialog.ts`; profile menu > Import a save; design in `docs/DESIGN-save-import.md`): recipes + quests only, ids hashed in the browser (no pipeline change). Lore pages use the `kid` of each page of `lore.json` (written by `build_lore.py`: rerun the pipeline on the Windows PC to get it; without it no page is imported); the explored area (`fogofwar`) is imported as a veil layer on the map (`fog.ts`, `fog.store.ts`, browser only, forgotten at logout); places (`kids` per marker in `map-data.json`, `pipeline/build_places.py` called by `build_data.py`) and picked-up unique items (single-place items, flag 1) are offered too, each with its checkbox. Dependency `fzstd` (pinned). Never commit a real save.
 
+## Browsers in the e2e suite
+- `npx playwright test` runs Chromium (everything). Firefox and WebKit run only the tests whose title has `@cross` (account chain: register, invitation, password; workshop, game, save import, layout shift): `E2E_BROWSER=firefox|webkit npx playwright test`, one browser per run because each run starts its own API with an empty database (the first test creates the first account). `make e2e-browsers` and the CI job `e2e (firefox|webkit)` do it. A new test that must run there needs the whole account chain before it, so tag it too. WebKit needs system libraries (`sudo npx playwright install-deps`): it only runs in CI here.
+- `.tabs` of the workshop and lore keep a fixed `min-height` (40 px), and a test measures the layout shift when they open (Chromium, 1920 wide): fonts are preloaded in `index.html`.
+
 ## Licence
 MIT (see `LICENSE`): use, fork and modify freely, the copyright notice must stay. It covers the original code only; the third-party skills in `.agents/` keep their own licences. The game's data and assets are not part of the repo and belong to their owners.
 

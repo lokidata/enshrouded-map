@@ -2,11 +2,13 @@ import { Component, computed, inject, input, signal } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { CraftService } from '../core/craft.service';
 import { BlockEntry, Entry } from '../core/craft.model';
+import { groupBy, itemVariantKey } from '../core/craft.group';
 import { normalize } from '../core/filter.store';
 import { LangService } from '../core/lang.service';
 import { Found } from '../core/found.service';
 import { EntryCard } from './entry-card';
 import { ItemChip } from './item-chip';
+import { Status, StatusFilter } from './status-filter';
 
 const PAGE = 40;
 type Facet = 'cat' | 'rarity';
@@ -24,7 +26,7 @@ const tierRank = (tier: string): number => (tier === NO_TIER ? 99 : Number(tier.
 
 @Component({
   selector: 'app-entries-tab',
-  imports: [TranslocoPipe, EntryCard, ItemChip],
+  imports: [TranslocoPipe, EntryCard, ItemChip, StatusFilter],
   template: `
     <div class="browse">
       <aside class="side" [attr.aria-label]="'wsFilters' | transloco">
@@ -35,13 +37,14 @@ const tierRank = (tier: string): number => (tier === NO_TIER ? 99 : Number(tier.
           [value]="query()"
           (input)="setQuery($any($event.target).value)"
         />
+        <app-status-filter [value]="status()" (valueChange)="setStatus($event)" />
         @if (categories(); as cat) {
           <h3 class="side-title">{{ 'wsCategory' | transloco }}</h3>
           <ul class="cat-list">
             <li>
               <button type="button" [class.active]="!cat.current" (click)="pickCategory('')">
                 <span>{{ 'wsAllItems' | transloco }}</span
-                ><b>{{ source().length }}</b>
+                ><b>{{ sourceCount() }}</b>
               </button>
             </li>
             @for (o of cat.options; track o.value) {
@@ -104,10 +107,6 @@ const tierRank = (tier: string): number => (tier === NO_TIER ? 99 : Number(tier.
             </select>
           </label>
         }
-        <label class="check">
-          <input type="checkbox" [checked]="locked()" (change)="locked.set(!locked())" />
-          {{ 'wsLockedOnly' | transloco }}
-        </label>
       </aside>
       <section class="main">
         <div class="bar">
@@ -130,7 +129,7 @@ const tierRank = (tier: string): number => (tier === NO_TIER ? 99 : Number(tier.
               {{ 'wsTier' | transloco }}
             </button>
           }
-          <span class="count" role="status">{{ 'wsCount' | transloco: { n: list().length } }}</span>
+          <span class="count" role="status">{{ 'wsCount' | transloco: { n: total() } }}</span>
           <button
             type="button"
             class="pill"
@@ -193,16 +192,21 @@ const tierRank = (tier: string): number => (tier === NO_TIER ? 99 : Number(tier.
           </table>
         } @else {
           <div class="cards">
-            @for (e of shown(); track e.id) {
-              <app-entry-card [entry]="e" />
+            @for (g of shownCards(); track g.key) {
+              <app-entry-card
+                [entry]="g.items[variantOf(g.key, g.items.length)]"
+                [variants]="g.items"
+                [variant]="variantOf(g.key, g.items.length)"
+                (variantChange)="pick(g.key, $event)"
+              />
             } @empty {
               <p class="empty">{{ 'wsNoResult' | transloco }}</p>
             }
           </div>
         }
-        @if (list().length > limit()) {
+        @if (total() > limit()) {
           <button type="button" class="more pill" (click)="limit.set(limit() + PAGE)">
-            {{ 'wsMore' | transloco: { n: list().length - limit() } }}
+            {{ 'wsMore' | transloco: { n: total() - limit() } }}
           </button>
         }
       </section>
@@ -218,12 +222,17 @@ export class EntriesTab {
   private readonly lang = inject(LangService);
   private readonly found = inject(Found);
 
+  protected readonly sourceCount = computed(
+    () => groupBy(this.source(), (e) => this.cardKey(e)).length,
+  );
   protected readonly query = signal('');
   protected readonly station = signal('');
   protected readonly group = signal('');
   protected readonly tier = signal('');
   protected readonly sort = signal<'name' | 'tier'>('name');
-  protected readonly locked = signal(false);
+  protected readonly status = signal<Status>('all');
+  /** The variant chosen on each card of a group of pieces (card key -> index). */
+  protected readonly chosen = signal<Readonly<Record<string, number>>>({});
   protected readonly limit = signal(PAGE);
   protected readonly sel = signal<Record<Facet, string>>({ cat: '', rarity: '' });
   protected readonly view = signal<'grid' | 'table'>('grid');
@@ -252,10 +261,11 @@ export class EntriesTab {
 
   protected readonly facets = computed(() =>
     FACETS.map((f) => {
+      // counted in cards: the levels of one item are one card
       const counts = new Map<string, number>();
-      for (const e of this.source()) {
-        const value = this.meta(e, f.key);
-        if (value) counts.set(value, (counts.get(value) ?? 0) + 1);
+      for (const g of groupBy(this.source(), (e) => this.cardKey(e))) {
+        for (const value of new Set(g.items.map((e) => this.meta(e, f.key)).filter(Boolean)))
+          counts.set(value, (counts.get(value) ?? 0) + 1);
       }
       const lang = this.lang.lang();
       const options = [...counts]
@@ -269,8 +279,8 @@ export class EntriesTab {
   protected readonly categories = computed(() => {
     if (this.kind() === 'blocks') {
       const n = new Map<string, number>();
-      for (const e of this.source()) {
-        const id = (e as BlockEntry).group;
+      for (const g of groupBy(this.source(), (e) => this.cardKey(e))) {
+        const id = (g.items[0] as BlockEntry).group;
         n.set(id, (n.get(id) ?? 0) + 1);
       }
       const options = this.groups()
@@ -311,7 +321,7 @@ export class EntriesTab {
     const tier = this.tier();
     const byTier = this.sort() === 'tier';
     const haystack = this.haystack();
-    const locked = this.locked();
+    const status = this.status();
     const lang = this.lang.lang();
     return this.source()
       .filter(
@@ -321,7 +331,7 @@ export class EntriesTab {
           FACETS.every((f) => !sel[f.key] || this.meta(e, f.key) === sel[f.key]) &&
           (!group || (e as BlockEntry).group === group) &&
           (!tier || ((e as BlockEntry).tier ?? NO_TIER) === tier) &&
-          (!locked || !this.found.known(e)),
+          (status === 'all' || this.found.known(e) === (status === 'known')),
       )
       .sort(
         (a, b) =>
@@ -332,6 +342,43 @@ export class EntriesTab {
 
   protected readonly shown = computed(() => this.list().slice(0, this.limit()));
 
+  /** The grid shows one card per building piece, with a choice between its variants (other bench, other cost). */
+  protected readonly cards = computed(() =>
+    groupBy(this.list(), (e) => this.cardKey(e)).map((g) => ({
+      ...g,
+      // the levels of one item in order, the lowest first
+      items: [...g.items].sort((a, b) => this.levelOf(a) - this.levelOf(b)),
+    })),
+  );
+
+  private levelOf(e: Entry): number {
+    return (e.output && this.craft.data()?.items[e.output.item]?.lvl) || 0;
+  }
+  protected readonly shownCards = computed(() => this.cards().slice(0, this.limit()));
+  /** What the count and the "more" button talk about: cards in the grid, rows in the table. */
+  protected readonly total = computed(() =>
+    this.view() === 'table' ? this.list().length : this.cards().length,
+  );
+
+  /**
+   * Pieces with the same name, group, tier and product are variants of one another, and so are the recipes of
+   * the levels of one item (and its other benches): one card each, with a choice between them.
+   */
+  private cardKey(e: Entry | BlockEntry): string {
+    if (this.kind() === 'blocks')
+      return [e.name[0], (e as BlockEntry).group, tierOf(e), e.output?.item ?? ''].join('|');
+    const item = e.output && this.craft.data()?.items[e.output.item];
+    return item ? `r|${itemVariantKey(item)}` : e.id;
+  }
+
+  protected variantOf(key: string, count: number): number {
+    return Math.min(this.chosen()[key] ?? 0, count - 1);
+  }
+
+  protected pick(key: string, index: number): void {
+    this.chosen.update((c) => ({ ...c, [key]: index }));
+  }
+
   protected tierText(e: Entry): string {
     const tier = tierOf(e);
     return tier === NO_TIER ? '' : tier;
@@ -339,6 +386,11 @@ export class EntriesTab {
 
   protected setFacet(key: Facet, value: string): void {
     this.sel.update((s) => ({ ...s, [key]: value }));
+    this.limit.set(PAGE);
+  }
+
+  protected setStatus(value: Status): void {
+    this.status.set(value);
     this.limit.set(PAGE);
   }
 
