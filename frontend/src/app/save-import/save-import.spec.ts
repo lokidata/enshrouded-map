@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { readKnowledge, guidId } from './knowledge';
 import { KsdError, readKsd } from './ksd';
-import { FOG_SIZE, fogShare, readFog, veilPixels } from './fog';
+import { FOG_SIZE, cellsFromVeil, fogShare, isExplored, readFog, veilPixels } from './fog';
+import { characterNumber, forgetImport, lastImport, rememberImport } from './import-history';
 import { fresh, propose } from './save-import.logic';
 
 const enc = new TextEncoder();
@@ -150,5 +151,42 @@ describe('fog of war', () => {
     expect(px[3]).toBe(0); // seen: clear
     expect(px[px.length - 1]).toBe(153); // unseen: 60 % veil
     expect(() => readFog(new Uint8Array(100))).toThrow(KsdError);
+  });
+});
+
+describe('explored area', () => {
+  const size = 10240;
+  const cells = new Uint8Array(FOG_SIZE * FOG_SIZE);
+  cells.fill(255, 0, 100 * FOG_SIZE); // the 100 northern rows are explored
+
+  it('reads the grid north-up: row 0 is the northern edge (z = size)', () => {
+    expect(isExplored(cells, 4, size - 4, size)).toBe(true);
+    expect(isExplored(cells, 4, 4, size)).toBe(false); // the south
+    expect(isExplored(cells, -5, size - 4, size)).toBe(false); // outside the world
+    expect(isExplored(cells, 4, size + 50, size)).toBe(false);
+  });
+
+  it('gets the cells back from the veil it was drawn as', () => {
+    const back = cellsFromVeil(veilPixels(cells));
+    expect(back[0]).toBeGreaterThanOrEqual(250);
+    expect(back[back.length - 1]).toBeLessThan(10);
+    expect(isExplored(back, 4, size - 4, size)).toBe(true);
+  });
+});
+
+describe('import history', () => {
+  it('names the character slot of a save file', () => {
+    expect(characterNumber('character3.ksd')).toBe(3);
+    expect(characterNumber('world0.ksd')).toBeNull();
+  });
+
+  it('round-trips and survives bad or blocked storage', () => {
+    forgetImport();
+    expect(lastImport()).toBeNull();
+    rememberImport({ name: 'character1.ksd', at: '2026-11-10T10:00:00Z', counts: { quest: 3 } });
+    expect(lastImport()?.counts.quest).toBe(3);
+    localStorage.setItem('lastImport', '{bad');
+    expect(lastImport()).toBeNull();
+    forgetImport();
   });
 });

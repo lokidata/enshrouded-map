@@ -9,6 +9,7 @@ import { PlannerStore } from './planner.store';
 import { GearService } from './gear.service';
 import { GamePresetsService } from './game-presets.service';
 import { FogStore } from '../save-import/fog.store';
+import { forgetImport } from '../save-import/import-history';
 import { GameSettingsStore } from './game-settings.store';
 import { GemsService } from './gems.service';
 import { SkillsService } from './skills.service';
@@ -144,6 +145,7 @@ export class SessionService {
     this.planner.clear();
     this.gameSettings.clear();
     this.fog.clear();
+    forgetImport();
     this.views.set('map');
     this.filters.reset();
     this.saved = this.pending = null;

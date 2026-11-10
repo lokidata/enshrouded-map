@@ -28,3 +28,20 @@ export function veilPixels(cells: Uint8Array): Uint8ClampedArray {
   }
   return px;
 }
+
+/** Is the point (x, z) in metres on an explored cell? The grid is north-up and the map's z grows to the north (see `latLng` in map-view), so row 0 is z = size. Outside the world: false. */
+export function isExplored(cells: Uint8Array, x: number, z: number, size: number): boolean {
+  const cell = size / FOG_SIZE;
+  const col = Math.floor(x / cell);
+  const row = Math.floor((size - z) / cell);
+  if (col < 0 || col >= FOG_SIZE || row < 0 || row >= FOG_SIZE) return false;
+  return cells[row * FOG_SIZE + col] >= 128;
+}
+
+/** The cells (0..255) back from the veil image: the veil's alpha is 0.6 x unseen (see `veilPixels`), so alpha under 77 means seen. */
+export function cellsFromVeil(rgba: Uint8ClampedArray): Uint8Array {
+  const cells = new Uint8Array(rgba.length / 4);
+  for (let i = 0; i < cells.length; i++)
+    cells[i] = Math.min(255, 255 - Math.round(rgba[4 * i + 3] / 0.6));
+  return cells;
+}

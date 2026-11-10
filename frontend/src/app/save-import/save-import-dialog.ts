@@ -1,3 +1,4 @@
+import { DatePipe } from '@angular/common';
 import { Component, ElementRef, effect, inject, signal, viewChild } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { AuthService } from '../core/auth.service';
@@ -6,6 +7,7 @@ import { MapDataService } from '../core/map-data.service';
 import { LoreService } from '../core/lore.service';
 import { ProgressStore } from '../core/progress.store';
 import { FogStore } from './fog.store';
+import { ImportEntry, characterNumber, lastImport, rememberImport } from './import-history';
 import { fogShare, readFog } from './fog';
 import { readKnowledge } from './knowledge';
 import { MAX_FILE, readKsd } from './ksd';
@@ -21,7 +23,7 @@ interface Line {
 /** Ticks what a local `character*.ksd` save already knows (recipes, finished quests). The file is read here, it is never sent. */
 @Component({
   selector: 'app-save-import-dialog',
-  imports: [TranslocoPipe],
+  imports: [TranslocoPipe, DatePipe],
   template: `
     <dialog #dialog aria-labelledby="import-title" (close)="auth.saveImportOpen.set(false)">
       <button
@@ -34,6 +36,11 @@ interface Line {
       </button>
       <h2 id="import-title">{{ 'saveImport' | transloco }}</h2>
       <p class="hint">{{ 'saveImportHint' | transloco }}</p>
+      @if (previous(); as p) {
+        <p class="hint">
+          {{ 'saveImportLast' | transloco: { name: p.name, date: (p.at | date: 'short') } }}
+        </p>
+      }
       <label>
         {{ 'saveImportFile' | transloco }}
         <input type="file" accept=".ksd" (change)="read($event)" />
@@ -42,7 +49,12 @@ interface Line {
         {{ error() ? ('saveImportErr_' + error() | transloco) : '' }}
       </div>
       @if (lines().length) {
-        <p>{{ 'saveImportFound' | transloco: { name: fileName() } }}</p>
+        <p>
+          {{ 'saveImportFound' | transloco: { name: fileName() } }}
+          @if (slot() !== null) {
+            ({{ 'saveImportSlot' | transloco: { n: slot() } }})
+          }
+        </p>
         <ul class="members">
           @for (l of lines(); track l.kind; let i = $index) {
             <li>
@@ -100,6 +112,9 @@ export class SaveImportDialog {
   protected readonly error = signal('');
   protected readonly done = signal<number | null>(null);
   protected readonly busy = signal(false);
+  /** The previous import, read each time the dialog opens. */
+  protected readonly previous = signal<ImportEntry | null>(null);
+  protected readonly slot = signal<number | null>(null);
   /** The explored area found in the save, and whether to import it. */
   protected readonly fog = signal<{ cells: Uint8Array; percent: number; take: boolean } | null>(
     null,
@@ -114,6 +129,7 @@ export class SaveImportDialog {
         this.fog.set(null);
         this.error.set('');
         this.done.set(null);
+        this.previous.set(lastImport());
         el.showModal();
       }
       if (!open && el.open) el.close();
@@ -154,6 +170,7 @@ export class SaveImportDialog {
       );
       const done = this.progress.done();
       this.fileName.set(file.name);
+      this.slot.set(characterNumber(file.name));
       const f = sections.get('fogofwar');
       if (f) {
         const cells = readFog(f);
@@ -178,6 +195,10 @@ export class SaveImportDialog {
     await this.progress.setAll(ids, true);
     this.busy.set(false);
     if (this.progress.saveFailed()) return this.error.set('save');
+    const counts: ImportEntry['counts'] = {};
+    for (const l of this.lines()) if (l.take) counts[l.kind] = l.ids.length;
+    rememberImport({ name: this.fileName(), at: new Date().toISOString(), counts });
+    this.previous.set(lastImport());
     this.done.set(ids.length + (fog?.take ? 1 : 0));
     this.lines.set([]);
     this.fog.set(null);

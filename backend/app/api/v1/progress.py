@@ -24,29 +24,39 @@ def get_progress(user: CurrentUser, db: DbSession) -> ProgressOut:
 @router.put("")
 def put_progress(body: ProgressIn, user: CurrentUser, db: DbSession) -> dict[str, str]:
     ids = list(dict.fromkeys(body.ids))
-    if body.done:
+    try:
+        _apply(db, user.id, ids, body.done)
+    except IntegrityError:
+        # A concurrent request inserted the same marks between our read and our write: the
+        # second pass sees them and inserts only what is left (the request is idempotent).
+        db.rollback()
+        try:
+            _apply(db, user.id, ids, body.done)
+        except IntegrityError:
+            db.rollback()
+            raise HTTPException(409, "conflict") from None
+    return {}
+
+
+def _apply(db: DbSession, user_id: int, ids: list[str], done: bool) -> None:
+    if done:
         existing: set[str] = set()
         for chunk in batched(ids, CHUNK):
             existing.update(
                 db.scalars(
-                    select(Mark.mark_id).where(Mark.user_id == user.id, Mark.mark_id.in_(chunk))
+                    select(Mark.mark_id).where(Mark.user_id == user_id, Mark.mark_id.in_(chunk))
                 )
             )
         new = [i for i in ids if i not in existing]
-        count = db.scalar(select(func.count()).select_from(Mark).where(Mark.user_id == user.id))
+        count = db.scalar(select(func.count()).select_from(Mark).where(Mark.user_id == user_id))
         if (count or 0) + len(new) > get_settings().max_marks:
             raise HTTPException(413, "too_many_marks")
         if new:
             now = utcnow()
             db.execute(
-                insert(Mark), [{"user_id": user.id, "mark_id": i, "created_at": now} for i in new]
+                insert(Mark), [{"user_id": user_id, "mark_id": i, "created_at": now} for i in new]
             )
     else:
         for chunk in batched(ids, CHUNK):
-            db.execute(delete(Mark).where(Mark.user_id == user.id, Mark.mark_id.in_(chunk)))
-    try:
-        db.commit()
-    except IntegrityError:  # concurrent identical request
-        db.rollback()
-        raise HTTPException(409, "conflict") from None
-    return {}
+            db.execute(delete(Mark).where(Mark.user_id == user_id, Mark.mark_id.in_(chunk)))
+    db.commit()

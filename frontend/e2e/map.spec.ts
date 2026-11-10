@@ -1678,4 +1678,32 @@ test('save import: a character save ticks its recipes and quests', async ({ page
     ]),
   );
   await expect(page.locator('.leaflet-control-layers')).toContainText('Zone explorée');
+
+  // the progress summary
+  await menu(page, 'Ma progression');
+  const summary = page.getByRole('dialog', { name: 'Ma progression' });
+  await expect(summary).toContainText('1 / 2'); // quests
+  await expect(summary).toContainText('25 %'); // explored
+  await expect(summary.locator('progress')).not.toHaveCount(0);
+  await summary.getByRole('button', { name: 'Fermer', exact: true }).last().click();
+
+  // the last import is remembered
+  await menu(page, 'Importer une sauvegarde');
+  await expect(page.getByRole('dialog', { name: 'Importer une sauvegarde' })).toContainText(
+    'Dernier import : character0.ksd',
+  );
+  await page
+    .getByRole('dialog', { name: 'Importer une sauvegarde' })
+    .getByRole('button', { name: 'Fermer', exact: true })
+    .last()
+    .click();
+
+  // only the explored area: the markers outside the northern quarter (z > 768 of 1024) go
+  const icons = page.locator('.leaflet-marker-icon');
+  const before = await icons.count();
+  await page.getByLabel('Seulement la zone explorée (sauvegarde importée)').check();
+  await expect(async () => expect(await icons.count()).toBeLessThan(before)).toPass();
+  await expect(page.locator('img.leaflet-marker-icon[src*="unique"]')).toHaveCount(1); // z = 800: explored
+  await page.getByLabel('Seulement la zone explorée (sauvegarde importée)').uncheck();
+  await expect(async () => expect(await icons.count()).toBe(before)).toPass();
 });
