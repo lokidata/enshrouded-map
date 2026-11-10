@@ -2130,6 +2130,10 @@ test('save import: the character sheet (level, worn equipment, skills) goes into
   await page.getByRole('button', { name: 'Builds enregistrés', exact: true }).click();
   await page.getByLabel('Nom du build').fill('Import');
   await page.getByRole('button', { name: 'Enregistrer' }).click();
-  const saved = await page.evaluate(async () => (await fetch('api/v1/builds')).json());
-  expect(Object.keys(saved[0]).sort()).toEqual(['id', 'name', 'nodes', 'updated_at']);
+  await expect
+    .poll(async () => {
+      const saved = await page.evaluate(async () => (await fetch('api/v1/builds')).json());
+      return saved.length ? Object.keys(saved[0]).sort() : null;
+    })
+    .toEqual(['id', 'name', 'nodes', 'updated_at']);
 });
