@@ -18,6 +18,14 @@ const WHOLE = '*';
  * that differs from its category. Elements added to the map later follow their
  * category, so a category shown in full stays in full.
  */
+const read = (key: string): boolean => {
+  try {
+    return localStorage.getItem(key) === '1';
+  } catch {
+    return false;
+  }
+};
+
 @Injectable({ providedIn: 'root' })
 export class FilterStore {
   private readonly mapData = inject(MapDataService);
@@ -25,7 +33,18 @@ export class FilterStore {
 
   readonly overrides = signal<Readonly<Record<string, boolean>>>({});
   readonly query = signal('');
+  /** Show only the markers on a cell of the explored area imported from a save (this browser only). */
+  readonly onlyExplored = signal(read('onlyExplored'));
   private readonly normalizedQuery = computed(() => normalize(this.query().trim()));
+
+  setOnlyExplored(on: boolean): void {
+    this.onlyExplored.set(on);
+    try {
+      localStorage.setItem('onlyExplored', on ? '1' : '0');
+    } catch {
+      // storage blocked: not remembered
+    }
+  }
 
   isShown(cat: string, key: string): boolean {
     const overrides = this.overrides();

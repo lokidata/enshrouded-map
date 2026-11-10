@@ -22,6 +22,7 @@ import { MapDataService } from '../core/map-data.service';
 import { MapFocus } from '../core/map-focus.service';
 import { ProgressStore } from '../core/progress.store';
 import { Halo, TeamStore } from '../core/team.store';
+import { isExplored } from '../save-import/fog';
 import { ProgressLegend } from './progress-legend';
 
 // Icon size per zoom level, and the zoom from which each label kind shows.
@@ -58,6 +59,9 @@ const haloColor = (halo: Halo): string => {
   };
   return haloColors[halo];
 };
+
+/** Names of places and regions are shown wherever they are: the filter is for what there is to do. */
+const NOT_FOGGED = new Set(['region', 'areaName']);
 
 interface Placed {
   m: MapMarker;
@@ -401,12 +405,16 @@ export class MapView {
     const zoom = this.zoom();
     this.filters.overrides();
     const searching = this.filters.query().trim() !== '';
+    const cells = this.filters.onlyExplored() ? this.fog.cells() : null;
     for (const p of this.placed) {
       const matches = this.filters.matchesText(...p.m.name, p.m.raw);
       // Labels only show from their zoom level, unless they match a search.
       const zoomOk =
         !(p.m.cat in LABEL_MIN_ZOOM) || zoom >= LABEL_MIN_ZOOM[p.m.cat] || (searching && matches);
-      p.wanted = this.filters.isShown(p.m.cat, p.key) && matches && zoomOk;
+      // shortcut: only the placed markers follow the explored area, not the dots of chests and plants
+      const explored =
+        !cells || NOT_FOGGED.has(p.m.cat) || isExplored(cells, p.m.x, p.m.z, this.size);
+      p.wanted = this.filters.isShown(p.m.cat, p.key) && matches && zoomOk && explored;
     }
     for (const p of this.placed) {
       const group = this.groups.get(p.m.cat)!;

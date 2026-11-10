@@ -1,4 +1,7 @@
+import pytest
 from conftest import ApiClient
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 
 URL = "/api/v1/progress"
 
@@ -73,3 +76,32 @@ def test_bulk(user: ApiClient) -> None:
     assert len(user.get(URL).json()["marks"]) == 2000
     assert user.put(URL, json={"ids": ids, "done": False}).status_code == 200
     assert user.get(URL).json() == {"marks": []}
+
+
+def test_concurrent_identical_put_is_not_a_conflict(
+    user: ApiClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A commit that loses the race (unique violation) is retried once instead of answering 409."""
+    real_commit = Session.commit
+    calls = {"n": 0}
+
+    def flaky(self: Session) -> None:
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise IntegrityError("INSERT", {}, Exception("unique"))
+        real_commit(self)
+
+    monkeypatch.setattr(Session, "commit", flaky)
+    assert user.put(URL, json={"ids": ["chest:1:2", "boss:3:4"]}).status_code == 200
+    monkeypatch.undo()
+    assert sorted(user.get(URL).json()["marks"]) == ["boss:3:4", "chest:1:2"]
+
+
+def test_persistent_integrity_error_stays_a_conflict(
+    user: ApiClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def always(self: Session) -> None:
+        raise IntegrityError("INSERT", {}, Exception("unique"))
+
+    monkeypatch.setattr(Session, "commit", always)
+    assert user.put(URL, json={"ids": ["chest:1:2"]}).status_code == 409

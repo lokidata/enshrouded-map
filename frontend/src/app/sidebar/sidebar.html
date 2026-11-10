@@ -7,6 +7,15 @@
     [value]="filters.query()"
     (input)="filters.query.set($any($event.target).value)"
   />
+  <label class="only-explored">
+    <input
+      type="checkbox"
+      [checked]="filters.onlyExplored()"
+      [disabled]="fog.cells() === null"
+      (change)="filters.setOnlyExplored($any($event.target).checked)"
+    />
+    {{ 'onlyExplored' | transloco }}
+  </label>
   <div class="toggles">
     <button type="button" (click)="filters.showAll()">{{ 'all' | transloco }}</button>
     <button type="button" (click)="filters.hideAll()">{{ 'none' | transloco }}</button>

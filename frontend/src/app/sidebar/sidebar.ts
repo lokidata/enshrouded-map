@@ -1,4 +1,5 @@
 import { Component, computed, inject } from '@angular/core';
+import { FogStore } from '../save-import/fog.store';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { Catalog } from '../core/catalog.service';
 import { FilterStore } from '../core/filter.store';
@@ -15,6 +16,7 @@ import { CategoryCard } from './category-card';
 })
 export class Sidebar {
   protected readonly filters = inject(FilterStore);
+  protected readonly fog = inject(FogStore);
   protected readonly lang = inject(LangService);
   protected readonly mapData = inject(MapDataService);
   private readonly catalog = inject(Catalog);
