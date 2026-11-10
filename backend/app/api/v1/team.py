@@ -11,7 +11,7 @@ from app.core.config import get_settings
 from app.core.logging import audit
 from app.core.security import new_token, token_digest
 from app.db.base import utcnow
-from app.db.models import Invitation, Mark, Team, TeamMember, User
+from app.db.models import ActiveCharacter, Invitation, Mark, Team, TeamMember, User
 from app.db.queries import leave_team
 from app.schemas.auth import InvitationOut
 from app.schemas.team import (
@@ -195,11 +195,13 @@ def team_marks(user: CurrentUser, db: DbSession) -> TeamMarks:
     marks: dict[str, list[int]] = defaultdict(list)
     if member:
         rows = db.execute(
-            select(Mark.mark_id, Mark.user_id)
-            .join(TeamMember, TeamMember.user_id == Mark.user_id)
+            select(Mark.mark_id, ActiveCharacter.user_id)
+            # a member counts with the profile they follow now
+            .join(ActiveCharacter, ActiveCharacter.character_id == Mark.character_id)
+            .join(TeamMember, TeamMember.user_id == ActiveCharacter.user_id)
             .where(
                 TeamMember.team_id == member.team_id,
-                Mark.user_id != user.id,
+                ActiveCharacter.user_id != user.id,
                 Mark.mark_id.not_like("recipe:%"),  # known recipes and found notes are personal,
                 Mark.mark_id.not_like("lore:%"),  # not map halos
                 Mark.mark_id.not_like("quest:%"),

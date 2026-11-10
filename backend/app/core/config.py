@@ -29,7 +29,8 @@ class Settings(BaseSettings):
 
     max_marks: int = 200_000
     max_settings_bytes: int = 256_000
-    max_builds: int = 50  # saved skill builds per player
+    max_builds: int = 50  # saved skill builds per character profile
+    max_characters: int = 10  # character profiles per player
     max_body_bytes: int = 4_000_000
 
     @field_validator("setup_token")

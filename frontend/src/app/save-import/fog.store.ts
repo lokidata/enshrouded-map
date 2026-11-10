@@ -4,7 +4,25 @@ import { FOG_SIZE, cellsFromVeil, fogShare, veilPixels } from './fog';
 const KEY = 'fog';
 const PERCENT = 'fogShare';
 
-/** The explored area imported from a save, as a veil image. Kept in this browser only (never sent, never shared with the team); forgotten at logout. */
+/** localStorage keys of one character profile's explored area. */
+const keyOf = (id: number): string => `${KEY}:${id}`;
+const percentOf = (id: number): string => `${PERCENT}:${id}`;
+
+/** Removes the stored explored areas: one profile's, or every profile's (and the one of the first version). */
+function wipe(id: number | null): void {
+  try {
+    const keys = Object.keys(localStorage).filter((k) =>
+      id === null
+        ? k === KEY || k === PERCENT || /^fog(Share)?:/.test(k)
+        : k === keyOf(id) || k === percentOf(id),
+    );
+    for (const k of keys) localStorage.removeItem(k);
+  } catch {
+    // nothing to remove
+  }
+}
+
+/** The explored area imported from a save, as a veil image, one per character profile. Kept in this browser only (never sent, never shared with the team); forgotten at logout. */
 @Injectable({ providedIn: 'root' })
 export class FogStore {
   /** PNG data URL of the veil, null without an import. */
@@ -13,13 +31,27 @@ export class FogStore {
   readonly share = signal<number | null>(null);
   /** The explored cells (north-up grid), decoded from the veil; null without an import or until decoded. */
   readonly cells = signal<Uint8Array | null>(null);
+  /** The character profile whose area is shown. */
+  private id: number | null = null;
 
-  constructor() {
+  /** Shows the area of this profile (or none). The first version kept one area per browser: the first profile that asks takes it. */
+  use(id: number | null): void {
+    this.id = id;
+    this.url.set(null);
+    this.share.set(null);
+    this.cells.set(null);
+    if (id === null) return;
     try {
-      this.url.set(localStorage.getItem(KEY));
-      const n = Number(localStorage.getItem(PERCENT));
-      this.share.set(this.url() && Number.isFinite(n) ? n : null);
-      const url = this.url();
+      if (localStorage.getItem(keyOf(id)) === null && localStorage.getItem(KEY) !== null) {
+        localStorage.setItem(keyOf(id), localStorage.getItem(KEY)!);
+        localStorage.setItem(percentOf(id), localStorage.getItem(PERCENT) ?? '');
+        localStorage.removeItem(KEY);
+        localStorage.removeItem(PERCENT);
+      }
+      const url = localStorage.getItem(keyOf(id));
+      const n = Number(localStorage.getItem(percentOf(id)));
+      this.url.set(url);
+      this.share.set(url && Number.isFinite(n) ? n : null);
       if (url) void this.decode(url);
     } catch {
       // storage blocked: nothing remembered
@@ -35,9 +67,10 @@ export class FogStore {
     this.url.set(url);
     this.cells.set(cells);
     this.share.set(fogShare(cells));
+    if (this.id === null) return;
     try {
-      localStorage.setItem(KEY, url);
-      localStorage.setItem(PERCENT, String(this.share()));
+      localStorage.setItem(keyOf(this.id), url);
+      localStorage.setItem(percentOf(this.id), String(this.share()));
     } catch {
       // too big or blocked: shown for this visit only
     }
@@ -60,15 +93,17 @@ export class FogStore {
     }
   }
 
+  /** A deleted profile's area goes with it. */
+  forget(id: number): void {
+    wipe(id);
+  }
+
+  /** Logout: nothing stays for the next account. */
   clear(): void {
+    this.id = null;
     this.url.set(null);
     this.share.set(null);
     this.cells.set(null);
-    try {
-      localStorage.removeItem(KEY);
-      localStorage.removeItem(PERCENT);
-    } catch {
-      // nothing to remove
-    }
+    wipe(null);
   }
 }

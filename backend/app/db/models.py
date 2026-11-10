@@ -1,7 +1,16 @@
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, LargeBinary, String
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Integer,
+    LargeBinary,
+    String,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, utcnow
@@ -30,11 +39,34 @@ class AuthSession(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime, index=True)
 
 
-class Mark(Base):
-    __tablename__ = "marks"
+class Character(Base):
+    """A character profile of a player: its own progress marks and skill builds."""
+
+    __tablename__ = "characters"
+    __table_args__ = (UniqueConstraint("user_id", "name"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(40))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class ActiveCharacter(Base):
+    """The profile a player follows now: what /progress, /builds and the team halos use."""
+
+    __tablename__ = "active_characters"
 
     user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    character_id: Mapped[int] = mapped_column(ForeignKey("characters.id", ondelete="CASCADE"))
+
+
+class Mark(Base):
+    __tablename__ = "marks"
+
+    character_id: Mapped[int] = mapped_column(
+        ForeignKey("characters.id", ondelete="CASCADE"), primary_key=True
     )
     mark_id: Mapped[str] = mapped_column(String(64), primary_key=True)  # "category:x:z"
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
@@ -140,6 +172,9 @@ class Build(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    character_id: Mapped[int] = mapped_column(
+        ForeignKey("characters.id", ondelete="CASCADE"), index=True
+    )
     name: Mapped[str] = mapped_column(String(60))
     nodes: Mapped[dict[str, int]] = mapped_column(JSON)
     level: Mapped[int] = mapped_column(Integer, default=1, server_default="1")

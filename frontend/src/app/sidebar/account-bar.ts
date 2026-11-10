@@ -1,6 +1,7 @@
 import { Component, ElementRef, inject, signal } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { AuthService } from '../core/auth.service';
+import { CharacterStore } from '../core/character.store';
 import { copyText, hashLink, timeOf } from '../core/links';
 import { ProgressStore } from '../core/progress.store';
 import { SessionService } from '../core/session.service';
@@ -16,6 +17,17 @@ import { TeamStore } from '../core/team.store';
   template: `
     <div class="account">
       @if (auth.user(); as name) {
+        @if (characters.list().length > 1) {
+          <select
+            class="character"
+            [attr.aria-label]="'characterActive' | transloco"
+            (change)="switchTo(+$any($event.target).value)"
+          >
+            @for (c of characters.list(); track c.id) {
+              <option [value]="c.id" [selected]="c.active">{{ c.name }}</option>
+            }
+          </select>
+        }
         <button
           type="button"
           class="who"
@@ -32,6 +44,9 @@ import { TeamStore } from '../core/team.store';
             </button>
             <button type="button" role="menuitem" (click)="pick(openTeam)">
               {{ 'team' | transloco }}
+            </button>
+            <button type="button" role="menuitem" (click)="pick(openCharacters)">
+              {{ 'characters' | transloco }}
             </button>
             <button type="button" role="menuitem" (click)="pick(openProgress)">
               {{ 'progressTitle' | transloco }}
@@ -84,6 +99,20 @@ import { TeamStore } from '../core/team.store';
       position: relative;
       font-size: 13px;
       color: var(--muted);
+    }
+    .account {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .character {
+      max-width: 160px;
+      padding: 4px 6px;
+      border: 1px solid var(--gold-dim);
+      border-radius: 3px;
+      background: var(--bg);
+      color: var(--gold);
+      font-size: 13px;
     }
     .who {
       max-width: 300px;
@@ -171,6 +200,7 @@ import { TeamStore } from '../core/team.store';
 export class AccountBar {
   protected readonly auth = inject(AuthService);
   protected readonly progress = inject(ProgressStore);
+  protected readonly characters = inject(CharacterStore);
   protected readonly session = inject(SessionService);
   protected readonly team = inject(TeamStore);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
@@ -182,12 +212,17 @@ export class AccountBar {
   protected readonly invite = (): Promise<void> => this.createInvite();
   protected readonly openTeam = (): void => this.team.dialogOpen.set(true);
   protected readonly openPassword = (): void => this.auth.accountOpen.set(true);
+  protected readonly openCharacters = (): void => this.characters.dialogOpen.set(true);
   protected readonly openProgress = (): void => this.auth.progressOpen.set(true);
   protected readonly openSaveImport = (): void => this.auth.saveImportOpen.set(true);
   protected readonly openPasskeys = (): void => this.auth.passkeysOpen.set(true);
   protected readonly openAdmin = (): void => this.auth.adminOpen.set(true);
   protected readonly openDelete = (): void => this.auth.deleteOpen.set(true);
   protected readonly logout = (): Promise<void> => this.session.logout();
+
+  protected switchTo(id: number): void {
+    void this.session.selectCharacter(id).catch(() => this.auth.notice.set('errors.unknown'));
+  }
 
   /** Closes the menu, then runs the chosen entry. */
   protected pick(action: () => unknown): void {

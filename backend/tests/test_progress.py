@@ -82,6 +82,7 @@ def test_concurrent_identical_put_is_not_a_conflict(
     user: ApiClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A commit that loses the race (unique violation) is retried once instead of answering 409."""
+    user.get(URL)  # the first profile is made now, not by the patched commit
     real_commit = Session.commit
     calls = {"n": 0}
 
@@ -100,6 +101,8 @@ def test_concurrent_identical_put_is_not_a_conflict(
 def test_persistent_integrity_error_stays_a_conflict(
     user: ApiClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    user.get(URL)  # the first profile is made now, not by the patched commit
+
     def always(self: Session) -> None:
         raise IntegrityError("INSERT", {}, Exception("unique"))
 

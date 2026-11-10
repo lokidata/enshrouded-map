@@ -25,15 +25,23 @@ const MAX_UPGRADES = 8; // as the API
 const MAX_GEM_LEVEL = 200; // as the API
 export type Gems = Partial<Record<WeaponSlot, GemPick>>;
 const DRAFT = 'skillDraft';
+const LEVELS = 'itemLevels';
+const ACTIVE = 'activeWeapon';
+/** Each character profile keeps its own sheet in this browser: the keys carry the profile id. */
+const keyOf = (base: string, id: number): string => `${base}:${id}`;
 const clamp = (n: number, min: number, max: number) =>
   Math.min(Math.max(Math.trunc(n) || min, min), max);
 
 export const WEAPON_SLOTS = ['weapon1', 'weapon2', 'weapon3', 'ranged'] as const;
 export type WeaponSlot = (typeof WEAPON_SLOTS)[number];
 const isWeapon = (k: string) => (WEAPON_SLOTS as readonly string[]).includes(k);
-function readLevels(): Upgrades {
+function readLevels(id: number | null): Upgrades {
+  if (id === null) return {};
   try {
-    const raw = JSON.parse(localStorage.getItem('itemLevels') ?? '{}') as Record<string, unknown>;
+    const raw = JSON.parse(localStorage.getItem(keyOf(LEVELS, id)) ?? '{}') as Record<
+      string,
+      unknown
+    >;
     return Object.fromEntries(
       Object.entries(raw).filter(([k, v]) => isSlot(k) && Number.isInteger(v) && (v as number) > 0),
     ) as Upgrades;
@@ -42,9 +50,10 @@ function readLevels(): Upgrades {
   }
 }
 const isSlot = (k: string) => (GEAR_SLOTS as readonly string[]).includes(k);
-function readActive(): WeaponSlot {
+function readActive(id: number | null): WeaponSlot {
+  if (id === null) return 'weapon1';
   try {
-    const v = localStorage.getItem('activeWeapon');
+    const v = localStorage.getItem(keyOf(ACTIVE, id));
     return WEAPON_SLOTS.find((s) => s === v) ?? 'weapon1';
   } catch {
     return 'weapon1';
@@ -59,7 +68,9 @@ export class PlannerStore {
   private readonly gearData = inject(GearService);
   private readonly gemsData = inject(GemsService);
 
-  private readonly draft = this.readDraft();
+  /** The character profile whose sheet this is (null before the login: nothing is read or written). */
+  private profile: number | null = null;
+  private readonly draft = this.readDraft(null);
   readonly levels = signal<Levels>(this.draft.levels);
   /** Character level and Flame level, and what is worn (see gear.json). */
   readonly level = signal(this.draft.level);
@@ -74,7 +85,7 @@ export class PlannerStore {
   /** The gem set in each weapon slot, at its level. */
   readonly gems = signal<Gems>(this.draft.gems);
   /** The weapon in hand: only its stat lines count in the totals (the others stay in the bag). */
-  readonly active = signal<WeaponSlot>(readActive());
+  readonly active = signal<WeaponSlot>('weapon1');
   /** What is worn without the weapons that are not in hand. */
   readonly inHand = computed<Gear>(() =>
     Object.fromEntries(
@@ -82,7 +93,7 @@ export class PlannerStore {
     ),
   );
   /** Base level chosen per slot (between the item's minimum and maximum), on top of its upgrades; device only. */
-  readonly itemLevels = signal<Upgrades>(readLevels());
+  readonly itemLevels = signal<Upgrades>({});
   readonly name = signal('');
   readonly saved = signal<readonly SavedBuild[]>([]);
   /** The saved build being edited; null for a new one. */
@@ -97,8 +108,9 @@ export class PlannerStore {
 
   setActive(slot: WeaponSlot): void {
     this.active.set(slot);
+    if (this.profile === null) return;
     try {
-      localStorage.setItem('activeWeapon', slot);
+      localStorage.setItem(keyOf(ACTIVE, this.profile), slot);
     } catch {
       // storage blocked: the choice is just not kept
     }
@@ -168,8 +180,9 @@ export class PlannerStore {
     if (level) next[slot] = Math.trunc(level);
     else delete next[slot];
     this.itemLevels.set(next);
+    if (this.profile === null) return;
     try {
-      localStorage.setItem('itemLevels', JSON.stringify(next));
+      localStorage.setItem(keyOf(LEVELS, this.profile), JSON.stringify(next));
     } catch {
       // storage blocked: the level is just not kept
     }
@@ -231,12 +244,79 @@ export class PlannerStore {
     }
   }
 
+  /**
+   * The player follows this character profile (null: none): its sheet (level, Flame, equipment, gems,
+   * skills, comfort) is read back, and its builds are listed, none of them open. The first version kept one
+   * sheet per browser: the first profile that asks takes it.
+   */
+  async switchProfile(id: number | null): Promise<void> {
+    this.profile = null; // nothing is written while the sheet is swapped
+    this.currentId.set(null);
+    this.name.set('');
+    this.error.set(null);
+    if (id !== null) this.adoptLegacy(id);
+    const d = this.readDraft(id);
+    this.levels.set(d.levels);
+    this.level.set(d.level);
+    this.flame.set(d.flame);
+    this.comfort.set(d.comfort);
+    this.gear.set(d.gear);
+    this.arrow.set(d.arrow);
+    this.upgrades.set(d.upgrades);
+    this.gems.set(d.gems);
+    this.itemLevels.set(readLevels(id));
+    this.active.set(readActive(id));
+    this.profile = id;
+    await this.load();
+  }
+
+  /** A deleted profile's sheet goes with it. */
+  forgetProfile(id: number): void {
+    this.wipe([keyOf(DRAFT, id), keyOf(LEVELS, id), keyOf(ACTIVE, id)]);
+  }
+
   clear(): void {
+    this.profile = null;
     this.saved.set([]);
     this.currentId.set(null);
     this.name.set('');
     this.error.set(null);
     this.reset();
+    this.wipe(
+      Object.keys(this.storage()).filter((k) =>
+        [DRAFT, LEVELS, ACTIVE].some((b) => k === b || k.startsWith(`${b}:`)),
+      ),
+    );
+  }
+
+  private storage(): Record<string, string> {
+    try {
+      return { ...localStorage };
+    } catch {
+      return {};
+    }
+  }
+
+  private wipe(keys: string[]): void {
+    try {
+      for (const k of keys) localStorage.removeItem(k);
+    } catch {
+      // nothing to remove
+    }
+  }
+
+  private adoptLegacy(id: number): void {
+    try {
+      for (const base of [DRAFT, LEVELS, ACTIVE]) {
+        const old = localStorage.getItem(base);
+        if (old !== null && localStorage.getItem(keyOf(base, id)) === null) {
+          localStorage.setItem(keyOf(base, id), old);
+          localStorage.removeItem(base);
+        }
+      }
+    } catch {
+      // storage blocked: nothing to move
+    }
   }
 
   /** Saves the build under its name: a new one, or an update of the one being edited. */
@@ -321,7 +401,7 @@ export class PlannerStore {
     return Math.min(this.gearData.data()?.constants[key] ?? api, api);
   }
 
-  private readDraft(): {
+  private readDraft(id: number | null): {
     levels: Levels;
     level: number;
     flame: number;
@@ -332,7 +412,11 @@ export class PlannerStore {
     gems: Gems;
   } {
     try {
-      const raw = JSON.parse(localStorage.getItem(DRAFT) ?? '{}') as Record<string, unknown>;
+      if (id === null) throw new Error('no profile');
+      const raw = JSON.parse(localStorage.getItem(keyOf(DRAFT, id)) ?? '{}') as Record<
+        string,
+        unknown
+      >;
       // before the Build screen the draft was only the levels
       const levels = (raw['levels'] ?? raw) as Record<string, number>;
       const gear = Object.fromEntries(
@@ -375,9 +459,10 @@ export class PlannerStore {
   }
 
   private writeDraft(): void {
+    if (this.profile === null) return;
     try {
       localStorage.setItem(
-        DRAFT,
+        keyOf(DRAFT, this.profile),
         JSON.stringify({
           levels: this.levels(),
           level: this.level(),
