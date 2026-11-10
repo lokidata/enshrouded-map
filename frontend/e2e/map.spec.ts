@@ -1769,7 +1769,13 @@ test('save import: a character save ticks its recipes and quests @cross', async 
   await dialog.getByRole('button', { name: 'Importer', exact: true }).click();
   await expect(dialog).toContainText('6 éléments cochés'); // recipe, quest, page, place, item and the fog
   await expect(dialog.getByRole('button', { name: 'Importer', exact: true })).toHaveCount(0);
-  expect(await page.evaluate(() => localStorage.getItem('fog'))).toMatch(/^data:image\/png/);
+  // another character's save goes to a new profile (this one already has marks)
+  expect(
+    await page.evaluate(
+      () => Object.entries(localStorage).find(([k]) => k.startsWith('fog:'))?.[1] ?? '',
+    ),
+  ).toMatch(/^data:image\/png/);
+  await expect(page.getByLabel('Personnage actif')).toHaveCount(1);
   await page.reload();
   const marks = await page.evaluate(
     async () => (await (await fetch('api/v1/progress')).json()).marks,
@@ -1843,4 +1849,93 @@ test('opening the workshop or the lore does not move their content @cross', asyn
     await page.waitForTimeout(800); // late fonts and images would shift it now
     expect(await shift(), entry).toBeLessThan(before + 0.001);
   }
+});
+
+test('character profiles: each has its own progress, switched from the top bar', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByLabel("Nom d'utilisateur").fill(user);
+  await page
+    .getByRole('dialog')
+    .getByLabel('Mot de passe', { exact: true })
+    .fill('a brand new passphrase');
+  await page.getByRole('dialog').getByRole('button', { name: 'Se connecter' }).click();
+  await expect(page.locator('.who')).toContainText(user);
+  const marks = (): Promise<string[]> =>
+    page.evaluate(async () => (await (await fetch('api/v1/progress')).json()).marks);
+  const before = await marks();
+  const switcher = page.getByLabel('Personnage actif');
+  // the profiles an earlier test left (read from the API: the top bar fills in after the login)
+  const chars = await page.evaluate(
+    async () =>
+      (await (await fetch('api/v1/characters')).json()) as { id: number; active: boolean }[],
+  );
+  const profiles = chars.length;
+  const first = String(chars.find((c) => c.active)!.id);
+  await expect(switcher).toHaveCount(profiles > 1 ? 1 : 0);
+
+  // add a character: it starts empty and is the one followed
+  await menu(page, 'Mes personnages');
+  const dialog = page.getByRole('dialog', { name: 'Mes personnages' });
+  await dialog.getByLabel('Nouveau personnage').fill('Frère');
+  await dialog.getByRole('button', { name: 'Ajouter' }).click();
+  await expect(switcher.locator('option')).toHaveCount(profiles + 1);
+  await expect(switcher.locator('option:checked')).toHaveText('Frère');
+  await dialog.getByRole('button', { name: 'Fermer', exact: true }).last().click();
+  expect(await marks()).toEqual([]);
+
+  // the character sheet (level, equipment...) belongs to the profile too
+  const hasSheet = await page.evaluate(async () =>
+    (await (await fetch('gear.json')).text()).includes('fixture_gear'),
+  );
+  const level = page.locator('app-build').getByLabel('Niveau du personnage', { exact: true });
+  if (hasSheet) {
+    await page
+      .locator('app-topbar')
+      .getByRole('button', { name: 'Personnage', exact: true })
+      .click();
+    await level.fill('33');
+    await level.dispatchEvent('change');
+    await expect(level).toHaveValue('33');
+    await page.locator('app-topbar').getByRole('button', { name: 'Carte', exact: true }).click();
+  }
+
+  // a save imported while the empty profile is followed goes into it
+  await menu(page, 'Importer une sauvegarde');
+  const imp = page.getByRole('dialog', { name: 'Importer une sauvegarde' });
+  await imp.getByLabel('Fichier de sauvegarde').setInputFiles({
+    name: 'character1.ksd',
+    mimeType: 'application/octet-stream',
+    buffer: fakeKsd({ player_knowledge: knowledge([[444, 1]]) }),
+  });
+  await expect(imp.getByRole('radio').first()).toBeChecked(); // into "Frère"
+  await imp.getByRole('button', { name: 'Importer', exact: true }).click();
+  await expect(imp).toContainText('1 éléments cochés');
+  await imp.getByRole('button', { name: 'Fermer', exact: true }).last().click();
+  expect(await marks()).toEqual(['quest:444']);
+
+  // switching to the first profile brings its own marks back
+  await switcher.selectOption(first ?? { index: 0 });
+  await expect.poll(marks).toEqual(before);
+
+  if (hasSheet) {
+    await expect(level).not.toHaveValue('33'); // the first profile keeps its own sheet
+    await switcher.selectOption({ label: 'Frère' });
+    await expect(level).toHaveValue('33');
+    await switcher.selectOption(first ?? { index: 0 });
+    await expect.poll(marks).toEqual(before);
+  }
+
+  // delete the second profile: one left, no switch in the top bar
+  await menu(page, 'Mes personnages');
+  page.once('dialog', (d) => void d.accept());
+  await page
+    .getByRole('dialog', { name: 'Mes personnages' })
+    .getByRole('button', { name: 'Supprimer' })
+    .last()
+    .click();
+  if (profiles > 1) await expect(switcher.locator('option')).toHaveCount(profiles);
+  else await expect(switcher).toHaveCount(0);
+  expect(await marks()).toEqual(before);
 });

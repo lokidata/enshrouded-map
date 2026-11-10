@@ -96,6 +96,48 @@ input {
 input:focus {
   border-color: var(--gold);
 }
+/* ticks and radio buttons are not text fields: no full width, no field frame */
+input[type='checkbox'],
+input[type='radio'] {
+  flex: none;
+  width: auto;
+  margin: 0;
+  padding: 0;
+  background: none;
+  box-shadow: none;
+  accent-color: var(--accent);
+}
+/* a tick or a radio button and its text on one line */
+label:has(> input[type='checkbox']),
+label:has(> input[type='radio']) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 0;
+  font: 400 15px/1.25 var(--ui);
+  letter-spacing: 0;
+  color: var(--text);
+  cursor: pointer;
+}
+/* "Import into": the profile that receives the save */
+fieldset.target {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0 6px;
+  padding: 10px 12px 12px;
+  border: 1px solid var(--gold-dim);
+  border-radius: 3px;
+}
+fieldset.target legend {
+  padding: 0 6px;
+  color: var(--gold);
+  font: 400 15px/1.2 var(--display-sc);
+  letter-spacing: 0.04em;
+}
+fieldset.target input[type='text'] {
+  margin: 2px 0 0 26px;
+  width: calc(100% - 26px);
+}
 .error {
   color: var(--bad);
   font-size: 14px;
@@ -182,11 +224,16 @@ ul.members {
   padding: 0;
   font-size: 13px;
 }
+ul.members li .hint {
+  flex: none;
+  white-space: nowrap;
+}
 ul.members li {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 3px 0;
+  gap: 12px;
+  padding: 5px 0;
 }
 button.danger {
   border-color: var(--danger);

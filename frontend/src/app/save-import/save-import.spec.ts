@@ -180,13 +180,19 @@ describe('import history', () => {
     expect(characterNumber('world0.ksd')).toBeNull();
   });
 
-  it('round-trips and survives bad or blocked storage', () => {
+  it('keeps one entry per profile and survives bad or blocked storage', () => {
     forgetImport();
-    expect(lastImport()).toBeNull();
-    rememberImport({ name: 'character1.ksd', at: '2026-11-10T10:00:00Z', counts: { quest: 3 } });
-    expect(lastImport()?.counts.quest).toBe(3);
-    localStorage.setItem('lastImport', '{bad');
-    expect(lastImport()).toBeNull();
+    expect(lastImport(1)).toBeNull();
+    rememberImport(1, { name: 'character1.ksd', at: '2026-11-10T10:00:00Z', counts: { quest: 3 } });
+    rememberImport(2, { name: 'character2.ksd', at: '2026-11-10T11:00:00Z', counts: { quest: 5 } });
+    expect(lastImport(1)?.counts.quest).toBe(3);
+    expect(lastImport(2)?.name).toBe('character2.ksd');
+    forgetImport(1);
+    expect(lastImport(1)).toBeNull();
+    expect(lastImport(2)).not.toBeNull();
+    localStorage.setItem('lastImport:2', '{bad');
+    expect(lastImport(2)).toBeNull();
     forgetImport();
+    expect(localStorage.getItem('lastImport:2')).toBeNull();
   });
 });

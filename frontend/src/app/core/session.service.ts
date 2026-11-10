@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, effect, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { AuthMode, AuthService, Credentials, UserInfo } from './auth.service';
+import { CharacterStore } from './character.store';
 import { CraftService } from './craft.service';
 import { EnemiesService } from './enemies.service';
 import { LoreService } from './lore.service';
@@ -42,6 +43,7 @@ export class SessionService {
   private readonly planner = inject(PlannerStore);
   private readonly gameSettings = inject(GameSettingsStore);
   private readonly fog = inject(FogStore);
+  private readonly characters = inject(CharacterStore);
 
   private saved: string | null = null;
   private pending: string | null = null;
@@ -146,6 +148,7 @@ export class SessionService {
     this.gameSettings.clear();
     this.fog.clear();
     forgetImport();
+    this.characters.clear();
     this.views.set('map');
     this.filters.reset();
     this.saved = this.pending = null;
@@ -154,7 +157,7 @@ export class SessionService {
   }
 
   private async enter(info: UserInfo): Promise<void> {
-    const [, , , , , , , , , marks, settings] = await Promise.all([
+    const [, , , , , , , , marks, settings] = await Promise.all([
       this.mapData.load(),
       this.craft.load(), // never fails: a server without craft.json just has no workshop
       this.lore.load(), // same for lore.json
@@ -163,7 +166,6 @@ export class SessionService {
       this.gear.load(), // and gear.json
       this.gems.load(), // and gems.json
       this.presets.load(), // and settings-presets.json
-      this.planner.load(), // the builds the player saved
       firstValueFrom(this.http.get<{ marks: string[] }>('api/v1/progress')),
       firstValueFrom(
         this.http.get<{ settings: { filters?: Record<string, boolean> } | null }>(
@@ -182,8 +184,41 @@ export class SessionService {
     await this.team.load();
     await this.gameSettings.load();
     this.configFor = this.teamKey();
+    await this.characters.load();
+    this.fog.use(this.characters.active()?.id ?? null);
+    await this.planner.switchProfile(this.characters.active()?.id ?? null);
     if (this.enemies.openFromHash()) this.views.set('enemies');
     if (this.planner.openFromHash()) this.views.set('skills');
+  }
+
+  /** Follows another character profile: its marks, builds, explored area and, for the team, its halos. */
+  async selectCharacter(id: number): Promise<void> {
+    await this.characters.activate(id);
+    await this.reloadProfile();
+  }
+
+  /** A new character profile, followed at once (empty). */
+  async addCharacter(name: string): Promise<void> {
+    await this.characters.create(name);
+    await this.reloadProfile();
+  }
+
+  async removeCharacter(id: number): Promise<void> {
+    await this.characters.remove(id);
+    this.fog.forget(id);
+    this.planner.forgetProfile(id);
+    forgetImport(id);
+    await this.reloadProfile();
+  }
+
+  private async reloadProfile(): Promise<void> {
+    const [marks] = await Promise.all([
+      firstValueFrom(this.http.get<{ marks: string[] }>('api/v1/progress')),
+      this.planner.switchProfile(this.characters.active()?.id ?? null),
+    ]);
+    this.progress.set(marks.marks);
+    this.fog.use(this.characters.active()?.id ?? null);
+    await this.team.load();
   }
 
   private teamKey(): string {

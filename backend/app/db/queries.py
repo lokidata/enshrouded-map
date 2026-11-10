@@ -1,7 +1,8 @@
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.db.models import Team, TeamMember, User
+from app.db.models import ActiveCharacter, Character, Team, TeamMember, User
 
 
 def no_users(db: Session) -> bool:
@@ -29,3 +30,36 @@ def leave_team(db: Session, user_id: int) -> bool:
         else:
             team.owner_id = heir
     return True
+
+
+DEFAULT_CHARACTER = "Principal"
+
+
+def active_character(db: Session, user: User) -> Character:
+    """The profile the player follows; every player has one, the first is made on demand."""
+    active = db.get(ActiveCharacter, user.id)
+    character = db.get(Character, active.character_id) if active else None
+    if character is not None:
+        return character
+    # The first requests after a login arrive together and each would make the first profile: the
+    # one that loses the race hits a unique constraint, rolls back and finds the winner's profile.
+    for attempt in range(3):
+        try:
+            character = db.scalar(
+                select(Character)
+                .where(Character.user_id == user.id)
+                .order_by(Character.id)
+                .limit(1)
+            )
+            if character is None:
+                character = Character(user_id=user.id, name=DEFAULT_CHARACTER)
+                db.add(character)
+                db.flush()
+            db.merge(ActiveCharacter(user_id=user.id, character_id=character.id))
+            db.commit()
+            return character
+        except IntegrityError:
+            db.rollback()
+            if attempt == 2:
+                raise
+    raise AssertionError("unreachable")

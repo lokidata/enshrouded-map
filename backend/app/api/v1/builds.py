@@ -4,6 +4,7 @@ from sqlalchemy import func, select
 from app.api.deps import CurrentUser, DbSession
 from app.core.config import get_settings
 from app.db.models import Build
+from app.db.queries import active_character
 from app.schemas.builds import BuildIn, BuildOut
 
 router = APIRouter(prefix="/builds", tags=["builds"])
@@ -34,7 +35,7 @@ def _out(build: Build) -> BuildOut:
 def list_builds(user: CurrentUser, db: DbSession) -> list[BuildOut]:
     rows = db.scalars(
         select(Build)
-        .where(Build.user_id == user.id)
+        .where(Build.character_id == active_character(db, user).id)
         .order_by(Build.updated_at.desc(), Build.id.desc())
     )
     return [_out(b) for b in rows]
@@ -42,10 +43,11 @@ def list_builds(user: CurrentUser, db: DbSession) -> list[BuildOut]:
 
 @router.post("", response_model=BuildOut)
 def create_build(body: BuildIn, user: CurrentUser, db: DbSession) -> BuildOut:
-    count = db.scalar(select(func.count()).select_from(Build).where(Build.user_id == user.id))
+    cid = active_character(db, user).id
+    count = db.scalar(select(func.count()).select_from(Build).where(Build.character_id == cid))
     if (count or 0) >= get_settings().max_builds:
         raise HTTPException(409, "too_many_builds")
-    build = Build(user_id=user.id, **body.model_dump())
+    build = Build(user_id=user.id, character_id=cid, **body.model_dump())
     db.add(build)
     db.commit()
     return _out(build)
