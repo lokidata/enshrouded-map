@@ -1,8 +1,11 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { CraftService } from '../core/craft.service';
+import { Entry } from '../core/craft.model';
 import { LangService } from '../core/lang.service';
+import { Found } from '../core/found.service';
 import { EntryCard } from './entry-card';
+import { Status, StatusFilter } from './status-filter';
 import { WorkshopNav } from './workshop-nav';
 
 const PAGE = 40;
@@ -10,10 +13,11 @@ const PAGE = 40;
 /** The crafting stations with their recipe counts, and what one station makes. */
 @Component({
   selector: 'app-stations-tab',
-  imports: [TranslocoPipe, EntryCard],
+  imports: [TranslocoPipe, EntryCard, StatusFilter],
   template: `
     <div class="browse">
       <aside class="side" [attr.aria-label]="'wsFilters' | transloco">
+        <app-status-filter [(value)]="status" />
         <h3 class="side-title">{{ 'ws_stations' | transloco }}</h3>
         <ul class="cat-list">
           @for (s of stations(); track s.id) {
@@ -60,10 +64,18 @@ export class StationsTab {
   protected readonly PAGE = PAGE;
   protected readonly NONE = 'none';
   protected readonly limit = signal(PAGE);
+  private readonly found = inject(Found);
+  /** Which recipes the list and the counts take into account: all, the discovered ones, the others. */
+  protected readonly status = signal<Status>('all');
+
+  private matches(e: Entry): boolean {
+    const status = this.status();
+    return status === 'all' || this.found.known(e) === (status === 'known');
+  }
 
   protected readonly stations = computed(() => {
     const count = new Map<string, number>();
-    for (const e of this.craft.entries().values())
+    for (const e of [...this.craft.entries().values()].filter((e) => this.matches(e)))
       count.set(e.station ?? this.NONE, (count.get(e.station ?? this.NONE) ?? 0) + 1);
     const lang = this.lang.lang();
     return [...count]
@@ -84,7 +96,7 @@ export class StationsTab {
     const id = this.selected();
     const lang = this.lang.lang();
     return [...this.craft.entries().values()]
-      .filter((e) => (e.station ?? this.NONE) === id)
+      .filter((e) => (e.station ?? this.NONE) === id && this.matches(e))
       .sort((a, b) => this.craft.text(a.name).localeCompare(this.craft.text(b.name), lang));
   });
 

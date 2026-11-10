@@ -27,7 +27,7 @@ export class LangService {
   }
 
   /** Translation for code that is not a template (popups, tooltips). */
-  t(key: string): string {
-    return this.transloco.translate(key);
+  t(key: string, params?: Record<string, unknown>): string {
+    return this.transloco.translate(key, params);
   }
 }

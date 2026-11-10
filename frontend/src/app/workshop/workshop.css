@@ -23,6 +23,8 @@ app-game {
     display: flex;
     gap: 2px;
     padding: 0 20px;
+    /* the bar's own height (13 + 15 + 11 of the buttons, 1 of the rule), so the panel below never moves when the labels arrive */
+    min-height: 40px;
     overflow-x: auto;
     background: linear-gradient(180deg, var(--panel-deep), var(--panel-deep));
     border-bottom: 1px solid var(--gold-dim);
@@ -306,6 +308,13 @@ app-game {
     margin-top: 3px;
     text-align: left;
   }
+  /* the choice between the variants of one building piece, inside its card */
+  .variants {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 0 14px 8px;
+  }
   .side-pills {
     display: flex;
     flex-wrap: wrap;
@@ -464,6 +473,59 @@ app-game {
     color: var(--text);
     cursor: pointer;
     text-align: center;
+  }
+  .item-card {
+    position: relative;
+  }
+  /* discovered: the same green frame as a known recipe */
+  .item-card.known {
+    border-color: var(--ok-dim);
+  }
+  /* several levels behind one card: a stack, and a badge */
+  .item-card.multi {
+    box-shadow:
+      3px 3px 0 -1px var(--panel-deep),
+      3px 3px 0 0 var(--border),
+      6px 6px 0 -1px var(--panel-deep),
+      6px 6px 0 0 var(--border);
+  }
+  .item-card.multi.known {
+    box-shadow:
+      3px 3px 0 -1px var(--panel-deep),
+      3px 3px 0 0 var(--ok-dim),
+      6px 6px 0 -1px var(--panel-deep),
+      6px 6px 0 0 var(--ok-dim);
+  }
+  /* recipes and pieces with several variants: the same stack and badge as an item tile */
+  .entry.multi {
+    position: relative;
+    box-shadow:
+      3px 3px 0 -1px var(--panel-deep),
+      3px 3px 0 0 var(--border),
+      6px 6px 0 -1px var(--panel-deep),
+      6px 6px 0 0 var(--border);
+  }
+  .entry.multi .variants-badge {
+    top: -9px;
+    right: 14px;
+  }
+  .variants .pill.known {
+    border-color: var(--ok-dim);
+  }
+  .variants-badge {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    padding: 1px 6px;
+    border: 1px solid var(--gold-dim);
+    border-radius: 2px;
+    background: var(--ink);
+    color: var(--gold);
+    font: 400 12px/1.2 var(--display-sc);
+    letter-spacing: 0.03em;
+  }
+  .item-head .variants {
+    padding: 0;
   }
   .item-card:hover {
     border-color: var(--gold);

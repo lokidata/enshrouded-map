@@ -2,13 +2,15 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { CraftService } from '../core/craft.service';
 import { normalize } from '../core/filter.store';
-import { Sources } from '../core/craft.model';
+import { Entry, Sources } from '../core/craft.model';
+import { groupBy, itemVariantKey } from '../core/craft.group';
 import { Names } from '../core/map-data.model';
 import { LangService } from '../core/lang.service';
 import { Found } from '../core/found.service';
 import { MapFocus } from '../core/map-focus.service';
 import { ItemChip } from './item-chip';
 import { EntryCard } from './entry-card';
+import { Status, StatusFilter } from './status-filter';
 import { WorkshopNav } from './workshop-nav';
 
 const PAGE = 40;
@@ -22,9 +24,29 @@ const FACETS: readonly { key: Facet; title: string }[] = [
 ];
 
 /** Every item of the recipes: search, then one item's page (made by, used in). */
+/** A line of the item browser: an item, or an armour set. `variants` holds the other levels of the same item (this one included) when there are several. */
+interface Row {
+  guid: string;
+  name: string;
+  search: string;
+  cat: string;
+  rarity: string;
+  cls: string;
+  type: string;
+  food: string;
+  lvl: number;
+  set: string;
+  types: string[];
+  isSet: boolean;
+  pieces: readonly string[];
+  /** Same name, category and type: the levels (and rarities) of one item are variants of it. */
+  vkey: string;
+  variants: readonly Row[];
+}
+
 @Component({
   selector: 'app-items-tab',
-  imports: [TranslocoPipe, EntryCard, ItemChip],
+  imports: [TranslocoPipe, EntryCard, ItemChip, StatusFilter],
   template: `
     <div class="browse">
       <aside class="side" [attr.aria-label]="'wsFilters' | transloco">
@@ -35,6 +57,7 @@ const FACETS: readonly { key: Facet; title: string }[] = [
           [value]="query()"
           (input)="setQuery($any($event.target).value)"
         />
+        <app-status-filter [value]="status()" (valueChange)="setStatus($event)" />
         @if (catFacet(); as cat) {
           <h3 class="side-title">{{ cat.title | transloco }}</h3>
           <ul class="cat-list">
@@ -86,6 +109,20 @@ const FACETS: readonly { key: Facet; title: string }[] = [
               <img [src]="icon" alt="" width="48" height="48" />
             }
             <h2>{{ craft.itemName(guid) }}</h2>
+            @if (siblings().length) {
+              <div class="variants" role="group" [attr.aria-label]="'wsVariantsOf' | transloco">
+                @for (v of siblings(); track v.guid) {
+                  <button
+                    type="button"
+                    class="pill"
+                    [attr.aria-pressed]="v.guid === guid"
+                    (click)="nav.openItem(v.guid)"
+                  >
+                    {{ variantLabel(v) }}
+                  </button>
+                }
+              </div>
+            }
             @if (onMap(guid); as place) {
               <span class="meta" role="status">
                 {{ 'wsMapFound' | transloco: { done: place.done, total: place.total } }}
@@ -188,7 +225,18 @@ const FACETS: readonly { key: Facet; title: string }[] = [
           <ul class="item-grid">
             @for (i of shown(); track i.guid) {
               <li>
-                <button type="button" class="item-card" (click)="open(i)">
+                <button
+                  type="button"
+                  class="item-card"
+                  [class.known]="cardKnown(i)"
+                  [class.multi]="i.variants.length > 1"
+                  (click)="open(i)"
+                >
+                  @if (i.variants.length > 1) {
+                    <span class="variants-badge">
+                      {{ 'wsVariantsBadge' | transloco: { n: i.variants.length } }}
+                    </span>
+                  }
                   <span class="icon" [class.pieces]="i.isSet">
                     @if (i.isSet) {
                       @for (p of i.pieces; track p) {
@@ -204,7 +252,9 @@ const FACETS: readonly { key: Facet; title: string }[] = [
                   <span class="meta">
                     {{ i.isSet ? ('wsSetPieces' | transloco: { n: i.pieces.length }) : '' }}
                     {{ !i.isSet && i.cat ? craft.label('cat', i.cat) : '' }}
-                    @if (i.lvl) {
+                    @if (i.variants.length > 1 && levelRange(i)) {
+                      · {{ 'wsLevels' | transloco: { range: levelRange(i) } }}
+                    } @else if (i.lvl) {
                       · {{ 'wsLevel' | transloco: { n: i.lvl } }}
                     }
                   </span>
@@ -244,31 +294,38 @@ export class ItemsTab {
   protected readonly focus = inject(MapFocus);
   protected readonly found = inject(Found);
   protected readonly grouped = signal(true);
+  /** Discovered items: a place on the map is marked, or a recipe that makes them is known. */
+  protected readonly status = signal<Status>('all');
 
   /** Items that a recipe makes or uses. */
-  protected readonly all = computed(() => {
+  protected readonly all = computed<Row[]>(() => {
     const lang = this.lang.lang();
     const items = this.craft.data()?.items ?? {};
     const byOutput = this.craft.byOutput();
     const usedIn = this.craft.usedIn();
-    return Object.keys(items)
-      .filter((g) => byOutput.has(g) || usedIn.has(g))
-      .map((guid) => ({
-        guid,
-        name: this.craft.itemName(guid),
-        search: normalize(items[guid].name.join(' ')),
-        cat: items[guid].cat ?? '',
-        rarity: items[guid].rarity ?? '',
-        cls: items[guid].cls ?? '',
-        type: items[guid].type ?? '',
-        food: items[guid].food ?? '',
-        lvl: items[guid].lvl ?? 0,
-        set: items[guid].set ?? '',
-        types: items[guid].type ? [items[guid].type!] : [],
-        isSet: false,
-        pieces: [] as readonly string[],
-      }))
-      .sort((a, b) => a.name.localeCompare(b.name, lang));
+    return (
+      Object.keys(items)
+        // building pieces have their own page (Construction): they are not listed here again
+        .filter((g) => items[g].cat !== 'building' && (byOutput.has(g) || usedIn.has(g)))
+        .map((guid) => ({
+          guid,
+          name: this.craft.itemName(guid),
+          search: normalize(items[guid].name.join(' ')),
+          cat: items[guid].cat ?? '',
+          rarity: items[guid].rarity ?? '',
+          cls: items[guid].cls ?? '',
+          type: items[guid].type ?? '',
+          food: items[guid].food ?? '',
+          lvl: items[guid].lvl ?? 0,
+          set: items[guid].set ?? '',
+          types: items[guid].type ? [items[guid].type!] : [],
+          isSet: false,
+          pieces: [] as readonly string[],
+          vkey: itemVariantKey(items[guid]),
+          variants: [] as readonly Row[],
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name, lang))
+    );
   });
 
   protected readonly hasSets = computed(
@@ -276,7 +333,7 @@ export class ItemsTab {
   );
 
   /** The rows of the browser: with grouping, the pieces of an armour set become one row. */
-  protected readonly rows = computed(() => {
+  protected readonly rows = computed<Row[]>(() => {
     const sets = this.craft.data()?.sets ?? {};
     if (!this.grouped() || !this.hasSets()) return this.all();
     const items = this.craft.data()?.items ?? {};
@@ -298,6 +355,8 @@ export class ItemsTab {
         types: [...new Set(set.pieces.map((p) => items[p].type ?? ''))],
         isSet: true,
         pieces: set.pieces,
+        vkey: key,
+        variants: [],
       });
     }
     return rows.sort((a, b) => a.name.localeCompare(b.name, lang));
@@ -327,20 +386,67 @@ export class ItemsTab {
     const sel = this.sel();
     const lang = this.lang.lang();
     const byLevel = this.sort() === 'lvl';
-    return this.rows()
-      .filter(
-        (i) =>
-          (!q || i.search.includes(q)) &&
-          FACETS.every(
-            (f) =>
-              !sel[f.key] ||
-              (f.key === 'type' ? i.types.includes(sel[f.key]) : i[f.key] === sel[f.key]),
-          ),
-      )
-      .sort((a, b) => (byLevel ? a.lvl - b.lvl : 0) || a.name.localeCompare(b.name, lang));
+    const status = this.status();
+    const byOutput = this.craft.byOutput();
+    const filtered = this.rows().filter(
+      (i) =>
+        (!q || i.search.includes(q)) &&
+        (status === 'all' || this.rowKnown(i, byOutput) === (status === 'known')) &&
+        FACETS.every(
+          (f) =>
+            !sel[f.key] ||
+            (f.key === 'type' ? i.types.includes(sel[f.key]) : i[f.key] === sel[f.key]),
+        ),
+    );
+    // one card per item: its other levels are variants, offered on its page
+    const cards = groupBy(filtered, (i) => (i.isSet ? i.guid : i.vkey)).map((g) => {
+      const levels = [...g.items].sort((a, b) => a.lvl - b.lvl);
+      return levels.length > 1 ? { ...levels[0], variants: levels } : levels[0];
+    });
+    return cards.sort(
+      (a, b) => (byLevel ? a.lvl - b.lvl : 0) || a.name.localeCompare(b.name, lang),
+    );
   });
 
+  /** The levels of the item open on its page, when it has several (same name, category and type). */
+  protected readonly siblings = computed(() => {
+    const guid = this.nav.item();
+    const me = this.all().find((i) => i.guid === guid);
+    if (!me) return [];
+    const same = this.all()
+      .filter((i) => i.vkey === me.vkey)
+      .sort((a, b) => a.lvl - b.lvl);
+    return same.length > 1 ? same : [];
+  });
+
+  protected variantLabel(v: Row): string {
+    const sameLevel = this.siblings().filter((s) => s.lvl === v.lvl).length;
+    const base = v.lvl ? this.lang.t('wsLevel', { n: v.lvl }) : v.name;
+    return sameLevel > 1 && v.rarity ? `${base} · ${this.craft.label('rarity', v.rarity)}` : base;
+  }
+
+  /** Levels of a card with variants: "16 – 46". */
+  protected levelRange(row: Row): string {
+    const lv = row.variants.map((v) => v.lvl).filter(Boolean);
+    return lv.length ? `${Math.min(...lv)} – ${Math.max(...lv)}` : '';
+  }
+
+  /** A card is discovered when the item (or any of its variants) is. */
+  protected cardKnown(row: Row): boolean {
+    const byOutput = this.craft.byOutput();
+    return (row.variants.length ? row.variants : [row]).some((r) => this.rowKnown(r, byOutput));
+  }
+
   protected readonly shown = computed(() => this.list().slice(0, this.limit()));
+
+  /** A set row is discovered when any of its pieces is. */
+  private rowKnown(
+    row: { guid: string; isSet: boolean; pieces: readonly string[] },
+    byOutput: ReadonlyMap<string, readonly Entry[]>,
+  ): boolean {
+    const guids = row.isSet ? row.pieces : [row.guid];
+    return guids.some((g) => this.found.itemKnown(g, byOutput.get(g) ?? []));
+  }
   protected readonly madeBy = computed(
     () => this.craft.byOutput().get(this.nav.item() ?? '') ?? [],
   );
@@ -389,6 +495,11 @@ export class ItemsTab {
 
   protected setFacet(key: Facet, value: string): void {
     this.sel.update((s) => ({ ...s, [key]: value }));
+    this.limit.set(PAGE);
+  }
+
+  protected setStatus(value: Status): void {
+    this.status.set(value);
     this.limit.set(PAGE);
   }
 
