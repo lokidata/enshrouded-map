@@ -36,6 +36,7 @@ import build_craft  # noqa: E402  (recipes, altar, building)
 import build_enemies  # noqa: E402  (bosses and elites)
 import build_skills  # noqa: E402  (skill tree)
 import build_lore  # noqa: E402  (journal: lore notes and quests)
+import build_places  # noqa: E402  (knowledge ids of the places, for the save import)
 import build_gear  # noqa: E402  (equipment stats, character constants)
 import build_gems  # noqa: E402  (weapon gems, comfort)
 import build_presets  # noqa: E402  (server difficulty presets)
@@ -701,6 +702,7 @@ def main(src, export, out):
         rows.append(bytes(line))
     write_png(f"{out}/biomes.png", w, h, rows)
 
+    build_places.attach_kids(src, markers)
     present = set(cells)
     data = {
         "worldSize": w * biome["mapScale"],

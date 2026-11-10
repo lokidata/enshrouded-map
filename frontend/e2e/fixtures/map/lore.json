@@ -31,7 +31,8 @@
       "pages": [
         {
           "name": ["Lettre sans région", "Letter without region"],
-          "text": ["Un seul mot.", "One word."]
+          "text": ["Un seul mot.", "One word."],
+          "kid": 555
         }
       ]
     }

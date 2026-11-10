@@ -18,6 +18,8 @@ export interface MapMarker {
   fastTravel: boolean;
   /** Loot markers (unique, cosmetic, collectible): the item, a key of MapData.items. */
   item?: string;
+  /** Knowledge ids that a save sets when the player discovers this place (written by pipeline/build_places.py). */
+  kids?: number[];
   /** Other items the game always puts here (a chest's materials, a boss drop...). */
   loot?: readonly LootEntry[];
 }

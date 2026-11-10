@@ -4,6 +4,8 @@ import { Names } from './map-data.model';
 export interface LorePage {
   name: Names;
   text: Names;
+  /** Id of the page in a save's player_knowledge (absent in an older lore.json: such pages are not imported). */
+  kid?: number;
 }
 
 export interface LoreNote {

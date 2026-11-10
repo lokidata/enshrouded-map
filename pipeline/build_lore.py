@@ -2,7 +2,7 @@
 
   {"categories": {id: [fr, en]},                          where a note is found (region, theme)
    "notes":  [{"id", "name": [fr, en], "cat": id | None, "priority": n,
-               "pages": [{"name": [fr, en], "text": [fr, en]}]}],
+               "pages": [{"name": [fr, en], "text": [fr, en], "kid": n}]}],   kid = the id of the page in a save's player_knowledge
    "quests": [{"id", "name": [fr, en], "giver": key | None, "main": bool,
                "steps": [{"name": [fr, en], "text": [fr, en]}], "rewards": [guid]}],
    "givers": {key: {"name": [fr, en], "region": bool}},   who gives a quest: a character or a region
@@ -69,7 +69,8 @@ def build_lore(src, export, out):
     categories, notes, skipped = {}, [], 0
     for c in journal["collections"]:
         name = loca(c["name"]["value"])
-        pages = [{"name": loca(e["name"]["value"]) or name, "text": loca(e["text"]["value"])}
+        pages = [{"name": loca(e["name"]["value"]) or name, "text": loca(e["text"]["value"]),
+                  "kid": e["knowledgeRequirement"]["knowledgeOrQueryId"]["value"]}
                  for e in c["entries"] if loca(e["text"]["value"])]
         if not name or not pages:
             skipped += 1

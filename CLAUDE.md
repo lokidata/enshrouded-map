@@ -39,6 +39,9 @@ Migration of a working prototype into a real app. The plan (approved, in French)
 - AXE (`@axe-core/playwright`, WCAG A and AA) runs on every workshop tab in `frontend/e2e/map.spec.ts`; `make e2e-stack` uses `deploy/compose.e2e.yml` to lift the login rate limit the suite would hit.
 - `make e2e-stack` also checks that the map files are refused without a session (`PROTECTED_ASSETS=1`).
 
+## Save import (issue #40, phase 1 partial)
+- `frontend/src/app/save-import/` (`ksd.ts`, `knowledge.ts`, `save-import.logic.ts`, `save-import-dialog.ts`; profile menu > Import a save; design in `docs/DESIGN-save-import.md`): recipes + quests only, ids hashed in the browser (no pipeline change). Lore pages use the `kid` of each page of `lore.json` (written by `build_lore.py`: rerun the pipeline on the Windows PC to get it; without it no page is imported); the explored area (`fogofwar`) is imported as a veil layer on the map (`fog.ts`, `fog.store.ts`, browser only, forgotten at logout); places (`kids` per marker in `map-data.json`, `pipeline/build_places.py` called by `build_data.py`) and picked-up unique items (single-place items, flag 1) are offered too, each with its checkbox. Dependency `fzstd` (pinned). Never commit a real save.
+
 ## Licence
 MIT (see `LICENSE`): use, fork and modify freely, the copyright notice must stay. It covers the original code only; the third-party skills in `.agents/` keep their own licences. The game's data and assets are not part of the repo and belong to their owners.
 
