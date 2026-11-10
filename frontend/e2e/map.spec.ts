@@ -88,10 +88,19 @@ test('register, mark an element, and find everything again after a reload @cross
   await expect(page.getByRole('button', { name: 'Unmark' })).toBeVisible();
   await expect(boss.locator('.count').first()).toHaveText(/^1\//);
 
-  // let the debounced filter save go out, then reload
-  await page.waitForResponse(
-    (r) => r.url().includes('/api/v1/settings') && r.request().method() === 'PUT',
-  );
+  // let the debounced filter save go out (waiting for its response is a race: in a fast browser it is
+  // already sent), then reload
+  await expect
+    .poll(() =>
+      page.evaluate(async () =>
+        JSON.stringify(
+          ((await (await fetch('api/v1/settings')).json()) as { settings?: unknown }).settings,
+        ),
+      ),
+    )
+    // only the fast-travel markers differ from the defaults: the bosses are shown by default, so showing them
+    // again drops their override
+    .toBe('{"filters":{"fastTravel|*":false}}');
   await page.reload();
   await expect(page.locator('.who')).toContainText(`${user} · 1`);
   await expect(
