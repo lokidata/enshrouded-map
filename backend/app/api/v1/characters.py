@@ -98,5 +98,5 @@ def delete_character(character_id: int, user: CurrentUser, db: DbSession) -> lis
         db.flush()
     db.delete(character)
     db.commit()
-    audit.info("character_deleted", extra={"user_id": user.id, "character_id": character_id})
+    audit.info("character_deleted", extra={"user_id": user.id})
     return _list(db, user)
