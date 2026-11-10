@@ -383,10 +383,19 @@ app-game {
   .planner .inputs {
     flex-basis: 100%;
   }
+  /* block flow, not flex: a flex fieldset lays its list out wrongly in some browsers (the cost list ended up beside the fields) */
   .browse .planner {
-    flex-direction: column;
-    align-items: stretch;
+    display: block;
     margin: 0;
+  }
+  .browse .planner label {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+  .browse .planner .meta {
+    margin: 0 0 0.5rem;
   }
   .browse .planner legend {
     padding: 0 6px;

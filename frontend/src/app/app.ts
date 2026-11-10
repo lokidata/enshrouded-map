@@ -5,6 +5,7 @@ import { AuthDialog } from './auth/auth-dialog';
 import { AdminDialog } from './auth/admin-dialog';
 import { DeleteDialog } from './auth/delete-dialog';
 import { PasskeyDialog } from './auth/passkey-dialog';
+import { SaveImportDialog } from './save-import/save-import-dialog';
 import { AuthService } from './core/auth.service';
 import { LayoutService } from './core/layout.service';
 import { ProgressStore } from './core/progress.store';
@@ -44,6 +45,7 @@ function read(): string | null {
     DeleteDialog,
     AdminDialog,
     PasskeyDialog,
+    SaveImportDialog,
     TeamDialog,
     Workshop,
     Lore,
@@ -102,6 +104,7 @@ function read(): string | null {
     <app-delete-dialog />
     <app-admin-dialog />
     <app-passkey-dialog />
+    <app-save-import-dialog />
     <app-team-dialog />
     @if (progress.saveFailed()) {
       <div class="toast" role="alert">{{ 'errors.save' | transloco }}</div>

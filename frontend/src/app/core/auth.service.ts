@@ -55,6 +55,7 @@ export class AuthService {
   readonly adminOpen = signal(false);
   readonly deleteOpen = signal(false);
   readonly passkeysOpen = signal(false);
+  readonly saveImportOpen = signal(false);
   /** The server is set up for passkeys (WEBAUTHN_*). */
   readonly passkeysEnabled = signal(false);
   /** Passkeys can be used here: the server and this browser both support them. */

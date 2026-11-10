@@ -152,7 +152,7 @@ change in the game data. Current reference: 1225 markers (79 unique items,
 1394 equipable items (575 with armour, 507 weapons, 72 shields, 38 rings, all with a picture, 246 with parry; parry and block points: formulas from enshrouded.exe, see `parryPower`/`blockPower` in `frontend/src/app/core/gear.logic.ts`),
 44 arrows and 118 spells in `gear.json` `ammo` (damage setup, effects, same ids as `craft.json`; the shot's charge and fire durations on every ranged weapon), 4 server presets x 38 keys, 365 upgrades, 403 UI texts, 153 UI pictures, 117 skill nodes with attribute effects.
 
-`build_resources.py` (chests, plants, ores, special loot), `build_enemies.py` (bosses and elites), `build_skills.py` (the skill tree), `build_gear.py` (equipment stats; its docstring describes `gear.json`), `build_gems.py` (weapon gems and comfort, `gems.json`), `build_lore.py` (the journal) and `build_craft.py`
+`build_resources.py` (chests, plants, ores, special loot), `build_enemies.py` (bosses and elites), `build_skills.py` (the skill tree), `build_gear.py` (equipment stats; its docstring describes `gear.json`), `build_gems.py` (weapon gems and comfort, `gems.json`), `build_lore.py` (the journal; each page carries its knowledge id `kid`), `build_places.py` (`kids` on the markers: the knowledge ids a save sets when a place is discovered, for the save import) and `build_craft.py`
 (recipes, altar, building; its docstring describes `craft.json`) are used by
 `build_data.py` and are not run on their own.
 

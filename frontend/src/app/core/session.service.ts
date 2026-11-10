@@ -8,6 +8,7 @@ import { LoreService } from './lore.service';
 import { PlannerStore } from './planner.store';
 import { GearService } from './gear.service';
 import { GamePresetsService } from './game-presets.service';
+import { FogStore } from '../save-import/fog.store';
 import { GameSettingsStore } from './game-settings.store';
 import { GemsService } from './gems.service';
 import { SkillsService } from './skills.service';
@@ -39,6 +40,7 @@ export class SessionService {
   private readonly presets = inject(GamePresetsService);
   private readonly planner = inject(PlannerStore);
   private readonly gameSettings = inject(GameSettingsStore);
+  private readonly fog = inject(FogStore);
 
   private saved: string | null = null;
   private pending: string | null = null;
@@ -141,6 +143,7 @@ export class SessionService {
     this.presets.clear();
     this.planner.clear();
     this.gameSettings.clear();
+    this.fog.clear();
     this.views.set('map');
     this.filters.reset();
     this.saved = this.pending = null;

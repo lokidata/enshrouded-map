@@ -16,6 +16,7 @@ import { Catalog, PlacedResource } from '../core/catalog.service';
 import { FilterStore } from '../core/filter.store';
 import { LangService } from '../core/lang.service';
 import { EnemiesService } from '../core/enemies.service';
+import { FogStore } from '../save-import/fog.store';
 import { LootEntry, MapMarker, itemKey, markId } from '../core/map-data.model';
 import { MapDataService } from '../core/map-data.service';
 import { MapFocus } from '../core/map-focus.service';
@@ -161,6 +162,7 @@ export class MapView {
   private readonly team = inject(TeamStore);
   private readonly focus = inject(MapFocus);
   private readonly enemies = inject(EnemiesService);
+  private readonly fog = inject(FogStore);
   private readonly host = viewChild.required<ElementRef<HTMLElement>>('host');
 
   protected readonly coords = signal('');
@@ -204,6 +206,7 @@ export class MapView {
     effect(() => this.applyVisibility());
     effect(() => this.applyLanguage());
     effect(() => this.applyDone());
+    effect(() => this.applyFog(this.fog.url()));
     effect(() => {
       this.auth.user();
       this.progress.done();
@@ -440,6 +443,25 @@ export class MapView {
         label: b.label[index],
       })),
     );
+  }
+
+  private fogLayer?: L.ImageOverlay;
+
+  /** The explored area imported from a save: a veil over the rest, listed in the layers control (on when imported). */
+  private applyFog(url: string | null): void {
+    if (!this.ready()) return;
+    if (this.fogLayer) {
+      this.layersControl.removeLayer(this.fogLayer);
+      this.fogLayer.remove();
+      this.fogLayer = undefined;
+    }
+    if (!url) return;
+    const bounds = L.latLngBounds([
+      [-this.size, 0],
+      [0, this.size],
+    ]);
+    this.fogLayer = L.imageOverlay(url, bounds, { opacity: 1, interactive: false }).addTo(this.map);
+    this.layersControl.addOverlay(this.fogLayer, this.lang.t('fogLayer'));
   }
 
   private applyDone(): void {

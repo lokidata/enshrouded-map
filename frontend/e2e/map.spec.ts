@@ -1547,3 +1547,135 @@ test('game settings feed the Personnage values and their tooltips', async ({ pag
   await shroud.locator('dd').hover();
   await expect(shroud.getByRole('tooltip')).toContainText('Réglage de la partie');
 });
+
+const fnv = (guid: string): number => {
+  const hex = guid.replaceAll('-', '');
+  const b = Array.from({ length: 16 }, (_, i) => parseInt(hex.slice(2 * i, 2 * i + 2), 16));
+  const le = [
+    ...b.slice(0, 4).reverse(),
+    ...b.slice(4, 6).reverse(),
+    ...b.slice(6, 8).reverse(),
+    ...b.slice(8),
+  ];
+  let h = 0x811c9dc5;
+  for (const x of le) h = Math.imul(h ^ x, 0x01000193) >>> 0;
+  return h;
+};
+
+/** A save with stored (not compressed) sections, built from the format notes: SV2C header, table, names, S2BH blocks. */
+function fakeKsd(sections: Record<string, Buffer>): Buffer {
+  const names = Object.keys(sections);
+  const table = 0x30;
+  const namesAt = table + 20 * names.length;
+  const nameBytes = names.map((n) => Buffer.from(n));
+  const blocks = names.map((n) =>
+    Buffer.concat([Buffer.from('S2BH'), Buffer.alloc(10), sections[n]]),
+  );
+  const head = Buffer.alloc(namesAt);
+  head.write('SV2C', 0);
+  head.writeUInt32LE(table - 0x28, 0x28);
+  head.writeUInt32LE(names.length, 0x2c);
+  let nameOff = namesAt;
+  let blockOff = namesAt + nameBytes.reduce((n, b) => n + b.length, 0);
+  names.forEach((_, i) => {
+    const at = table + 20 * i;
+    head.writeUInt32LE(nameOff - at, at);
+    head.writeUInt32LE(nameBytes[i].length, at + 4);
+    head.writeUInt32LE(blockOff, at + 8);
+    head.writeUInt32LE(blocks[i].length, at + 12);
+    nameOff += nameBytes[i].length;
+    blockOff += blocks[i].length;
+  });
+  return Buffer.concat([head, ...nameBytes, ...blocks]);
+}
+
+/** player_knowledge: [u32 1][u32 n][n ids][n flags]. */
+function knowledge(entries: [number, number][]): Buffer {
+  const k = Buffer.alloc(8 + 8 * entries.length);
+  k.writeUInt32LE(1, 0);
+  k.writeUInt32LE(entries.length, 4);
+  entries.forEach(([id, flags], i) => {
+    k.writeUInt32LE(id, 8 + 4 * i);
+    k.writeUInt32LE(flags, 8 + 4 * (entries.length + i));
+  });
+  return k;
+}
+
+/** fogofwar: a 13-byte header (`FGOW` at byte 8), then 1280 x 1280 cells; the first quarter explored. */
+function fog(): Buffer {
+  const b = Buffer.alloc(13 + 1280 * 1280);
+  b.write('FGOW', 8);
+  b.fill(255, 13, 13 + (1280 * 1280) / 4);
+  return b;
+}
+
+test('save import: a character save ticks its recipes and quests', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel("Nom d'utilisateur").fill(user);
+  await page
+    .getByRole('dialog')
+    .getByLabel('Mot de passe', { exact: true })
+    .fill('a brand new passphrase');
+  await page.getByRole('dialog').getByRole('button', { name: 'Se connecter' }).click();
+  await expect(page.locator('.who')).toContainText(user);
+  // earlier tests may have ticked them: start from unticked
+  await page.evaluate(async () => {
+    const token = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]*)/)?.[1] ?? '';
+    await fetch('api/v1/progress', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-XSRF-TOKEN': decodeURIComponent(token) },
+      body: JSON.stringify({
+        ids: [
+          'recipe:11111111-1111-4111-8111-111111111111',
+          'quest:333',
+          'lore:222:0',
+          'lore:222',
+          'fastTravel:200:700',
+          'unique:500:800',
+        ],
+        done: false,
+      }),
+    });
+  });
+  await page.reload();
+  await menu(page, 'Importer une sauvegarde');
+  const dialog = page.getByRole('dialog', { name: 'Importer une sauvegarde' });
+  await dialog.getByLabel('Fichier de sauvegarde').setInputFiles({
+    name: 'character0.ksd',
+    mimeType: 'application/octet-stream',
+    buffer: fakeKsd({
+      player_knowledge: knowledge([
+        [fnv('11111111-1111-4111-8111-111111111111'), 1], // a recipe
+        [333, 1], // a quest
+        [555, 1], // a lore page
+        [777, 1], // a discovered place
+        [fnv('a0000000-0000-4000-8000-00000000000a'), 5], // a unique item, picked up and inspected
+      ]),
+      fogofwar: fog(),
+    }),
+  });
+  await expect(dialog).toContainText('Recettes et constructions connues');
+  await expect(dialog).toContainText('1 à cocher sur 1');
+  await expect(dialog).toContainText('Pages de lore récupérées');
+  await expect(dialog).toContainText('1 à cocher sur 1');
+  await expect(dialog).toContainText('Lieux découverts');
+  await expect(dialog).toContainText('Zone explorée de la carte (25 % du monde)');
+  await dialog.getByRole('button', { name: 'Importer', exact: true }).click();
+  await expect(dialog).toContainText('6 éléments cochés'); // recipe, quest, page, place, item and the fog
+  await expect(dialog.getByRole('button', { name: 'Importer', exact: true })).toHaveCount(0);
+  expect(await page.evaluate(() => localStorage.getItem('fog'))).toMatch(/^data:image\/png/);
+  await page.reload();
+  const marks = await page.evaluate(
+    async () => (await (await fetch('api/v1/progress')).json()).marks,
+  );
+  expect(marks).toEqual(
+    expect.arrayContaining([
+      'recipe:11111111-1111-4111-8111-111111111111',
+      'quest:333',
+      'lore:222:0',
+      'fastTravel:200:700',
+      'unique:500:800',
+    ]),
+  );
+  await expect(page.locator('.leaflet-control-layers')).toContainText('Zone explorée');
+});
