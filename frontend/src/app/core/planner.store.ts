@@ -134,10 +134,62 @@ export class PlannerStore {
     if (this.canRemove(id)) this.set(remove(this.levels(), id));
   }
 
+  /** The skills only: the character's level, equipment and gems are not part of a skill build. */
   reset(): void {
+    this.set({});
+  }
+
+  /** Everything: a new session or a profile with nothing yet. */
+  private resetAll(): void {
     this.setAll({}, 1, 0, {}, {}, {});
     this.arrow.set(null);
     this.writeDraft();
+  }
+
+  /**
+   * The character as a save has it: its level, its skills and the worn pieces of the fixed slots (armour, rings,
+   * shield, weapons, ranged) with their base level, upgrades and gem. The Flame level and the comfort are left as
+   * they were. The skill build that was open is closed.
+   */
+  applyCharacter(sheet: {
+    level: number;
+    skills: Levels;
+    gear: Partial<Record<SlotKey, { guid: string; base: number | null; upgrades: number }>>;
+    gems?: Gems;
+  }): void {
+    const gear: Record<string, string> = { ...this.gear() };
+    const upgrades: Record<string, number> = { ...this.upgrades() };
+    const levels: Record<string, number> = { ...this.itemLevels() };
+    const gems: Gems = { ...this.gems() };
+    for (const [slot, w] of Object.entries(sheet.gear)) {
+      gear[slot] = w.guid;
+      if (isWeapon(slot)) {
+        const g = sheet.gems?.[slot as WeaponSlot];
+        if (g) gems[slot as WeaponSlot] = g;
+        else delete gems[slot as WeaponSlot];
+      }
+      if (w.upgrades > 0) upgrades[slot] = Math.min(w.upgrades, MAX_UPGRADES);
+      else delete upgrades[slot];
+      if (w.base !== null) levels[slot] = w.base;
+      else delete levels[slot];
+    }
+    this.currentId.set(null);
+    this.name.set('');
+    this.setAll(
+      sheet.skills,
+      clamp(sheet.level, 1, this.limit('playerLevelCap', 200)),
+      this.flame(),
+      gear,
+      upgrades,
+      gems,
+    );
+    this.itemLevels.set(levels);
+    if (this.profile === null) return;
+    try {
+      localStorage.setItem(keyOf(LEVELS, this.profile), JSON.stringify(levels));
+    } catch {
+      // storage blocked: the levels are just not kept
+    }
   }
 
   setArrow(id: string | null): void {
@@ -211,7 +263,7 @@ export class PlannerStore {
     if (write) this.writeDraft();
   }
 
-  /** A new, empty build. */
+  /** A new, empty skill build. */
   create(): void {
     this.currentId.set(null);
     this.name.set('');
@@ -224,16 +276,7 @@ export class PlannerStore {
     this.currentId.set(build.id);
     this.name.set(build.name);
     this.error.set(null);
-    this.setAll(
-      tree ? fromSaved(tree, build.nodes) : {},
-      build.level,
-      build.flame,
-      Object.fromEntries(Object.entries(build.gear).filter(([k]) => k !== 'arrow')),
-      fromIndices(build.upgrades ?? {}),
-      readGems(build.gems ?? {}),
-    );
-    this.arrow.set((build.gear as Record<string, string>)['arrow'] ?? null);
-    this.writeDraft();
+    this.set(tree ? fromSaved(tree, build.nodes) : {});
   }
 
   async load(): Promise<void> {
@@ -281,7 +324,7 @@ export class PlannerStore {
     this.currentId.set(null);
     this.name.set('');
     this.error.set(null);
-    this.reset();
+    this.resetAll();
     this.wipe(
       Object.keys(this.storage()).filter((k) =>
         [DRAFT, LEVELS, ACTIVE].some((b) => k === b || k.startsWith(`${b}:`)),
@@ -319,16 +362,11 @@ export class PlannerStore {
     }
   }
 
-  /** Saves the build under its name: a new one, or an update of the one being edited. */
+  /** Saves the skills under a name: a new build, or an update of the one being edited. */
   async save(): Promise<void> {
     const body = {
       name: this.name().trim() || `Build ${this.saved().length + 1}`,
       nodes: toSaved(this.levels()),
-      level: this.level(),
-      flame: this.flame(),
-      gear: { ...this.gear(), ...(this.arrow() ? { arrow: this.arrow()! } : {}) },
-      upgrades: toIndices(this.upgrades()),
-      gems: this.gems(),
     };
     this.error.set(null);
     try {
@@ -479,18 +517,6 @@ export class PlannerStore {
     }
   }
 }
-
-/** Saved as the indices 0..n-1 (the API allows any list; the chain is a count here). */
-const toIndices = (u: Upgrades): Record<string, number[]> =>
-  Object.fromEntries(
-    Object.entries(u).map(([k, n]) => [k, Array.from({ length: n }, (_, i) => i)]),
-  );
-const fromIndices = (u: Record<string, number[]>): Upgrades =>
-  Object.fromEntries(
-    Object.entries(u)
-      .filter(([, l]) => l.length)
-      .map(([k, l]) => [k, l.length]),
-  );
 
 /** Gems of a draft or a saved build: weapon slots with a gem id and a level in the API's range. */
 function readGems(raw: Record<string, unknown>): Gems {

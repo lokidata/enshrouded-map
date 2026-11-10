@@ -45,3 +45,35 @@ export function cellsFromVeil(rgba: Uint8ClampedArray): Uint8Array {
     cells[i] = Math.min(255, 255 - Math.round(rgba[4 * i + 3] / 0.6));
   return cells;
 }
+
+/** Bytes of a grid with one bit per cell (what the server stores for a shared area). */
+export const FOG_BYTES = (FOG_SIZE * FOG_SIZE) / 8;
+
+/** One bit per cell, cell i in bit i % 8 of byte i >> 3: explored from half seen. */
+export function cellsToBits(cells: Uint8Array): Uint8Array {
+  const bits = new Uint8Array(FOG_BYTES);
+  for (let i = 0; i < cells.length; i++) if (cells[i] >= 128) bits[i >> 3] |= 1 << (i & 7);
+  return bits;
+}
+
+export function bitsToCells(bits: Uint8Array): Uint8Array {
+  const cells = new Uint8Array(bits.length * 8);
+  for (let i = 0; i < cells.length; i++) cells[i] = bits[i >> 3] & (1 << (i & 7)) ? 255 : 0;
+  return cells;
+}
+
+/** Explored by one or the other. */
+export function unionCells(a: Uint8Array, b: Uint8Array): Uint8Array {
+  return a.map((v, i) => (v >= 128 || b[i] >= 128 ? 255 : 0));
+}
+
+export function toBase64(bytes: Uint8Array): string {
+  let s = '';
+  for (let i = 0; i < bytes.length; i += 0x8000)
+    s += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+
+export function fromBase64(text: string): Uint8Array {
+  return Uint8Array.from(atob(text), (c) => c.charCodeAt(0));
+}

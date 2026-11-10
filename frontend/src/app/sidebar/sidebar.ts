@@ -1,4 +1,6 @@
 import { Component, computed, inject } from '@angular/core';
+import { AuthService } from '../core/auth.service';
+import { TeamStore } from '../core/team.store';
 import { FogStore } from '../save-import/fog.store';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { Catalog } from '../core/catalog.service';
@@ -17,6 +19,8 @@ import { CategoryCard } from './category-card';
 export class Sidebar {
   protected readonly filters = inject(FilterStore);
   protected readonly fog = inject(FogStore);
+  protected readonly team = inject(TeamStore);
+  private readonly auth = inject(AuthService);
   protected readonly lang = inject(LangService);
   protected readonly mapData = inject(MapDataService);
   private readonly catalog = inject(Catalog);
@@ -30,4 +34,9 @@ export class Sidebar {
       return { ...section, cats: cats.filter((cat) => items.has(cat)) };
     }).filter((section) => section.cats.length);
   });
+
+  /** Shows my stored area to the team, or hides it again (possible at any time). */
+  protected share(on: boolean): void {
+    void this.fog.setShared(on).catch(() => this.auth.notice.set('errors.unknown'));
+  }
 }

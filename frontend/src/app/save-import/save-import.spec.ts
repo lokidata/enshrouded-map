@@ -1,7 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import { readKnowledge, guidId } from './knowledge';
 import { KsdError, readKsd } from './ksd';
-import { FOG_SIZE, cellsFromVeil, fogShare, isExplored, readFog, veilPixels } from './fog';
+import {
+  FOG_BYTES,
+  FOG_SIZE,
+  bitsToCells,
+  cellsFromVeil,
+  cellsToBits,
+  fogShare,
+  fromBase64,
+  isExplored,
+  readFog,
+  toBase64,
+  unionCells,
+  veilPixels,
+} from './fog';
 import { characterNumber, forgetImport, lastImport, rememberImport } from './import-history';
 import { fresh, propose } from './save-import.logic';
 
@@ -194,5 +207,34 @@ describe('import history', () => {
     expect(lastImport(2)).toBeNull();
     forgetImport();
     expect(localStorage.getItem('lastImport:2')).toBeNull();
+  });
+});
+
+describe('shared explored area', () => {
+  const cells = new Uint8Array(FOG_SIZE * FOG_SIZE);
+  for (const i of [0, 7, 8, 1000, FOG_SIZE * FOG_SIZE - 1]) cells[i] = 255;
+
+  it('packs a bit per cell and gets the same cells back', () => {
+    const bits = cellsToBits(cells);
+    expect(bits.length).toBe(FOG_BYTES);
+    expect(bits[0]).toBe(0b10000001); // cells 0 and 7
+    expect(bits[1]).toBe(0b00000001); // cell 8
+    expect(bitsToCells(bits)).toEqual(cells);
+  });
+
+  it('keeps a bit only from half seen, and is the same text both ways', () => {
+    const soft = new Uint8Array(FOG_SIZE * FOG_SIZE);
+    soft[3] = 127;
+    soft[4] = 128;
+    expect(cellsToBits(soft)[0]).toBe(0b00010000);
+    const bytes = cellsToBits(cells);
+    expect(fromBase64(toBase64(bytes))).toEqual(bytes);
+  });
+
+  it('is explored by one or the other', () => {
+    const other = new Uint8Array(FOG_SIZE * FOG_SIZE);
+    other[1] = 255;
+    const u = unionCells(cells, other);
+    expect([u[0], u[1], u[2], u[1000]]).toEqual([255, 255, 0, 255]);
   });
 });

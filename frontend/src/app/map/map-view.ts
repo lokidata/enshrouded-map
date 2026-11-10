@@ -170,14 +170,11 @@ export class MapView {
   private readonly host = viewChild.required<ElementRef<HTMLElement>>('host');
 
   protected readonly coords = signal('');
-  protected readonly biomes = signal<{ color: string; label: string }[]>([]);
-  protected readonly legendOn = signal(false);
 
   private readonly ready = signal(false);
   private readonly zoom = signal(0);
   private readonly size = this.mapData.data.worldSize;
   private map!: L.Map;
-  private biomesLayer!: L.ImageOverlay;
   private layersControl!: L.Control.Layers;
   private readonly placed: Placed[] = [];
   private readonly groups = new Map<string, L.LayerGroup>();
@@ -210,7 +207,12 @@ export class MapView {
     effect(() => this.applyVisibility());
     effect(() => this.applyLanguage());
     effect(() => this.applyDone());
-    effect(() => this.applyFog(this.fog.url()));
+    effect(() => this.applyFog(this.fog.viewUrl()));
+    effect(() => {
+      this.lang.index(); // the layers are named again when the language changes
+      this.applyFogAreas(this.fog.areas());
+    });
+    effect(() => this.syncFogView(this.fog.view()));
     effect(() => {
       this.auth.user();
       this.progress.done();
@@ -267,15 +269,20 @@ export class MapView {
       bounds,
       keepBuffer: 4,
     }).addTo(this.map);
-    this.biomesLayer = L.imageOverlay('biomes.png', bounds, { opacity: 0.85 });
     this.layersControl = L.control
       .layers(undefined, undefined, { position: 'topright' })
       .addTo(this.map);
     this.zoom.set(this.map.getZoom());
 
     this.map.on('overlayadd overlayremove', (e: L.LeafletEvent) => {
-      if ((e as L.LayersControlEvent).layer === this.biomesLayer)
-        this.legendOn.set(e.type === 'overlayadd');
+      const layer = (e as L.LayersControlEvent).layer;
+      if (this.syncingFog) return;
+      for (const [key, area] of this.fogAreas) {
+        if (area !== layer) continue;
+        const on = e.type === 'overlayadd';
+        if (key === 'me') this.fog.toggleMine(on);
+        else this.fog.toggleMember(Number(key), on);
+      }
     });
     this.map.on('mousemove', (e: L.LeafletMouseEvent) =>
       this.coords.set(`X ${Math.round(e.latlng.lng)} · Z ${Math.round(e.latlng.lat + this.size)}`),
@@ -405,7 +412,7 @@ export class MapView {
     const zoom = this.zoom();
     this.filters.overrides();
     const searching = this.filters.query().trim() !== '';
-    const cells = this.filters.onlyExplored() ? this.fog.cells() : null;
+    const cells = this.filters.onlyExplored() ? this.fog.known() : null;
     for (const p of this.placed) {
       const matches = this.filters.matchesText(...p.m.name, p.m.raw);
       // Labels only show from their zoom level, unless they match a search.
@@ -437,29 +444,23 @@ export class MapView {
 
   private applyLanguage(): void {
     if (!this.ready()) return;
-    const index = this.lang.index();
+    this.lang.index(); // the labels are drawn again when the language changes
     for (const p of this.placed) {
       if (this.mapData.data.categories[p.m.cat].kind === 'label')
         (p.layer as L.Marker).setIcon(this.labelIcon(p.m));
     }
-    this.layersControl
-      .removeLayer(this.biomesLayer)
-      .addOverlay(this.biomesLayer, this.lang.t('biomes'));
-    this.biomes.set(
-      Object.values(this.mapData.data.biomes).map((b) => ({
-        color: b.color,
-        label: b.label[index],
-      })),
-    );
   }
 
   private fogLayer?: L.ImageOverlay;
+  /** One layer per explored area ("me", or a member's id) in the layers control: ticking it shows that area. */
+  private readonly fogAreas = new Map<string, L.LayerGroup>();
+  /** Set while the layers are set from the player's choice, so that the events they raise are not taken for a click. */
+  private syncingFog = false;
 
-  /** The explored area imported from a save: a veil over the rest, listed in the layers control (on when imported). */
+  /** The veil over everything that is not in a ticked area (a single image, not listed in the control). */
   private applyFog(url: string | null): void {
     if (!this.ready()) return;
     if (this.fogLayer) {
-      this.layersControl.removeLayer(this.fogLayer);
       this.fogLayer.remove();
       this.fogLayer = undefined;
     }
@@ -469,7 +470,45 @@ export class MapView {
       [0, this.size],
     ]);
     this.fogLayer = L.imageOverlay(url, bounds, { opacity: 1, interactive: false }).addTo(this.map);
-    this.layersControl.addOverlay(this.fogLayer, this.lang.t('fogLayer'));
+  }
+
+  /** The explored areas, as layers of the control: mine and each member's who shares. */
+  private applyFogAreas(areas: readonly { key: string; name: string | null }[]): void {
+    if (!this.ready()) return;
+    this.syncingFog = true;
+    for (const layer of this.fogAreas.values()) {
+      this.layersControl.removeLayer(layer);
+      layer.remove();
+    }
+    this.fogAreas.clear();
+    const view = untracked(() => this.fog.view());
+    for (const a of areas) {
+      const layer = L.layerGroup(); // empty: the veil is one image for all the ticked areas
+      this.fogAreas.set(a.key, layer);
+      this.layersControl.addOverlay(
+        layer,
+        a.name === null
+          ? this.lang.t('fogMineLayer')
+          : this.lang.t('fogMemberLayer', { name: a.name }),
+      );
+      if (this.fogShown(a.key, view)) layer.addTo(this.map);
+    }
+    this.syncingFog = false;
+  }
+
+  private fogShown(key: string, view: { mine: boolean; off: readonly number[] }): boolean {
+    return key === 'me' ? view.mine : !view.off.includes(Number(key));
+  }
+
+  /** The player's choice (from anywhere) is the state of the layers. */
+  private syncFogView(view: { mine: boolean; off: readonly number[] }): void {
+    this.syncingFog = true;
+    for (const [key, layer] of this.fogAreas) {
+      const on = this.fogShown(key, view);
+      if (on && !this.map.hasLayer(layer)) layer.addTo(this.map);
+      if (!on && this.map.hasLayer(layer)) layer.remove();
+    }
+    this.syncingFog = false;
   }
 
   private applyDone(): void {

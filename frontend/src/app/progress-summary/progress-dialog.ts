@@ -1,10 +1,11 @@
-import { Component, ElementRef, computed, effect, inject, viewChild } from '@angular/core';
+import { Component, ElementRef, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { AuthService } from '../core/auth.service';
+import { AuthService, errorCode } from '../core/auth.service';
 import { CraftService } from '../core/craft.service';
 import { LoreService } from '../core/lore.service';
 import { MapDataService } from '../core/map-data.service';
 import { ProgressStore } from '../core/progress.store';
+import { TeamStore } from '../core/team.store';
 import { FogStore } from '../save-import/fog.store';
 import { summarize } from './progress-summary.logic';
 
@@ -41,6 +42,26 @@ import { summarize } from './progress-summary.logic';
           </li>
         }
       </ul>
+      @if (fog.share() !== null && team.team()) {
+        <fieldset class="target share">
+          <legend>{{ 'saveImportTeam' | transloco }}</legend>
+          <label>
+            <input
+              type="checkbox"
+              [checked]="fog.shared()"
+              (change)="shareFog($any($event.target).checked)"
+            />
+            {{ 'fogShareMine' | transloco }}
+          </label>
+          <p class="hint">{{ 'fogShareHint' | transloco }}</p>
+          @if (fog.team().length > 0) {
+            <p class="hint">{{ 'fogShareInfo' | transloco: { n: fog.team().length } }}</p>
+          }
+          <div class="error" role="alert">
+            {{ error() ? ('errors.' + error() | transloco) : '' }}
+          </div>
+        </fieldset>
+      }
       <div class="footer">
         <span></span>
         <button type="button" (click)="auth.progressOpen.set(false)">
@@ -67,7 +88,9 @@ export class ProgressDialog {
   private readonly lore = inject(LoreService);
   private readonly mapData = inject(MapDataService);
   private readonly progress = inject(ProgressStore);
-  private readonly fog = inject(FogStore);
+  protected readonly fog = inject(FogStore);
+  protected readonly team = inject(TeamStore);
+  protected readonly error = signal('');
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
 
   protected readonly lines = computed(() =>
@@ -79,6 +102,15 @@ export class ProgressDialog {
       this.fog.share(),
     ),
   );
+
+  protected async shareFog(on: boolean): Promise<void> {
+    this.error.set('');
+    try {
+      await this.fog.setShared(on);
+    } catch (err) {
+      this.error.set(errorCode(err));
+    }
+  }
 
   constructor() {
     effect(() => {

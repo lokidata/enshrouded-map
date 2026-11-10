@@ -54,16 +54,10 @@ export interface SkillsData {
 export type Levels = Readonly<Record<number, number>>;
 
 /** A build the player saved (api/v1/builds). */
+/** A skill build the player saved: a name and the level of each node. */
 export interface SavedBuild {
   id: number;
   name: string;
   nodes: Record<string, number>;
-  level: number;
-  flame: number;
-  gear: Record<string, string>;
-  /** slot -> indices into the item's upgrades, in order (the app writes 0..n-1: a chain). */
-  upgrades: Record<string, number[]>;
-  /** weapon slot -> the gem set in it (absent in builds saved before gems). */
-  gems?: Record<string, { id: string; level: number }>;
   updated_at: string;
 }

@@ -1,291 +1,270 @@
 {
- "constants": {
-  "genericWeaponSeed": 10,
-  "powerCreepWeapon": 0.15000000596046448,
-  "playerBaseHealth": 100,
-  "playerHealthPerAP": 50,
-  "playerBaseMana": 100,
-  "playerManaPerAP": 20,
-  "playerBaseStamina": 100,
-  "playerStaminaPerAP": 10,
-  "damageScalePerAttributePoint": 0.05,
-  "apPerFlameLevel": 1,
-  "flameLevelMax": 20,
-  "playerLevelMax": 100,
-  "playerBaseOxygen": 30,
-  "armorOffset": 23.0,
-  "armorGradient": 15.0,
-  "fixture_gear": 1,
-  "playerLevelCap": 50
- },
- "items": {
-  "11111111-0000-0000-0000-000000000001": {
-   "name": [
-    "Casque d'essai",
-    "Test Helmet"
-   ],
-   "slot": "Head",
-   "rarity": "Rare",
-   "lvl": [
-    10,
-    10
-   ],
-   "armor": {
-    "physical": 0.14,
-    "magical": 0.14
-   },
-   "stats": [
-    {
-     "id": 1,
-     "name": [
-      "Santé",
-      "Health"
-     ],
-     "value": 40,
-     "format": "Normal"
+  "constants": {
+    "genericWeaponSeed": 10,
+    "powerCreepWeapon": 0.15000000596046448,
+    "playerBaseHealth": 100,
+    "playerHealthPerAP": 50,
+    "playerBaseMana": 100,
+    "playerManaPerAP": 20,
+    "playerBaseStamina": 100,
+    "playerStaminaPerAP": 10,
+    "damageScalePerAttributePoint": 0.05,
+    "apPerFlameLevel": 1,
+    "flameLevelMax": 20,
+    "playerLevelMax": 100,
+    "playerBaseOxygen": 30,
+    "armorOffset": 23.0,
+    "armorGradient": 15.0,
+    "fixture_gear": 1,
+    "playerLevelCap": 50
+  },
+  "items": {
+    "11111111-0000-0000-0000-000000000001": {
+      "name": ["Casque d'essai", "Test Helmet"],
+      "slot": "Head",
+      "rarity": "Rare",
+      "lvl": [10, 10],
+      "armor": {
+        "physical": 0.14,
+        "magical": 0.14
+      },
+      "stats": [
+        {
+          "id": 1,
+          "name": ["Santé", "Health"],
+          "value": 40,
+          "format": "Normal"
+        },
+        {
+          "id": 2,
+          "name": ["Résistance au poison", "Poison Resistance"],
+          "value": 5,
+          "format": "Percentage"
+        }
+      ],
+      "upgrades": [
+        {
+          "name": ["Armure émoussée", "Blunt Armor"],
+          "armor": {
+            "blunt": 0.03
+          },
+          "stats": [],
+          "icon": "ui/missing-upgrade.png",
+          "desc": ["Réduit les dégâts contondants", "Reduces blunt damage"]
+        },
+        {
+          "name": ["Armure ignée", "Fire Armor"],
+          "armor": {
+            "fire": 0.02
+          },
+          "stats": [
+            {
+              "id": 3,
+              "name": ["Santé", "Health"],
+              "value": 10,
+              "format": "Normal"
+            }
+          ]
+        }
+      ],
+      "parry": 0.19
     },
-    {
-     "id": 2,
-     "name": [
-      "Résistance au poison",
-      "Poison Resistance"
-     ],
-     "value": 5,
-     "format": "Percentage"
-    }
-   ],
-   "upgrades": [
-    {
-     "name": [
-      "Armure émoussée",
-      "Blunt Armor"
-     ],
-     "armor": {
-      "blunt": 0.03
-     },
-     "stats": [],
-     "icon": "ui/missing-upgrade.png",
-     "desc": [
-      "Réduit les dégâts contondants",
-      "Reduces blunt damage"
-     ]
+    "11111111-0000-0000-0000-000000000002": {
+      "name": ["Plastron d'essai", "Test Chest"],
+      "slot": "Chest",
+      "rarity": "Common",
+      "lvl": [5, 5],
+      "armor": {
+        "physical": 0.2,
+        "fire": 0.05
+      },
+      "stats": [],
+      "upgrades": []
     },
-    {
-     "name": [
-      "Armure ignée",
-      "Fire Armor"
-     ],
-     "armor": {
-      "fire": 0.02
-     },
-     "stats": [
-      {
-       "id": 3,
-       "name": [
-        "Santé",
-        "Health"
-       ],
-       "value": 10,
-       "format": "Normal"
-      }
-     ]
+    "11111111-0000-0000-0000-000000000003": {
+      "name": ["Anneau d'essai", "Test Ring"],
+      "slot": "Ring",
+      "rarity": "Epic",
+      "lvl": [8, 8],
+      "stats": [
+        {
+          "id": 3,
+          "name": ["Dégâts de mêlée", "Melee Damage"],
+          "value": 4,
+          "format": "Percentage"
+        }
+      ],
+      "upgrades": []
+    },
+    "11111111-0000-0000-0000-000000000004": {
+      "name": ["Épée d'essai", "Test Sword"],
+      "slot": "Weapon",
+      "rarity": "Rare",
+      "lvl": [12, 12],
+      "type": "OneHandedSword",
+      "damage": {
+        "mod": 1.2,
+        "speed": 1.0,
+        "hands": 1,
+        "attr": "strength",
+        "types": {
+          "cut": 1.0
+        }
+      },
+      "stats": [
+        {
+          "id": 4,
+          "name": ["Capacité de parade", "Parry Power"],
+          "value": 7,
+          "format": "Normal"
+        }
+      ],
+      "upgrades": [
+        {
+          "name": ["Dégâts tranchants", "Cutting Damage"],
+          "armor": {},
+          "stats": [],
+          "damage": {
+            "type": "cut",
+            "share": 0.1,
+            "label": ["Dégâts tranchants", "Cutting Damage"]
+          }
+        }
+      ],
+      "gem": 0.25
+    },
+    "11111111-0000-0000-0000-000000000005": {
+      "name": ["Bouclier d'essai", "Test Shield"],
+      "slot": "Shield",
+      "rarity": "Uncommon",
+      "lvl": [6, 6],
+      "block": 2.0,
+      "stats": [
+        {
+          "id": 5,
+          "name": ["Bloc", "Block"],
+          "value": 15,
+          "format": "Normal"
+        }
+      ],
+      "upgrades": []
+    },
+    "11111111-0000-0000-0000-000000000006": {
+      "name": ["Arc d'essai", "Test Bow"],
+      "slot": "Weapon",
+      "rarity": "Rare",
+      "lvl": [9, 9],
+      "type": "Bow",
+      "damage": {
+        "mod": 1.0,
+        "speed": 1.0,
+        "hands": 2,
+        "attr": "dexterity",
+        "types": {
+          "pierce": 1.0
+        }
+      },
+      "stats": [],
+      "upgrades": []
+    },
+    "11111111-0000-0000-0000-000000000007": {
+      "name": ["Gants d'essai", "Test gloves"],
+      "slot": "Hands",
+      "rarity": "Common",
+      "lvl": [5, 5],
+      "armor": {
+        "physical": 0.2,
+        "fire": 0.05
+      },
+      "stats": [],
+      "upgrades": []
+    },
+    "11111111-0000-0000-0000-000000000008": {
+      "name": ["Jambières d'essai", "Test leggings"],
+      "slot": "Legs",
+      "rarity": "Common",
+      "lvl": [5, 5],
+      "armor": {
+        "physical": 0.2,
+        "fire": 0.05
+      },
+      "stats": [],
+      "upgrades": []
+    },
+    "11111111-0000-0000-0000-000000000009": {
+      "name": ["Bottes d'essai", "Test boots"],
+      "slot": "Feet",
+      "rarity": "Common",
+      "lvl": [5, 5],
+      "armor": {
+        "physical": 0.2,
+        "fire": 0.05
+      },
+      "stats": [],
+      "upgrades": []
+    },
+    "11111111-0000-0000-0000-00000000000a": {
+      "name": ["Anneau d'essai II", "Test ring II"],
+      "slot": "Ring",
+      "rarity": "Epic",
+      "lvl": [1, 20],
+      "stats": [
+        {
+          "id": 3,
+          "name": ["Dégâts de mêlée", "Melee Damage"],
+          "value": 4,
+          "format": "Percentage"
+        }
+      ],
+      "upgrades": []
     }
-   ],
-   "parry": 0.19
   },
-  "11111111-0000-0000-0000-000000000002": {
-   "name": [
-    "Plastron d'essai",
-    "Test Chest"
-   ],
-   "slot": "Chest",
-   "rarity": "Common",
-   "lvl": [
-    5,
-    5
-   ],
-   "armor": {
-    "physical": 0.2,
-    "fire": 0.05
-   },
-   "stats": [],
-   "upgrades": []
+  "player": {
+    "CritChance_Base": 0.05,
+    "CritDamageMod_Base": 1.5,
+    "DamageModSneak_Base": 10,
+    "DamageModMerciless_Base": 6,
+    "DamageModBackstab_Multiplier": 1.1,
+    "DamageModSkillShot_Base": 1,
+    "HealingMod_Base": 1,
+    "Revive_Delay_Base": 6,
+    "Revive_Healing_Percentage": 0.1,
+    "Health_Recharge": 0,
+    "Mana_Recharge": 5,
+    "Stamina_Recharge": 50,
+    "Health_RechargeTimeout": 500,
+    "Mana_RechargeTimeout": 500,
+    "Stamina_RechargeTimeout": 500,
+    "WetDurationReduction": 0,
+    "CritChance_Adder_Melee": 0,
+    "CritChance_Adder_Magic": 0,
+    "CritChance_Adder_Ranged": 0,
+    "WeaponCategoryDamageMod_TwoHand": 1,
+    "WeaponCategoryDamageMod_Single": 1
   },
-  "11111111-0000-0000-0000-000000000003": {
-   "name": [
-    "Anneau d'essai",
-    "Test Ring"
-   ],
-   "slot": "Ring",
-   "rarity": "Epic",
-   "lvl": [
-    8,
-    8
-   ],
-   "stats": [
-    {
-     "id": 3,
-     "name": [
-      "Dégâts de mêlée",
-      "Melee Damage"
-     ],
-     "value": 4,
-     "format": "Percentage"
-    }
-   ],
-   "upgrades": []
+  "colors": {
+    "common": "#a1ae96",
+    "uncommon": "#3c9b5a",
+    "rare": "#78a1db",
+    "epic": "#9c84d9",
+    "legendary": "#f6a02c"
   },
-  "11111111-0000-0000-0000-000000000004": {
-   "name": [
-    "Épée d'essai",
-    "Test Sword"
-   ],
-   "slot": "Weapon",
-   "rarity": "Rare",
-   "lvl": [
-    12,
-    12
-   ],
-   "type": "OneHandedSword",
-   "damage": {
-    "mod": 1.2,
-    "speed": 1.0,
-    "hands": 1,
-    "attr": "strength",
-    "types": {
-     "cut": 1.0
-    }
-   },
-   "stats": [
-    {
-     "id": 4,
-     "name": [
-      "Capacité de parade",
-      "Parry Power"
-     ],
-     "value": 7,
-     "format": "Normal"
-    }
-   ],
-   "upgrades": [
-    {
-     "name": [
-      "Dégâts tranchants",
-      "Cutting Damage"
-     ],
-     "armor": {},
-     "stats": [],
-     "damage": {
-      "type": "cut",
-      "share": 0.1,
-      "label": [
-       "Dégâts tranchants",
-       "Cutting Damage"
-      ]
-     }
-    }
-   ],
-   "gem": 0.25
+  "texts": {
+    "/rpgTerms/attributes/offenseCritical/displayInfo/label": [
+      "Dégâts de coup critique",
+      "Critical Strike Damage"
+    ],
+    "/rpgTerms/attributes/twoHandDamage/displayInfo/alternativeLabel": [
+      "À deux mains",
+      "Two-Handed"
+    ],
+    "/rpgTerms/attributes/health/displayInfo/tooltip": [
+      "Vous mourez lorsque votre santé atteint zéro.",
+      "You perish when your health reaches zero."
+    ],
+    "/inventory/damagePerkDescription": ["%k de dégâts de base", "%k of base damage"]
   },
-  "11111111-0000-0000-0000-000000000005": {
-   "name": [
-    "Bouclier d'essai",
-    "Test Shield"
-   ],
-   "slot": "Shield",
-   "rarity": "Uncommon",
-   "lvl": [
-    6,
-    6
-   ],
-   "block": 2.0,
-   "stats": [
-    {
-     "id": 5,
-     "name": [
-      "Bloc",
-      "Block"
-     ],
-     "value": 15,
-     "format": "Normal"
-    }
-   ],
-   "upgrades": []
-  },
-  "11111111-0000-0000-0000-000000000006": {
-   "name": [
-    "Arc d'essai",
-    "Test Bow"
-   ],
-   "slot": "Weapon",
-   "rarity": "Rare",
-   "lvl": [
-    9,
-    9
-   ],
-   "type": "Bow",
-   "damage": {
-    "mod": 1.0,
-    "speed": 1.0,
-    "hands": 2,
-    "attr": "dexterity",
-    "types": {
-     "pierce": 1.0
-    }
-   },
-   "stats": [],
-   "upgrades": []
+  "ui": {
+    "equipmentslot_head": "ui/missing-head.png"
   }
- },
- "player": {
-  "CritChance_Base": 0.05,
-  "CritDamageMod_Base": 1.5,
-  "DamageModSneak_Base": 10,
-  "DamageModMerciless_Base": 6,
-  "DamageModBackstab_Multiplier": 1.1,
-  "DamageModSkillShot_Base": 1,
-  "HealingMod_Base": 1,
-  "Revive_Delay_Base": 6,
-  "Revive_Healing_Percentage": 0.1,
-  "Health_Recharge": 0,
-  "Mana_Recharge": 5,
-  "Stamina_Recharge": 50,
-  "Health_RechargeTimeout": 500,
-  "Mana_RechargeTimeout": 500,
-  "Stamina_RechargeTimeout": 500,
-  "WetDurationReduction": 0,
-  "CritChance_Adder_Melee": 0,
-  "CritChance_Adder_Magic": 0,
-  "CritChance_Adder_Ranged": 0,
-  "WeaponCategoryDamageMod_TwoHand": 1,
-  "WeaponCategoryDamageMod_Single": 1
- },
- "colors": {
-  "common": "#a1ae96",
-  "uncommon": "#3c9b5a",
-  "rare": "#78a1db",
-  "epic": "#9c84d9",
-  "legendary": "#f6a02c"
- },
- "texts": {
-  "/rpgTerms/attributes/offenseCritical/displayInfo/label": [
-   "Dégâts de coup critique",
-   "Critical Strike Damage"
-  ],
-  "/rpgTerms/attributes/twoHandDamage/displayInfo/alternativeLabel": [
-   "À deux mains",
-   "Two-Handed"
-  ],
-  "/rpgTerms/attributes/health/displayInfo/tooltip": [
-   "Vous mourez lorsque votre santé atteint zéro.",
-   "You perish when your health reaches zero."
-  ],
-  "/inventory/damagePerkDescription": [
-   "%k de dégâts de base",
-   "%k of base damage"
-  ]
- },
- "ui": {
-  "equipmentslot_head": "ui/missing-head.png"
- }
 }

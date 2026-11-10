@@ -4,15 +4,22 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { AuthService, errorCode } from '../core/auth.service';
 import { CharacterStore } from '../core/character.store';
 import { CraftService } from '../core/craft.service';
+import { GearService } from '../core/gear.service';
+import { GemsService } from '../core/gems.service';
 import { LangService } from '../core/lang.service';
 import { MapDataService } from '../core/map-data.service';
 import { LoreService } from '../core/lore.service';
+import { PlannerStore } from '../core/planner.store';
 import { ProgressStore } from '../core/progress.store';
+import { SkillsService } from '../core/skills.service';
 import { SessionService } from '../core/session.service';
+import { TeamStore } from '../core/team.store';
+import { readCharacter } from './character';
+import { Sheet, indexItems, sheetOf } from './character.logic';
 import { FogStore } from './fog.store';
 import { ImportEntry, characterNumber, lastImport, rememberImport } from './import-history';
 import { fogShare, readFog } from './fog';
-import { readKnowledge } from './knowledge';
+import { guidId, readKnowledge } from './knowledge';
 import { MAX_FILE, readKsd } from './ksd';
 import { Kind, Proposal, fresh, propose } from './save-import.logic';
 
@@ -116,11 +123,40 @@ type Target = 'active' | 'new';
             </li>
           }
         </ul>
+        @if (sheet(); as s) {
+          <label class="fog">
+            <input type="checkbox" [checked]="s.take" (change)="toggleSheet()" />
+            {{
+              'saveImportSheet'
+                | transloco: { level: s.sheet.level, pieces: s.pieces.length, skills: s.skills }
+            }}
+          </label>
+          @if (s.take) {
+            @if (s.pieces.length) {
+              <p class="hint">{{ s.pieces.join(', ') }}</p>
+            }
+            <p class="hint">{{ 'saveImportSheetNote' | transloco }}</p>
+          }
+        }
         @if (fog(); as f) {
           <label class="fog">
             <input type="checkbox" [checked]="f.take" (change)="toggleFog()" />
             {{ 'saveImportFog' | transloco: { percent: f.percent } }}
           </label>
+          @if (f.take && team.team()) {
+            <fieldset class="target share">
+              <legend>{{ 'saveImportTeam' | transloco }}</legend>
+              <label>
+                <input
+                  type="checkbox"
+                  [checked]="share()"
+                  (change)="share.set($any($event.target).checked)"
+                />
+                {{ 'saveImportFogShare' | transloco }}
+              </label>
+              <p class="hint">{{ 'fogShareHint' | transloco }}</p>
+            </fieldset>
+          }
         }
         <p class="hint">{{ 'saveImportAdds' | transloco }}</p>
       }
@@ -154,6 +190,20 @@ export class SaveImportDialog {
   private readonly progress = inject(ProgressStore);
   private readonly session = inject(SessionService);
   private readonly lang = inject(LangService);
+  private readonly gear = inject(GearService);
+  private readonly skills = inject(SkillsService);
+  private readonly gemsData = inject(GemsService);
+  private readonly planner = inject(PlannerStore);
+  /** The character found in the save (level, equipment of the fixed slots, skills), and whether to import it. */
+  protected readonly sheet = signal<{
+    sheet: Sheet;
+    pieces: string[];
+    skills: number;
+    take: boolean;
+  } | null>(null);
+  protected readonly team = inject(TeamStore);
+  /** Share the explored area with the team (off until the player says so). */
+  protected readonly share = signal(false);
   protected readonly characters = inject(CharacterStore);
   private readonly fogStore = inject(FogStore);
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
@@ -199,6 +249,7 @@ export class SaveImportDialog {
       if (open && !el.open) {
         this.proposal.set(null);
         this.fog.set(null);
+        this.sheet.set(null);
         this.error.set('');
         this.serverError.set('');
         this.done.set(null);
@@ -211,8 +262,14 @@ export class SaveImportDialog {
 
   protected count(): number {
     return (
-      this.lines().reduce((n, l) => n + (l.take ? l.ids.length : 0), 0) + (this.fog()?.take ? 1 : 0)
+      this.lines().reduce((n, l) => n + (l.take ? l.ids.length : 0), 0) +
+      (this.fog()?.take ? 1 : 0) +
+      (this.sheet()?.take ? 1 : 0)
     );
+  }
+
+  protected toggleSheet(): void {
+    this.sheet.update((s) => (s ? { ...s, take: !s.take } : s));
   }
 
   protected toggleFog(): void {
@@ -249,6 +306,7 @@ export class SaveImportDialog {
     this.proposal.set(null);
     this.unticked.set(new Set());
     this.fog.set(null);
+    this.sheet.set(null);
     this.error.set('');
     this.serverError.set('');
     this.done.set(null);
@@ -270,7 +328,9 @@ export class SaveImportDialog {
       if (f) {
         const cells = readFog(f);
         this.fog.set({ cells, percent: Math.round(fogShare(cells) * 100), take: true });
+        this.share.set(this.fogStore.shared());
       }
+      this.sheet.set(this.readSheet(sections.get('player_character')));
       // The same file as last time goes to the profile it came from; an empty profile takes its first
       // import; another character's save is a new profile.
       const last = this.lastOfActive();
@@ -289,12 +349,15 @@ export class SaveImportDialog {
     const counts: ImportEntry['counts'] = {};
     for (const l of this.lines()) if (l.take) counts[l.kind] = l.ids.length;
     const fog = this.fog();
+    const sheet = this.sheet();
     this.busy.set(true);
     this.serverError.set('');
     try {
       // a new profile first, so that the marks and the explored area land in it
       if (this.target() === 'new') await this.session.addCharacter(this.newName().trim());
-      if (fog?.take) this.fogStore.set(fog.cells);
+      // the server keeps the area for this profile; the team sees it only if the player said so
+      if (fog?.take) await this.fogStore.save(fog.cells, !!this.team.team() && this.share());
+      if (sheet?.take) this.planner.applyCharacter(sheet.sheet);
       await this.progress.setAll(ids, true);
     } catch (err) {
       this.serverError.set(errorCode(err));
@@ -307,8 +370,34 @@ export class SaveImportDialog {
     if (id !== undefined)
       rememberImport(id, { name: this.fileName(), at: new Date().toISOString(), counts });
     this.previous.set(this.lastOfActive());
-    this.done.set(ids.length + (fog?.take ? 1 : 0));
+    this.done.set(ids.length + (fog?.take ? 1 : 0) + (sheet?.take ? 1 : 0));
     this.proposal.set(null);
     this.fog.set(null);
+    this.sheet.set(null);
+  }
+
+  /** The character of the save, when the game's data is loaded and the section is recognised. */
+  private readSheet(section: Uint8Array | undefined): ReturnType<typeof this.sheet> {
+    const items = this.gear.data()?.items;
+    const nodes = this.skills.data()?.nodes;
+    if (!section || !items || !nodes) return null;
+    const info = indexItems(items);
+    const character = readCharacter(
+      section,
+      new Map(nodes.map((n) => [n.id, n.max])),
+      new Map([...info].map(([id, i]) => [id, i.kind])),
+      new Set([...info].filter(([, i]) => i.type === 'Bow').map(([id]) => id)),
+    );
+    if (!character) return null;
+    const gems = new Map(
+      this.gemsData.gems().map((g) => [guidId(g.id), { guid: g.id, lvl: g.lvl }] as const),
+    );
+    const sheet = sheetOf(character, info, gems);
+    return {
+      sheet,
+      pieces: Object.values(sheet.gear).map((w) => this.gear.text(items[w.guid].name)),
+      skills: Object.keys(sheet.skills).length,
+      take: true,
+    };
   }
 }

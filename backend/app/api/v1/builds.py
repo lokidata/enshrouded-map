@@ -18,17 +18,7 @@ def _own(db: DbSession, user: CurrentUser, build_id: int) -> Build:
 
 
 def _out(build: Build) -> BuildOut:
-    return BuildOut(
-        id=build.id,
-        name=build.name,
-        nodes=build.nodes,
-        level=build.level,
-        flame=build.flame,
-        gear=build.gear,
-        upgrades=build.upgrades,
-        gems=build.gems or {},
-        updated_at=build.updated_at,
-    )
+    return BuildOut(id=build.id, name=build.name, nodes=build.nodes, updated_at=build.updated_at)
 
 
 @router.get("", response_model=list[BuildOut])
@@ -56,8 +46,8 @@ def create_build(body: BuildIn, user: CurrentUser, db: DbSession) -> BuildOut:
 @router.put("/{build_id}", response_model=BuildOut)
 def update_build(build_id: int, body: BuildIn, user: CurrentUser, db: DbSession) -> BuildOut:
     build = _own(db, user, build_id)
-    for field, value in body.model_dump().items():
-        setattr(build, field, value)
+    build.name = body.name
+    build.nodes = body.nodes
     db.commit()
     return _out(build)
 

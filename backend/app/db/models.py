@@ -62,6 +62,20 @@ class ActiveCharacter(Base):
     character_id: Mapped[int] = mapped_column(ForeignKey("characters.id", ondelete="CASCADE"))
 
 
+class Fog(Base):
+    """The explored area imported for a character profile: a bit per 8 m cell of the map.
+    Private to its owner unless `shared`: the team sees the union of its members' shared rows."""
+
+    __tablename__ = "fogs"
+
+    character_id: Mapped[int] = mapped_column(
+        ForeignKey("characters.id", ondelete="CASCADE"), primary_key=True
+    )
+    bits: Mapped[bytes] = mapped_column(LargeBinary)
+    shared: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
 class Mark(Base):
     __tablename__ = "marks"
 
@@ -166,7 +180,9 @@ class Passkey(Base):
 
 
 class Build(Base):
-    """A skill build a player saved: the level of each skill node they took ("node id" -> level)."""
+    """A skill build a player saved: the level of each skill node they took ("node id" -> level).
+    level, flame, gear, upgrades and gems are no longer written (the character sheet is per
+    profile); the columns stay so that nothing saved before is lost."""
 
     __tablename__ = "builds"
 
