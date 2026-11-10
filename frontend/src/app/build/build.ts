@@ -45,7 +45,6 @@ import { PlannerStore } from '../core/planner.store';
 import { ATTRS, attributes } from '../core/skills.logic';
 import { SkillsService } from '../core/skills.service';
 import { ViewStore } from '../core/view.store';
-import { BuildsPanel } from './builds-panel';
 import { CharacterSheet } from './character';
 import { RecommendationsPanel } from './recommendations';
 import { StatRow, TipPart } from './stat-row';
@@ -95,22 +94,14 @@ interface Row {
   desc: string | null;
 }
 
-/** The game's Character screen (sheet), then its Attributes screen: level, Flame, equipment and skills of the planned build. */
+/** The game's Character screen (sheet), then its Attributes screen: the level, Flame, equipment and skills of the character of the profile followed. */
 @Component({
   selector: 'app-build',
-  imports: [TranslocoPipe, BuildsPanel, CharacterSheet, RecommendationsPanel, StatRow],
+  imports: [TranslocoPipe, CharacterSheet, RecommendationsPanel, StatRow],
   template: `
     @if (gear.data()) {
       <div class="stage">
         <nav class="actions" [attr.aria-label]="'buildActions' | transloco">
-          <button
-            type="button"
-            class="pill"
-            [attr.aria-pressed]="saves()"
-            (click)="saves.set(!saves())"
-          >
-            {{ 'skillBuilds' | transloco }}
-          </button>
           <button type="button" class="pill" (click)="views.set('equipment')">
             {{ 'buildEquipment' | transloco }}
           </button>
@@ -118,11 +109,6 @@ interface Row {
             {{ 'skills' | transloco }}
           </button>
         </nav>
-        @if (saves()) {
-          <section class="sheet" [attr.aria-label]="'skillBuilds' | transloco">
-            <app-builds-panel />
-          </section>
-        }
         <div id="attributes" class="attrs">
           <aside class="left" [attr.aria-label]="'buildCharacter' | transloco">
             <h2>{{ 'buildLevel' | transloco }}</h2>
@@ -536,7 +522,6 @@ export class Build {
 
   protected readonly tabs = TABS;
   protected readonly tab = signal<Tab>('bases');
-  protected readonly saves = signal(false);
   /** The attributes section under the character sheet. */
 
   private readonly constants = computed(() => this.gear.data()?.constants ?? {});

@@ -108,3 +108,36 @@ h1 {
   color: var(--muted);
   font-size: 13px;
 }
+
+.fog-areas {
+  /* at the bottom of the menu: it can come in late (the area is restored after the login) without
+     pushing the categories down */
+  flex: none;
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  border-width: 1px 0 0;
+  padding: 8px 16px 12px;
+  border-style: solid;
+  border-color: var(--gold-dim);
+  background: linear-gradient(180deg, var(--panel), var(--panel-deep));
+  font-size: 13px;
+}
+.fog-areas legend {
+  padding: 0 6px;
+  color: var(--gold);
+  font: 400 14px/1.2 var(--display-sc);
+  letter-spacing: 0.04em;
+}
+.fog-areas label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text);
+}
+.fog-areas .hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-style: italic;
+}

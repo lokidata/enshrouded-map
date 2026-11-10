@@ -1,83 +1,20 @@
-import re
 from datetime import datetime
 from typing import Annotated
 
-from pydantic import BaseModel, Field, StringConstraints, field_validator
-
-from app.schemas.common import StrictModel
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
 
 MAX_LEVEL = 3  # the most levels a skill node has in the game
 MAX_NODES = 400  # the tree has 243
-SLOTS = frozenset(
-    [
-        "head",
-        "chest",
-        "legs",
-        "hands",
-        "feet",
-        "ring1",
-        "ring2",
-        "weapon1",
-        "weapon2",
-        "weapon3",
-        "shield",
-        "ranged",
-        "arrow",  # the ammunition the DPS counts with the bow (an ammo guid of gear.json)
-    ]
-)  # equipment slots
-MAX_UPGRADES = 8  # per piece (the data has 5 at most)
-MAX_UPGRADE_INDEX = 64
-GEM_SLOTS = frozenset(["weapon1", "weapon2", "weapon3", "ranged"])  # slots that can hold a gem
-MAX_GEM_LEVEL = 200  # the data has 105
-GUID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
 
 
-def _gear(gear: dict[str, str]) -> dict[str, str]:
-    for slot, guid in gear.items():
-        if slot not in SLOTS:
-            raise ValueError("unknown slot")
-        if not GUID.fullmatch(guid):
-            raise ValueError("item ids are lowercase guids")
-    return gear
+class BuildIn(BaseModel):
+    """A skill build: a name and the level of each skill node. The character's level, equipment and
+    gems are not in it (they belong to the character profile): an old client may still send them."""
 
+    model_config = ConfigDict(extra="ignore", strict=True)
 
-def _upgrades(upgrades: dict[str, list[int]]) -> dict[str, list[int]]:
-    for slot, picks in upgrades.items():
-        if slot not in SLOTS:
-            raise ValueError("unknown slot")
-        if len(picks) > MAX_UPGRADES or not all(0 <= i < MAX_UPGRADE_INDEX for i in picks):
-            raise ValueError("bad upgrades")
-    return upgrades
-
-
-class GemIn(StrictModel):
-    """The gem set in a weapon slot, at its gem level."""
-
-    id: str
-    level: int = Field(ge=1, le=MAX_GEM_LEVEL)
-
-    @field_validator("id")
-    @classmethod
-    def _guid(cls, guid: str) -> str:
-        if not GUID.fullmatch(guid):
-            raise ValueError("gem ids are lowercase guids")
-        return guid
-
-
-def _gems(gems: dict[str, GemIn]) -> dict[str, GemIn]:
-    if not GEM_SLOTS.issuperset(gems):
-        raise ValueError("unknown gem slot")
-    return gems
-
-
-class BuildIn(StrictModel):
     name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=60)]
     nodes: dict[str, int] = Field(max_length=MAX_NODES)
-    level: int = Field(default=1, ge=1, le=200)
-    flame: int = Field(default=0, ge=0, le=50)
-    gear: dict[str, str] = Field(default_factory=dict, max_length=len(SLOTS))
-    upgrades: dict[str, list[int]] = Field(default_factory=dict, max_length=len(SLOTS))
-    gems: dict[str, GemIn] = Field(default_factory=dict, max_length=len(GEM_SLOTS))
 
     @field_validator("nodes")
     @classmethod
@@ -89,18 +26,9 @@ class BuildIn(StrictModel):
                 raise ValueError(f"a level is 1 to {MAX_LEVEL}")
         return nodes
 
-    _slots = field_validator("gear")(_gear)
-    _picks = field_validator("upgrades")(_upgrades)
-    _gem_slots = field_validator("gems")(_gems)
-
 
 class BuildOut(BaseModel):
     id: int
     name: str
     nodes: dict[str, int]
-    level: int = 1
-    flame: int = 0
-    gear: dict[str, str] = Field(default_factory=dict)
-    upgrades: dict[str, list[int]] = Field(default_factory=dict)
-    gems: dict[str, dict[str, str | int]] = Field(default_factory=dict)
     updated_at: datetime

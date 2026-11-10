@@ -1,9 +1,12 @@
+import base64
 from collections import defaultdict
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from fastapi import APIRouter, HTTPException, Request
+from pydantic import BaseModel
 from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.sql import Select
 
 from app.api.deps import CurrentUser, DbSession
 from app.api.limiter import limiter
@@ -11,7 +14,7 @@ from app.core.config import get_settings
 from app.core.logging import audit
 from app.core.security import new_token, token_digest
 from app.db.base import utcnow
-from app.db.models import ActiveCharacter, Invitation, Mark, Team, TeamMember, User
+from app.db.models import ActiveCharacter, Fog, Invitation, Mark, Team, TeamMember, User
 from app.db.queries import leave_team
 from app.schemas.auth import InvitationOut
 from app.schemas.team import (
@@ -210,3 +213,57 @@ def team_marks(user: CurrentUser, db: DbSession) -> TeamMarks:
         for mark_id, user_id in rows:
             marks[mark_id].append(user_id)
     return TeamMarks(marks=marks)
+
+
+class SharedArea(BaseModel):
+    user_id: int
+    username: str
+    updated_at: str  # a browser that has this copy does not ask for it again
+
+
+class SharedAreas(BaseModel):
+    """The other members who share their explored area (the area itself is asked for one by one)."""
+
+    members: list[SharedArea]
+
+
+class AreaBits(BaseModel):
+    bits: str  # base64 of a bit per 8 m cell
+
+
+def _shared_areas(user: User, team_id: int) -> Select[int, str, datetime, bytes]:
+    """Rows (user id, name, area) of the other members who share; a member counts with the profile
+    they follow now, like the marks."""
+    return (
+        select(User.id, User.username, Fog.updated_at, Fog.bits)
+        .join(ActiveCharacter, ActiveCharacter.user_id == User.id)
+        .join(Fog, Fog.character_id == ActiveCharacter.character_id)
+        .join(TeamMember, TeamMember.user_id == User.id)
+        .where(TeamMember.team_id == team_id, User.id != user.id, Fog.shared.is_(True))
+    )
+
+
+@router.get("/fog", response_model=SharedAreas)
+def team_fog(user: CurrentUser, db: DbSession) -> SharedAreas:
+    member = _membership(db, user)
+    if member is None:
+        raise HTTPException(404, "no_team")
+    rows = db.execute(
+        _shared_areas(user, member.team_id)
+        .with_only_columns(User.id, User.username, Fog.updated_at)
+        .order_by(User.username)
+    )
+    return SharedAreas(
+        members=[SharedArea(user_id=i, username=n, updated_at=a.isoformat()) for i, n, a in rows]
+    )
+
+
+@router.get("/fog/{user_id}", response_model=AreaBits)
+def team_fog_of(user_id: int, user: CurrentUser, db: DbSession) -> AreaBits:
+    member = _membership(db, user)
+    if member is None:
+        raise HTTPException(404, "no_team")
+    row = db.execute(_shared_areas(user, member.team_id).where(User.id == user_id)).first()
+    if row is None:
+        raise HTTPException(404, "no_fog")  # not in the team, or not sharing: the same answer
+    return AreaBits(bits=base64.b64encode(row.bits).decode())

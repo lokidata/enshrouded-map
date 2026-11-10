@@ -979,21 +979,10 @@ test('build: level, flame, equipment, protection, skills, save and reload', asyn
   await build.getByRole('tab', { name: 'Dégâts' }).click();
   await expect(build.locator('dl > div').filter({ hasText: 'À deux mains' })).toContainText('+10%');
 
-  // save, reload, new (back to level 1), open the saved build
-  await build.getByRole('button', { name: 'Builds enregistrés', exact: true }).click();
-  await build.getByLabel('Nom du build').fill('Avec équipement');
-  await build.getByRole('button', { name: 'Enregistrer' }).click();
-  await expect(build.locator('.builds')).toContainText('Avec équipement');
+  // the sheet belongs to the profile, not to a saved build: still there after a reload
   await page.reload();
   await openBuild();
   await expect(sheet.locator('.total').first()).toContainText('26'); // the draft, upgrades included
-  await build.getByRole('button', { name: 'Builds enregistrés', exact: true }).click();
-  await build.getByRole('button', { name: 'Nouveau' }).click();
-  await expect(build.getByLabel('Niveau du personnage', { exact: true })).toHaveValue('1');
-  await build
-    .locator('.builds')
-    .getByRole('button', { name: /^Avec équipement/ })
-    .click();
   await expect(build.getByLabel('Niveau du personnage', { exact: true })).toHaveValue('20');
   await expect(build.getByLabel('Niveau de flamme', { exact: true })).toHaveValue('4');
   await build.getByRole('tab', { name: 'Protection' }).click();
@@ -1110,17 +1099,9 @@ test('build: a gem and its level on a weapon, shown with the weapon and saved', 
     '7.1 s',
   );
 
-  // saved with the build and back after a reload
-  await build.getByRole('button', { name: 'Builds enregistrés', exact: true }).click();
-  await build.getByLabel('Nom du build').fill('Avec pierre');
-  await build.getByRole('button', { name: 'Enregistrer' }).click();
-  await expect(build.locator('.builds')).toContainText('Avec pierre');
-  await build.getByRole('button', { name: 'Nouveau' }).click();
-  await expect(build.locator('.gem-row')).toHaveCount(0);
-  await build
-    .locator('.builds')
-    .getByRole('button', { name: /^Avec pierre/ })
-    .click();
+  // the gem belongs to the profile's sheet: still there after a reload
+  await page.reload();
+  await page.locator('app-topbar').getByRole('button', { name: 'Personnage', exact: true }).click();
   await build.getByRole('tab', { name: 'Dégâts' }).click();
   await expect(build.locator('.gem-row')).toContainText('15');
 });
@@ -1707,6 +1688,34 @@ function knowledge(entries: [number, number][]): Buffer {
   return k;
 }
 
+/** player_character: level, experience, skills (node id, level) then the slots of the inventory. */
+function character(
+  level: number,
+  skills: [number, number][],
+  slots: { id: number; level: number; upgrades: number }[],
+): Buffer {
+  const u32 = (n: number): Buffer => {
+    const b = Buffer.alloc(4);
+    b.writeUInt32LE(n);
+    return b;
+  };
+  const entry = (i: number, p: { id: number; level: number; upgrades: number }): Buffer =>
+    Buffer.concat([
+      Buffer.from([i]),
+      u32(p.id),
+      Buffer.from([1, 0, 0x13, p.level, 100, 0, 0, 0, 100, 0, 0, 0, p.upgrades, p.upgrades]),
+    ]);
+  return Buffer.concat([
+    Buffer.alloc(40),
+    u32(level),
+    u32(1234),
+    u32(skills.length),
+    ...skills.map(([id, l]) => Buffer.concat([u32(id), Buffer.from([l])])),
+    Buffer.alloc(30),
+    ...slots.map((p, i) => entry(5 + i, p)), // slots 0-4 are the outfit in a current save
+  ]);
+}
+
 /** fogofwar: a 13-byte header (`FGOW` at byte 8), then 1280 x 1280 cells; the first quarter explored. */
 function fog(): Buffer {
   const b = Buffer.alloc(13 + 1280 * 1280);
@@ -1789,7 +1798,7 @@ test('save import: a character save ticks its recipes and quests @cross', async 
       'unique:500:800',
     ]),
   );
-  await expect(page.locator('.leaflet-control-layers')).toContainText('Zone explorée');
+  await expect(page.locator('.leaflet-control-layers')).toContainText('Ma zone explorée');
 
   // the progress summary
   await menu(page, 'Ma progression');
@@ -1822,11 +1831,29 @@ test('save import: a character save ticks its recipes and quests @cross', async 
 
 test('opening the workshop or the lore does not move their content @cross', async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1080 });
+  // every layout shift with the element that moved, to tell what moves when a test fails
   await page.addInitScript(() => {
-    (window as unknown as { __cls: number }).__cls = 0;
+    const w = window as unknown as { __cls: number; __why: string[] };
+    w.__cls = 0;
+    w.__why = [];
     new PerformanceObserver((list) => {
-      for (const e of list.getEntries())
-        (window as unknown as { __cls: number }).__cls += (e as unknown as { value: number }).value;
+      for (const e of list.getEntries()) {
+        const shift = e as unknown as {
+          value: number;
+          sources?: { node?: Element; previousRect: DOMRect; currentRect: DOMRect }[];
+        };
+        w.__cls += shift.value;
+        w.__why.push(
+          `${shift.value.toFixed(4)} ` +
+            (shift.sources ?? [])
+              .map(
+                (s) =>
+                  `${s.node?.nodeName}.${(s.node as HTMLElement | undefined)?.className} ` +
+                  `${Math.round(s.previousRect.y)}->${Math.round(s.currentRect.y)}`,
+              )
+              .join(' | '),
+        );
+      }
     }).observe({ type: 'layout-shift', buffered: true });
   });
   await page.goto('/');
@@ -1837,8 +1864,12 @@ test('opening the workshop or the lore does not move their content @cross', asyn
     .fill('a brand new passphrase');
   await page.getByRole('dialog').getByRole('button', { name: 'Se connecter' }).click();
   await expect(page.locator('.who')).toContainText(user);
+  // what loads after the login (profiles, the explored area) settles first: only the opening is measured
+  await page.waitForLoadState('networkidle');
   const shift = (): Promise<number> =>
     page.evaluate(() => (window as unknown as { __cls: number }).__cls);
+  const why = (): Promise<string[]> =>
+    page.evaluate(() => (window as unknown as { __why: string[] }).__why);
   for (const [entry, tabs] of [
     ['Atelier', 'workshop'],
     ['Lore', 'lore'],
@@ -1847,7 +1878,7 @@ test('opening the workshop or the lore does not move their content @cross', asyn
     await page.getByRole('button', { name: entry, exact: true }).click();
     await expect(page.locator(`app-${tabs} [role="tablist"]`)).toBeVisible();
     await page.waitForTimeout(800); // late fonts and images would shift it now
-    expect(await shift(), entry).toBeLessThan(before + 0.001);
+    expect(await shift(), `${entry}: ${(await why()).join(' ; ')}`).toBeLessThan(before + 0.001);
   }
 });
 
@@ -1938,4 +1969,167 @@ test('character profiles: each has its own progress, switched from the top bar',
   if (profiles > 1) await expect(switcher.locator('option')).toHaveCount(profiles);
   else await expect(switcher).toHaveCount(0);
   expect(await marks()).toEqual(before);
+});
+
+test('team: the explored area is shared at any time, and each player chooses what the map shows', async ({
+  page,
+  browser,
+}) => {
+  await page.goto('/');
+  await page.getByLabel("Nom d'utilisateur").fill(user);
+  await page
+    .getByRole('dialog')
+    .getByLabel('Mot de passe', { exact: true })
+    .fill('a brand new passphrase');
+  await page.getByRole('dialog').getByRole('button', { name: 'Se connecter' }).click();
+  await expect(page.locator('.who')).toContainText(user);
+
+  // guest, in the same team, sees nothing before anyone shares
+  const guest = await browser.newPage(origin(page));
+  await guest.goto('/');
+  await guest.getByLabel("Nom d'utilisateur").fill('guest');
+  await guest.getByLabel('Mot de passe', { exact: true }).fill('guest new passphrase');
+  await guest.getByRole('dialog').getByRole('button', { name: 'Se connecter' }).click();
+  await expect(guest.locator('.who')).toContainText('guest');
+  const sharing = (p: Page): Promise<string[]> =>
+    p.evaluate(async () =>
+      (
+        (await (await fetch('api/v1/team/fog')).json()) as { members: { username: string }[] }
+      ).members.map((m) => m.username),
+    );
+  expect(await sharing(guest)).toEqual([]);
+
+  // the owner imports a save into the profile followed: the area is kept, not shared yet
+  await menu(page, 'Importer une sauvegarde');
+  const imp = page.getByRole('dialog', { name: 'Importer une sauvegarde' });
+  await imp.getByLabel('Fichier de sauvegarde').setInputFiles({
+    name: 'character0.ksd',
+    mimeType: 'application/octet-stream',
+    buffer: fakeKsd({ player_knowledge: knowledge([]), fogofwar: fog() }),
+  });
+  await imp.getByRole('radio').first().check(); // into the profile followed
+  await expect(imp.getByLabel('Partager cette zone avec mon équipe')).not.toBeChecked();
+  await imp.getByRole('button', { name: 'Importer', exact: true }).click();
+  await expect(imp).toContainText('1 éléments cochés');
+  await imp.getByRole('button', { name: 'Fermer', exact: true }).last().click();
+  expect(await sharing(guest)).toEqual([]);
+
+  // it can be shared at any time, from the map's side menu
+  const shareMine = page.getByLabel("Partager ma zone avec l'équipe");
+  await expect(shareMine).not.toBeChecked();
+  await shareMine.check();
+  await expect.poll(() => sharing(guest)).toEqual([user]);
+
+  // each area is a layer of the map's control: guest ticks the ones to show (one veil, the union of them)
+  await guest.reload();
+  const layers = guest.locator('.leaflet-control-layers');
+  const veil = guest.locator('img.leaflet-image-layer[src^="data:image"]');
+  await layers.hover();
+  const theirs = layers.getByLabel(`Zone explorée de ${user}`);
+  await expect(theirs).toBeChecked();
+  await expect(veil).toHaveCount(1);
+  await theirs.uncheck();
+  await expect(veil).toHaveCount(0); // nothing ticked, nothing veiled
+  await theirs.check();
+  await expect(veil).toHaveCount(1);
+
+  // the owner stops sharing from the same place: its layer is gone for guest
+  await shareMine.uncheck();
+  await expect.poll(() => sharing(guest)).toEqual([]);
+  await guest.reload();
+  await expect(guest.locator('.leaflet-control-layers')).not.toContainText(
+    `Zone explorée de ${user}`,
+  );
+
+  // ... and from "My progress" too
+  await shareMine.check();
+  await expect.poll(() => sharing(guest)).toEqual([user]);
+  await menu(page, 'Ma progression');
+  const summary = page.getByRole('dialog', { name: 'Ma progression' });
+  const mine = summary.getByLabel('Partager ma zone explorée avec mon équipe');
+  await expect(mine).toBeChecked();
+  await mine.uncheck();
+  await expect.poll(() => sharing(guest)).toEqual([]);
+  await summary.getByRole('button', { name: 'Fermer', exact: true }).last().click();
+
+  // withdrawn from the team, the area is still the owner's: the server keeps it for the profile, so a
+  // browser with nothing cached (a new one, after a logout) gets it back
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await expect(page.locator('.leaflet-control-layers')).toContainText('Ma zone explorée');
+  await expect(page.locator('img.leaflet-image-layer[src^="data:image"]')).toHaveCount(1);
+  expect(await sharing(guest)).toEqual([]); // and the team still sees nothing
+});
+
+test('save import: the character sheet (level, worn equipment, skills) goes into the profile', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByLabel("Nom d'utilisateur").fill(user);
+  await page
+    .getByRole('dialog')
+    .getByLabel('Mot de passe', { exact: true })
+    .fill('a brand new passphrase');
+  await page.getByRole('dialog').getByRole('button', { name: 'Se connecter' }).click();
+  await expect(page.locator('.who')).toContainText(user);
+  const fixture = await page.evaluate(async () =>
+    (await (await fetch('gear.json')).text()).includes('fixture_gear'),
+  );
+  test.skip(!fixture, 'needs the fixture map');
+
+  const worn = [1, 2, 7, 8, 9, 3, 10, 5].map((n, i) => ({
+    id: fnv(`11111111-0000-0000-0000-0000000000${n.toString(16).padStart(2, '0')}`),
+    level: [12, 5, 5, 5, 5, 8, 14, 6][i],
+    upgrades: [2, 0, 0, 0, 0, 0, 0, 0][i],
+  }));
+  await menu(page, 'Importer une sauvegarde');
+  const imp = page.getByRole('dialog', { name: 'Importer une sauvegarde' });
+  await imp.getByLabel('Fichier de sauvegarde').setInputFiles({
+    name: 'character7.ksd',
+    mimeType: 'application/octet-stream',
+    buffer: fakeKsd({
+      player_knowledge: knowledge([]),
+      player_character: character(
+        21,
+        [
+          [2, 2], // Endurance, 2 of 3
+          [5, 1], // Force
+        ],
+        worn,
+      ),
+    }),
+  });
+  await expect(imp).toContainText(
+    "Fiche du personnage : niveau 21, 8 pièces d'équipement, 2 compétences",
+  );
+  await expect(imp).toContainText("Casque d'essai");
+  await imp.getByRole('button', { name: 'Importer', exact: true }).click();
+  await expect(imp).toContainText('1 éléments cochés');
+  await imp.getByRole('button', { name: 'Fermer', exact: true }).last().click();
+
+  // the Character screen shows it: level, what is worn (the ring has a base level in its range)
+  await page.locator('app-topbar').getByRole('button', { name: 'Personnage', exact: true }).click();
+  const build = page.locator('app-build');
+  await expect(build.getByLabel('Niveau du personnage', { exact: true })).toHaveValue('21');
+  await expect(build.getByRole('button', { name: /Tête/ })).toHaveAccessibleName(/Casque d'essai/);
+  await expect(build.getByRole('button', { name: /Torse/ })).toHaveAccessibleName(
+    /Plastron d'essai/,
+  );
+  await expect(build.getByRole('button', { name: /Bouclier/ })).toHaveAccessibleName(
+    /Bouclier d'essai/,
+  );
+
+  // the skills are the profile's: 2 + 1 points spent
+  await build.getByRole('button', { name: 'Compétences', exact: true }).click();
+  await expect(page.locator('app-skills g.skill').filter({ hasText: /Endurance/ })).toContainText(
+    '2/3',
+  );
+  await expect(page.locator('app-skills .points')).toContainText(/Disponible\s*3$/);
+
+  // a skill build saves the skills only: the level and the equipment stay with the profile
+  await page.getByRole('button', { name: 'Builds enregistrés', exact: true }).click();
+  await page.getByLabel('Nom du build').fill('Import');
+  await page.getByRole('button', { name: 'Enregistrer' }).click();
+  const saved = await page.evaluate(async () => (await fetch('api/v1/builds')).json());
+  expect(Object.keys(saved[0]).sort()).toEqual(['id', 'name', 'nodes', 'updated_at']);
 });

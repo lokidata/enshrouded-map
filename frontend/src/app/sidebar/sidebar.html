@@ -11,7 +11,7 @@
     <input
       type="checkbox"
       [checked]="filters.onlyExplored()"
-      [disabled]="fog.cells() === null"
+      [disabled]="fog.known() === null"
       (change)="filters.setOnlyExplored($any($event.target).checked)"
     />
     {{ 'onlyExplored' | transloco }}
@@ -31,3 +31,17 @@
     </div>
   }
 </div>
+@if (team.team() && fog.cells() !== null) {
+  <fieldset class="fog-areas">
+    <legend>{{ 'fogAreas' | transloco }}</legend>
+    <label class="share">
+      <input
+        type="checkbox"
+        [checked]="fog.shared()"
+        (change)="share($any($event.target).checked)"
+      />
+      {{ 'fogShareShort' | transloco }}
+    </label>
+    <p class="hint">{{ 'fogLayersHint' | transloco }}</p>
+  </fieldset>
+}
