@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # The tag keeps Dependabot on Node 24 Alpine (a digest alone follows `latest`, which moved to Node 26).
-FROM node:24-alpine@sha256:8a32c8cf649a49915a66e81e7a609223c708d0adabf288ee3f4077d765542f85 AS build
+FROM node:25-alpine@sha256:bdf2cca6fe3dabd014ea60163eca3f0f7015fbd5c7ee1b0e9ccb4ced6eb02ef4 AS build
 WORKDIR /build
 COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts
