@@ -16,6 +16,21 @@ export class ProgressStore {
   /** True after a save failed (the change was reverted). */
   readonly saveFailed = signal(false);
 
+  /** The save in flight (null: none). A save sent while another one is, waits for it: the server must see them in click order. */
+  private tail: Promise<unknown> | null = null;
+
+  private save(body: { ids: readonly string[]; done: boolean }): Promise<unknown> {
+    const send = () => firstValueFrom(this.http.put('api/v1/progress', body));
+    const run = this.tail ? this.tail.then(send) : send();
+    const mine: Promise<unknown> = run
+      .catch(() => undefined)
+      .then(() => {
+        if (this.tail === mine) this.tail = null;
+      });
+    this.tail = mine;
+    return run;
+  }
+
   set(ids: readonly string[]): void {
     this.done.set(new Set(ids));
   }
@@ -25,7 +40,7 @@ export class ProgressStore {
     const now = !this.done().has(id);
     this.change(id, now);
     try {
-      await firstValueFrom(this.http.put('api/v1/progress', { ids: [id], done: now }));
+      await this.save({ ids: [id], done: now });
       this.saveFailed.set(false);
     } catch {
       this.change(id, !now);
@@ -39,7 +54,7 @@ export class ProgressStore {
     if (!changed.length) return;
     for (const id of changed) this.change(id, done);
     try {
-      await firstValueFrom(this.http.put('api/v1/progress', { ids: changed, done }));
+      await this.save({ ids: changed, done });
       this.saveFailed.set(false);
     } catch {
       for (const id of changed) this.change(id, !done);
