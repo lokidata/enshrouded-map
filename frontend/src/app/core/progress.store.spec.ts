@@ -36,4 +36,19 @@ describe('ProgressStore', () => {
     expect(store.done().has('boss:1:2')).toBe(true);
     expect(store.saveFailed()).toBe(true);
   });
+
+  it('sends the changes one after the other, in the order of the clicks', async () => {
+    const first = store.toggle('boss:1:2');
+    const second = store.toggle('boss:1:2'); // unmark again before the first answer
+    const req = http.expectOne('api/v1/progress'); // only the first is in flight
+    expect(req.request.body).toEqual({ ids: ['boss:1:2'], done: true });
+    req.flush({});
+    await first;
+    await new Promise((r) => setTimeout(r)); // the queued save goes out once the first is settled
+    const next = http.expectOne('api/v1/progress');
+    expect(next.request.body).toEqual({ ids: ['boss:1:2'], done: false });
+    next.flush({});
+    await second;
+    expect(store.done().has('boss:1:2')).toBe(false);
+  });
 });

@@ -16,6 +16,8 @@ const engines = {
 
 export default defineConfig({
   testDir: './e2e',
+  // CI runners are slower (WebKit and Firefox with the dev server): the long workshop test needs more than 30 s there
+  timeout: process.env['CI'] ? 60_000 : 30_000,
   use: { baseURL: 'http://localhost:4200' },
   projects: [
     {
