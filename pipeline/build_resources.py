@@ -167,18 +167,20 @@ WIG_ITEM = "Prop_NPC_barber_hairstyle_dummy_wigHead_"
 # Hair and eye colours have no item in the world: the game unlocks them through quests and tales.
 # These templates are the places the journal's hints (JournalRegistryResource.itemSetCategories,
 # "Player customisation") send the player to: the tale to read, or the quest's search area.
-# The colour comes from the template's name; the two nightPlant fields are matched to their hint by its text.
+# The colour comes from the template's name; the two nightPlant fields are matched to their hint by its text
+# (a deduction, said in their name). Each quest ends at the Barber.
 # Not here because their hints name no place: 10 hair colours (items to bring to the Barber) and the
 # dark red eyes (a gem to find for the Alchemist's apprentice).
 APPEARANCE_PLACES = {
     "8kMapLabel_deepforest_NPC_barber_hint03_haircolor_01_red_searchmarker_01":
-        ("haircolor", "Couleurs de cheveux : rouge (2)", "Hair colours: red (2)"),
+        ("haircolor", "Couleurs de cheveux : 2 rouges", "Hair colours: 2 reds"),
     "8kMapLabel_deepforest_NPC_barber_hint04_haircolor_02_blue_searchmarker_01":
-        ("haircolor", "Couleurs de cheveux : bleu (2), le donjon", "Hair colours: blue (2), the dungeon"),
+        ("haircolor", "Couleurs de cheveux : 2 bleus, étape 1 (le donjon)", "Hair colours: 2 blues, step 1 (the dungeon)"),
     "8kMapLabel_deepforest_nightPlant_Berry_field_01":
-        ("haircolor", "Couleurs de cheveux : bleu (2), baies sombres la nuit", "Hair colours: blue (2), dark berries at night"),
+        ("haircolor", "Couleurs de cheveux : 2 bleus, étape 2 (baies sombres la nuit, lieu déduit)",
+         "Hair colours: 2 blues, step 2 (dark berries at night, deduced place)"),
     "8kMapLabel_steppes_nightPlant_field_01":
-        ("haircolor", "Couleur de cheveux : vert, plantes nocturnes", "Hair colour: green, night plants"),
+        ("haircolor", "Couleur de cheveux : vert (plantes nocturnes, lieu déduit)", "Hair colour: green (night plants, deduced place)"),
     "LoreText_Grassland_plains_Ministory_36_eyeColor_reward_purple_01":
         ("eyecolor", "Couleur des yeux : violet", "Eye colour: purple"),
     "8kMapLabel_deepforest_foggerProject_eyeColor_reward_brightBlue_searchArea_noUI":
