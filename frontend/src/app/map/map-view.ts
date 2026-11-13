@@ -43,7 +43,7 @@ const LABEL_MIN_ZOOM: Record<string, number> = { region: -5, areaName: -2.5 };
 const dotRadius = (zoom: number): number => (zoom <= -4 ? 4 : zoom <= -2 ? 5 : zoom <= -1 ? 7 : 9);
 const DOT_ICON_MIN_RADIUS = 7;
 // Loot items found in the same chest sit about a metre apart: one click lists them all.
-const STACKED_CATS = new Set(['unique', 'cosmetic', 'palette', 'hairstyle', 'collectible']);
+const STACKED_CATS = new Set(['unique', 'cosmetic', 'palette', 'hairstyle', 'haircolor', 'eyecolor', 'collectible']);
 const STACK_RADIUS = 3;
 // Halo of a POI: blue = only I marked it, violet = me and some others, orange = others did and I did not, green = everyone did.
 // The colours are the `--halo-*` tokens of styles.css (the canvas needs them as strings): read once, on first use.

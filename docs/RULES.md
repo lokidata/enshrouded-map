@@ -96,7 +96,7 @@ The map stays mounted (hidden) when another screen is shown; the others load on 
 ## 4. Map
 
 ### Layout
-- Left menu: filters per category with counts (done / total), grouped in sections; the Loot section holds unique items, cosmetics, colour palettes, hairstyles, collectibles and chests. It can be hidden and placed left, on top, or automatically (portrait = top), remembered per device.
+- Left menu: filters per category with counts (done / total), grouped in sections; the Loot section holds unique items, cosmetics, colour palettes, hairstyles, hair and eye colours, collectibles and chests. It can be hidden and placed left, on top, or automatically (portrait = top), remembered per device.
 - The filters chosen are saved per player on the server (`/settings`); a new player keeps the defaults.
 - No biome layer (removed on request; `biomes.png` is still produced and `map-data.json` still lists the biomes). The layers control (top right) lists only the explored-area layers.
 - Look: mist vignette, popups as plates (see the design rules in `frontend/CLAUDE.md`).
@@ -104,13 +104,14 @@ The map stays mounted (hidden) when another screen is shown; the others load on 
 ### Categories (counts of 2026-11-13)
 - Icon markers: point of interest 110, cosmetic 110, collectible 107, enemy camp 92, elite 84, unique item 79, elixir well 76, landmark 67, flame shrine 63, cave 55, summoning stone 45, camp 44, farm 37, dungeon 37, night temple 30, boss 28, dungeon entrance 27, place name 25, **colour palette 23**, gem forge 21, mine 21, shroud root 15, obelisk 14, fast travel 10, balefire 9, big dungeon 6, **hairstyle 5**, hidden grave 4, start 1, plus region names.
 - Dots (`resources.json`): chests 2575 (12 kinds), ores 6632 (17 kinds), plants 124,417 points (52 kinds).
-- Hidden until ticked: chest, plant, ore, unique, cosmetic, palette, hairstyle, collectible.
+- Hidden until ticked: chest, plant, ore, unique, cosmetic, palette, hairstyle, haircolor, eyecolor, collectible.
 - **Plants**: a whitelist (`PLANT_ITEMS` in `pipeline/build_resources.py`) decides which plants appear.
 
 ### Loot markers
 - A loot marker is one item at one place (it carries `item`, a key of `map-data.json` `items`, with its picture). Sources: the scene's guaranteed loot with a single container, the items placed in the scene, and pickups lying in the world.
 - **unique**: weapons, equipment, tools, instruments, fishing rods, gems, ammunition. **cosmetic**: the same whose developer name starts with `Vanity_` (violet). **collectible**: the Collections items. **palette**: the 23 colour palettes that lie in the world (20 pickups + 3 in guaranteed loot); the other palettes are crafted at the Coloring Station or are quest rewards, and the 4 palette lore texts are lore pages, not palettes. **hairstyle**: the 5 Barber wig heads that unlock haircuts once picked up (braid, cowlick, slick fade, afro, hanfu ponytail); the sixth, "Barber's Favorite", has no place in the world.
-- Not on the map because the game data gives them no position: the hairstyles themselves, eye and hair colours (unlocked by the Barber's quests and by reading tales), horse coat colours (no such data).
+- **haircolor**, **eyecolor**: the places the game's own journal hints ("Player customisation": 22 hair colours, 15 eye colours) send the player to: the tale to read or the quest's search area. The game unlocks 15 hair colours and 10 eye colours (the others are there from the start). On the map: 9 of the 10 eye colours (purple, bright blue, orange, yellow, white, red, turquoise, black, pink; yellow and white also have their first hint note) and 4 places for 5 hair colours (red x2 at Fort Kelvin, blue x2: the dungeon and the dark berry field, green: the night plants). The two plant fields are matched to their hint by its text (the hint's marker id was not resolved). The table is hand-written in `build_resources.APPEARANCE_PLACES` and the run fails if a template is missing.
+- Not on the map because their hints name no place: 10 hair colours (an item to bring to the Barber: spiced tea, ice, flowers, sparkling dust..., or the Collector's ectoplasm for one green), the dark red eyes (a Bloodlust gem for the Alchemist's apprentice), the hairstyles themselves. Horse coat colours: no such data.
 - Items sharing a container are moved apart by 1 m so that each keeps its own mark id.
 - **Loot stacks**: loot markers within 3 m share one icon and one popup listing each item with who marked it, and a single button that marks or unmarks all. Stack icon: green when all are green, orange as soon as one waits on me, blue when I am alone on all that are marked, violet otherwise.
 - Other guaranteed items of a container (materials, blocks...) are listed in the popup of what stands there (the loot marker, the chest or the enemy).
@@ -354,7 +355,7 @@ After a pipeline run: copy the output to the server's artifacts folder; nothing 
 
 ## 14. Known gaps (do not present as done)
 
-- Hairstyles, eye and hair colours, horse coats: no position in the game data (section 4).
+- Hairstyles, 10 hair colours, 1 eye colour, horse coats: no position in the game data (section 4).
 - Ordinary enemies, damage taken, drops: not readable in the data (section 7).
 - Estimations: weapon hit, DPS, parry, frost duration, gem effects (section 8). Not modelled: food, buffs, speed skills, crits.
 - Skill budget 212 comes from enshrouded.tools; 72 skill descriptions show "…" for their value.

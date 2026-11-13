@@ -120,6 +120,8 @@ CATEGORY_LABELS = {
     "cosmetic": ("Cosmétique", "Cosmetic"),
     "palette": ("Palette de couleurs", "Color palette"),
     "hairstyle": ("Coiffure", "Hairstyle"),
+    "haircolor": ("Couleur de cheveux", "Hair colour"),
+    "eyecolor": ("Couleur des yeux", "Eye colour"),
     "collectible": ("Objet de collection", "Collectible"),
     "plant": ("Plante", "Plant"),
     "ore": ("Minerai", "Ore"),
@@ -130,14 +132,14 @@ RESOURCE_CATEGORIES = {"chest": "icon_chest", "plant": "icon_plants", "ore": "ic
 # Hidden until checked: thousands of points each.
 CRYPT_NAME = re.compile(r"^Crypte des Anciens")
 # Markers of a single item (special loot), see build_resources.special_loot.
-LOOT_MARKER_CATEGORIES = ("unique", "cosmetic", "palette", "hairstyle", "collectible")
-HIDDEN_BY_DEFAULT = {"chest", "plant", "ore", "unique", "cosmetic", "palette", "hairstyle", "collectible"}
+LOOT_MARKER_CATEGORIES = ("unique", "cosmetic", "palette", "hairstyle", "haircolor", "eyecolor", "collectible")
+HIDDEN_BY_DEFAULT = {"chest", "plant", "ore", "unique", "cosmetic", "palette", "hairstyle", "haircolor", "eyecolor", "collectible"}
 
 # Categories that do not come from map markers: category -> icon (game icon
 # debug name, or an svg written by this script).
 EXTRA_CATEGORIES = {"start": "mapmarker_spawn_flame_altar", "boss": "boss.svg", "elite": "elite.svg",
                     "summon": "summon.svg", "unique": "unique.svg", "cosmetic": "cosmetic.svg", "palette": "palette.svg",
-                    "hairstyle": "hairstyle.svg",
+                    "hairstyle": "hairstyle.svg", "haircolor": "haircolor.svg", "eyecolor": "eyecolor.svg",
                     "collectible": "collectible.svg"}
 # Technical suffixes of enemy template names (see enemy_key).
 ENEMY_SUFFIX = re.compile(r"bosshealthbar|bosshealtbar|healthbar|hookpte|hook|summonstone|ag2|elite|deprecated|"
@@ -209,6 +211,22 @@ ICON_SVGS = {
 <circle cx="24" cy="29" r="6" fill="#ff8a8a" stroke="#4a1030" stroke-width="2"/>
 <circle cx="40" cy="29" r="6" fill="#ffd36b" stroke="#4a1030" stroke-width="2"/>
 <circle cx="32" cy="41" r="6" fill="#7bd3ff" stroke="#4a1030" stroke-width="2"/>
+</svg>
+""",
+    # hair colour: a lock of hair in three shades on a dark teal diamond
+    "haircolor.svg": """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+<path d="M32 2 L62 32 L32 62 L2 32 Z" fill="#0f2f33" stroke="#5fd0c8" stroke-width="3"/>
+<path d="M22 18 q-6 16 2 30" fill="none" stroke="#ff7a7a" stroke-width="5" stroke-linecap="round"/>
+<path d="M32 16 q-6 18 2 34" fill="none" stroke="#7bd3ff" stroke-width="5" stroke-linecap="round"/>
+<path d="M42 18 q-6 16 2 30" fill="none" stroke="#8be08b" stroke-width="5" stroke-linecap="round"/>
+</svg>
+""",
+    # eye colour: an eye on a dark blue diamond
+    "eyecolor.svg": """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+<path d="M32 2 L62 32 L32 62 L2 32 Z" fill="#101c3d" stroke="#7fa8ff" stroke-width="3"/>
+<path d="M14 32 q18 -18 36 0 q-18 18 -36 0 Z" fill="#f2f2f2" stroke="#0a1230" stroke-width="2"/>
+<circle cx="32" cy="32" r="7" fill="#b04cff" stroke="#0a1230" stroke-width="2"/>
+<circle cx="32" cy="32" r="3" fill="#0a1230"/>
 </svg>
 """,
     # hairstyle: wig head (round head with a tuft of hair) on a dark sand diamond
@@ -557,6 +575,9 @@ def main(src, export, out):
     raws = {g: re.search(r'"name": "([^"]*)"', t[:300]).group(1) for g, t in texts.items()}
     marker_templates.update(boss_templates(src, locas, texts))
     marker_templates.update(build_resources.collectible_templates(src, locas, texts, raws))
+    # Hair and eye colour places: a second marker on the template (keyed apart, it may already be one).
+    appearance = build_resources.appearance_templates(raws)
+    marker_templates.update({"appearance:" + g: t for g, t in appearance.items()})
     for guid, raw in raws.items():
         if raw == START_SPAWN_TEMPLATE:
             marker_templates[guid] = {
@@ -588,6 +609,9 @@ def main(src, export, out):
             pos = e["transform"]["position"]
             (placed if guid in marker_templates else resources_placed).append(
                 (guid, pos["x"] / 2**32, pos["y"] / 2**32, pos["z"] / 2**32))
+        if guid in appearance:
+            pos = e["transform"]["position"]
+            placed.append(("appearance:" + guid, pos["x"] / 2**32, pos["y"] / 2**32, pos["z"] / 2**32))
 
     for p in glob.glob(f"{src}/SceneEntityChunkResource/{MAIN_SCENE}_*.json"):
         chunk = load(p)
@@ -600,6 +624,11 @@ def main(src, export, out):
                 (placed if guid in marker_templates else resources_placed).append(
                     (guid, fixed("positionX0", "positionX1"), fixed("positionY0", "positionY1"),
                      fixed("positionZ0", "positionZ1")))
+            if guid in appearance:
+                tr = e["transform"]
+                fixed = lambda lo, hi: tr[hi] + tr[lo] / 65536
+                placed.append(("appearance:" + guid, fixed("positionX0", "positionX1"),
+                               fixed("positionY0", "positionY1"), fixed("positionZ0", "positionZ1")))
 
     # Dungeon interiors are stored in a corner of the world, outside of the map.
     dungeon_areas = [
