@@ -164,6 +164,46 @@ WIG_PICKUP = "LootPickup_NPC_Barber_hairstyle_wigHead_"  # a wig head unlocks ha
 WIG_ITEM = "Prop_NPC_barber_hairstyle_dummy_wigHead_"
 
 
+# Hair and eye colours have no item in the world: the game unlocks them through quests and tales.
+# These templates are the places the journal's hints (JournalRegistryResource.itemSetCategories,
+# "Player customisation") send the player to: the tale to read, or the quest's search area.
+# The colour comes from the template's name; the two nightPlant fields are matched to their hint by its text.
+# Not here because their hints name no place: 10 hair colours (items to bring to the Barber) and the
+# dark red eyes (a gem to find for the Alchemist's apprentice).
+APPEARANCE_PLACES = {
+    "8kMapLabel_deepforest_NPC_barber_hint03_haircolor_01_red_searchmarker_01":
+        ("haircolor", "Couleurs de cheveux : rouge (2)", "Hair colours: red (2)"),
+    "8kMapLabel_deepforest_NPC_barber_hint04_haircolor_02_blue_searchmarker_01":
+        ("haircolor", "Couleurs de cheveux : bleu (2), le donjon", "Hair colours: blue (2), the dungeon"),
+    "8kMapLabel_deepforest_nightPlant_Berry_field_01":
+        ("haircolor", "Couleurs de cheveux : bleu (2), baies sombres la nuit", "Hair colours: blue (2), dark berries at night"),
+    "8kMapLabel_steppes_nightPlant_field_01":
+        ("haircolor", "Couleur de cheveux : vert, plantes nocturnes", "Hair colour: green, night plants"),
+    "LoreText_Grassland_plains_Ministory_36_eyeColor_reward_purple_01":
+        ("eyecolor", "Couleur des yeux : violet", "Eye colour: purple"),
+    "8kMapLabel_deepforest_foggerProject_eyeColor_reward_brightBlue_searchArea_noUI":
+        ("eyecolor", "Couleur des yeux : bleu vif", "Eye colour: bright blue"),
+    "LoreText_Deepforest_ministory_36_eyeColor_reward_orange_01":
+        ("eyecolor", "Couleur des yeux : orange", "Eye colour: orange"),
+    "LoreText_steppes_Ministory_41_eyeColor_reward_yellow_01":
+        ("eyecolor", "Couleur des yeux : jaune (indice)", "Eye colour: yellow (hint)"),
+    "LoreText_steppes_Ministory_41_eyeColor_reward_yellow_02":
+        ("eyecolor", "Couleur des yeux : jaune", "Eye colour: yellow"),
+    "LoreText_steppes_Ministory_42_eyeColor_reward_white_01":
+        ("eyecolor", "Couleur des yeux : blanc (indice)", "Eye colour: white (hint)"),
+    "LoreText_steppes_Ministory_42_eyeColor_reward_white_02":
+        ("eyecolor", "Couleur des yeux : blanc", "Eye colour: white"),
+    "LoreText_desert_Ministory_31_eyeColor_reward_red_01":
+        ("eyecolor", "Couleur des yeux : rouge", "Eye colour: red"),
+    "LoreText_desert_Ministory_32_eyeColor_reward_turquoise_01":
+        ("eyecolor", "Couleur des yeux : turquoise", "Eye colour: turquoise"),
+    "LoreText_coldHeights_Ministory_37_eyeColor_reward_black_01":
+        ("eyecolor", "Couleur des yeux : noir", "Eye colour: black"),
+    "LoreText_ancientLands_Ancients_Ministory_20_eyeColor_unlock_pink":
+        ("eyecolor", "Couleur des yeux : rose", "Eye colour: pink"),
+}
+
+
 def collectible_templates(src, locas, texts, raws):
     """Collectibles, colour palettes and hairstyle wig heads lying in the world (LootPickup_Collections_*,
     LootPickup_colorPalette_reward_* and LootPickup_NPC_Barber_hairstyle_wigHead_* templates).
@@ -189,6 +229,19 @@ def collectible_templates(src, locas, texts, raws):
                 out[guid] = {"raw": raw, "names": names, "cat": cat, "fastTravel": False, "item": ref}
                 break
     print(f"{len(out)} collectible and palette pickup templates")
+    return out
+
+
+def appearance_templates(raws):
+    """{template guid: marker template} for APPEARANCE_PLACES. Some of these templates are already a
+    marker (a farm, a camp, a point of interest): build_data adds the colour marker beside it."""
+    out = {}
+    for guid, raw in raws.items():
+        if raw in APPEARANCE_PLACES:
+            cat, *names = APPEARANCE_PLACES[raw]
+            out[guid] = {"raw": raw, "names": names, "cat": cat, "fastTravel": False}
+    missing = set(APPEARANCE_PLACES) - {t["raw"] for t in out.values()}
+    assert not missing, f"appearance templates not in the game data: {missing}"
     return out
 
 
