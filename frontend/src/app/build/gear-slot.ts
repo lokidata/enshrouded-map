@@ -8,6 +8,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { GemText } from './gem-text';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { GearItem, SlotKey } from '../core/gear.model';
 import {
@@ -31,7 +32,7 @@ import { SlotPicker } from '../equipment/slot-picker';
 /** One slot of the character sheet: the item's picture (click = pick another), and its card on hover or focus. */
 @Component({
   selector: 'app-gear-slot',
-  imports: [TranslocoPipe, SlotPicker],
+  imports: [TranslocoPipe, SlotPicker, GemText],
   template: `
     <button
       type="button"
@@ -169,14 +170,29 @@ import { SlotPicker } from '../equipment/slot-picker';
           }
         </dl>
         @if (gem(); as e) {
-          <p class="gem-text">
-            @if (e.lines[0]?.estimate) {
-              <span class="est" [title]="'buildGemTip' | transloco">{{
-                'buildEstimate' | transloco
-              }}</span>
+          <section class="gem-card" [attr.aria-label]="gems.text(e.gem.name)">
+            <h5>{{ gems.text(e.gem.name) }} · {{ 'charLevel' | transloco }} {{ e.level }}</h5>
+            @if (e.parts.length) {
+              <p class="gem-text"><app-gem-text [parts]="e.parts" /></p>
             }
-            {{ lineText(e.lines) }}
-          </p>
+            @if (e.extra.length) {
+              <ul class="gem-lines">
+                @for (l of e.extra; track $index) {
+                  <li>
+                    <span>{{ l.name }}</span>
+                    <b>
+                      @if (l.estimate) {
+                        <span class="est" [title]="'buildGemTip' | transloco">{{
+                          'buildEstimate' | transloco
+                        }}</span>
+                      }
+                      {{ l.text }}
+                    </b>
+                  </li>
+                }
+              </ul>
+            }
+          </section>
         }
         @if (item()!.upgrades.length) {
           <p class="head">
@@ -346,10 +362,6 @@ export class GearSlot {
 
   protected out(event: FocusEvent): void {
     if (!this.host.nativeElement.contains(event.relatedTarget as Node | null)) this.open.set(false);
-  }
-
-  protected lineText(lines: { name: string; text: string }[]): string {
-    return lines.map((l) => `${l.name} ${l.text}`).join(' · ');
   }
 
   protected hide(event: Event): void {

@@ -405,7 +405,7 @@ interface Row {
                                 "
                                 [desc]="e.text"
                               ></div>
-                              @for (l of e.lines; track $index) {
+                              @for (l of e.extra; track $index) {
                                 <div
                                   app-stat-row
                                   [label]="l.name"

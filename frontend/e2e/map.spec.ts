@@ -36,6 +36,27 @@ async function menu(page: Page, item: string): Promise<void> {
 }
 
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+/** The server keeps the sheet of every earlier test: start a Character test from an empty one (logged in). */
+async function blankSheet(page: Page): Promise<void> {
+  await page.evaluate(async () => {
+    const token = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]*)/)?.[1] ?? '';
+    const list = (await (await fetch('api/v1/characters')).json()) as {
+      id: number;
+      active: boolean;
+    }[];
+    const id = (list.find((c) => c.active) ?? list[0]).id;
+    const url = `api/v1/characters/${id}/sheet`;
+    const { updated_at } = (await (await fetch(url)).json()) as { updated_at: string | null };
+    await fetch(url, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-XSRF-TOKEN': decodeURIComponent(token) },
+      body: JSON.stringify({ settings: {}, base: updated_at }),
+    });
+  });
+  await page.reload();
+  await expect(page.locator('.who')).toBeVisible();
+}
+
 test.describe.configure({ mode: 'serial' }); // the second test needs the account of the first
 
 const user = `e2e${Date.now()}`;
@@ -871,6 +892,7 @@ test('build: level, flame, equipment, protection, skills, save and reload', asyn
     (await (await fetch('gear.json')).text()).includes('fixture_gear'),
   );
   test.skip(!fixture, 'needs the fixture map');
+  await blankSheet(page);
 
   const build = page.locator('app-build');
   const topbar = page.locator('app-topbar');
@@ -1004,6 +1026,7 @@ test('build: a low-level piece is flagged on its slot and in the recommendations
     (await (await fetch('gear.json')).text()).includes('fixture_gear'),
   );
   test.skip(!fixture, 'needs the fixture map');
+  await blankSheet(page);
 
   const build = page.locator('app-build');
   await page.locator('app-topbar').getByRole('button', { name: 'Personnage', exact: true }).click();
@@ -1063,6 +1086,7 @@ test('build: a gem and its level on a weapon, shown with the weapon and saved', 
     async () => (await (await fetch('gems.json')).json()).gems?.length === 2,
   );
   test.skip(!fixture, 'needs the fixture map');
+  await blankSheet(page);
 
   const build = page.locator('app-build');
   await page.locator('app-topbar').getByRole('button', { name: 'Personnage', exact: true }).click();
@@ -1078,8 +1102,11 @@ test('build: a gem and its level on a weapon, shown with the weapon and saved', 
   const level = dialog.getByLabel('Niveau de la pierre');
   await level.fill('15');
   await level.dispatchEvent('change');
-  await expect(dialog.locator('.gempick')).toContainText('Dégâts de coupure par seconde: 14');
-  await expect(dialog.locator('.gempick')).toContainText('Durée de debuff: 7.1 s');
+  // the values of the level are written in the description, where the game puts its %k, and not listed again
+  await expect(dialog.locator('.gempick .gem-text')).toContainText(
+    'infligeant 14 dégât par seconde pendant 7.1 s',
+  );
+  await expect(dialog.locator('.gempick .lines')).toHaveCount(0);
   await level.fill('999');
   await level.dispatchEvent('change');
   await expect(level).toHaveValue('105'); // clamped to the gem's range
@@ -1089,15 +1116,12 @@ test('build: a gem and its level on a weapon, shown with the weapon and saved', 
   await expect(dialog).toBeHidden();
   await expect(build.getByRole('button', { name: /Arme 1/ })).toHaveAccessibleName(/saignement 15/);
 
-  // the Damage tab: the gem under its weapon, its lines tagged as estimations
+  // the Damage tab: the gem under its weapon; its values are in its text, not in rows of their own
   await build.getByRole('tab', { name: 'Dégâts' }).click();
   await expect(build.locator('.gem-row')).toContainText('Pierre précieuse de saignement');
   await expect(
     build.locator('dl > div').filter({ hasText: 'Dégâts de coupure par seconde' }),
-  ).toContainText('14');
-  await expect(build.locator('dl > div').filter({ hasText: 'Durée de debuff' })).toContainText(
-    '7.1 s',
-  );
+  ).toHaveCount(0);
 
   // the gem belongs to the profile's sheet: still there after a reload
   await page.reload();

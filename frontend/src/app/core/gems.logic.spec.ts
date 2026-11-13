@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { filterGems, formatGem, gemLevel, gemLines, gemText, gemValue } from './gems.logic';
+import { filterGems, formatGem, gemLevel, gemLines, gemParts, gemValue } from './gems.logic';
 import { Gem } from './gems.model';
 
 const CREEP = 0.15000000596046448;
@@ -47,11 +47,50 @@ describe('gems.logic', () => {
     // the game shows 5.2 s for the duration: not reproduced (see gemValue)
     expect(gemLines(toxic, 15, CREEP)[0].text).toBe('8');
   });
-  it("keeps the text, values left out (their order is not the data's)", () => {
-    expect(gemText(bleeding.desc![1])).toBe(
-      'Critical Strikes with Cutting damage cause bleeding, dealing … damage per second for ….',
-    );
-    expect(gemText('a %k b %%')).toBe('a … b %');
+  it('writes each stat where its %k stands, in the text order', () => {
+    const lines = [
+      { text: '14', estimate: true },
+      { text: '7.1 s', estimate: true },
+    ];
+    // Toxic Betrayal reads "for %k that deals %k": the duration (stat 1) comes first
+    expect(gemParts('poison for %k that deals %k per second.', [1, 0], lines)).toEqual([
+      { kind: 'text', text: 'poison for ' },
+      { kind: 'value', text: '7.1 s', estimate: true },
+      { kind: 'text', text: ' that deals ' },
+      { kind: 'value', text: '14', estimate: true },
+      { kind: 'text', text: ' per second.' },
+    ]);
+  });
+  it('leaves "…" where the data has no value, or no fill', () => {
+    const lines = [{ text: '5 s', estimate: false }];
+    expect(gemParts('a %k b %k c %%', [0, null], lines).map((p) => p.kind)).toEqual([
+      'text',
+      'value',
+      'text',
+      'unknown',
+      'text',
+    ]);
+    expect(gemParts('a %k', undefined, lines).map((p) => p.kind)).toEqual(['text', 'unknown']);
+  });
+  it('writes just the number when the text already says the unit', () => {
+    const six = [{ text: '6 s', estimate: false }];
+    expect(gemParts('for %k sec. Then', [0], six)).toEqual([
+      { kind: 'text', text: 'for ' },
+      { kind: 'value', text: '6', estimate: false },
+      { kind: 'text', text: ' sec. Then' },
+    ]);
+    // French: "secondes" is the word, never cut
+    expect(gemParts('pendant %k secondes. Puis', [0], six)).toEqual([
+      { kind: 'text', text: 'pendant ' },
+      { kind: 'value', text: '6', estimate: false },
+      { kind: 'text', text: ' secondes. Puis' },
+    ]);
+    // a duration with no unit in the text keeps its own: "for 6 s."
+    expect(gemParts('for %k.', [0], six)[1]).toEqual({
+      kind: 'value',
+      text: '6 s',
+      estimate: false,
+    });
   });
   it('clamps the level to the gem range', () => {
     expect(gemLevel(bleeding, 0)).toBe(1);

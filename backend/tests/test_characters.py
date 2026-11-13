@@ -3,6 +3,9 @@ from conftest import ApiClient
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.db.models import CharacterSheet
+from app.db.session import SessionLocal
+
 C = "/api/v1/characters"
 P = "/api/v1/progress"
 B = "/api/v1/builds"
@@ -102,3 +105,51 @@ def test_the_first_profile_survives_a_race(
 
     monkeypatch.setattr(Session, "commit", flaky)
     assert names(user.get(C)) == [("Principal", True)]
+
+
+def test_sheet_is_kept_per_profile_and_private(user: ApiClient, bob: ApiClient) -> None:
+    first = user.get(C).json()[0]["id"]
+    second = user.post(C, json={"name": "Second"}).json()[1]["id"]
+    assert user.get(f"{C}/{first}/sheet").json() == {"sheet": None, "updated_at": None}
+    sheet = {"level": 12, "flame": 3, "gear": {"head": "abc"}}
+    saved = user.put(f"{C}/{first}/sheet", json={"settings": sheet, "base": None}).json()
+    assert saved["sheet"] == sheet
+    stamp = saved["updated_at"]
+    assert user.get(f"{C}/{first}/sheet").json() == saved
+    again = user.put(f"{C}/{first}/sheet", json={"settings": {"level": 13}, "base": stamp})
+    assert again.status_code == 200
+    assert again.json()["updated_at"] != stamp
+    assert user.get(f"{C}/{first}/sheet").json()["sheet"] == {"level": 13}
+    assert user.get(f"{C}/{second}/sheet").json() == {"sheet": None, "updated_at": None}
+    # someone else's profile looks missing, for reading and writing
+    assert bob.get(f"{C}/{first}/sheet").status_code == 404
+    assert bob.put(f"{C}/{first}/sheet", json={"settings": {}, "base": None}).status_code == 404
+
+
+def test_sheet_write_from_a_stale_copy_is_refused(user: ApiClient) -> None:
+    cid = user.get(C).json()[0]["id"]
+    url = f"{C}/{cid}/sheet"
+    first = user.put(url, json={"settings": {"level": 1}, "base": None}).json()["updated_at"]
+    user.put(url, json={"settings": {"level": 2}, "base": first})  # another device wrote
+    stale = user.put(url, json={"settings": {"level": 3}, "base": first})
+    assert stale.status_code == 409 and stale.json()["detail"] == "sheet_changed"
+    # a first write when a copy already exists is just as stale
+    assert user.put(url, json={"settings": {"level": 4}, "base": None}).status_code == 409
+    assert user.get(url).json()["sheet"] == {"level": 2}
+
+
+def test_sheet_too_large(user: ApiClient) -> None:
+    cid = user.get(C).json()[0]["id"]
+    big = {"x": "a" * 300_000}
+    assert user.put(f"{C}/{cid}/sheet", json={"settings": big, "base": None}).status_code == 400
+
+
+def test_sheet_goes_with_its_profile(user: ApiClient) -> None:
+    user.get(C)
+    second = user.post(C, json={"name": "Second"}).json()[1]["id"]
+    user.put(f"{C}/{second}/sheet", json={"settings": {"level": 5}, "base": None})
+    with SessionLocal() as db:
+        assert db.get(CharacterSheet, second) is not None
+    user.delete(f"{C}/{second}")
+    with SessionLocal() as db:
+        assert db.get(CharacterSheet, second) is None

@@ -19,6 +19,9 @@
   "Normal" lines are Sint32 configs, rounded) but not Toxic Betrayal's 5.2 s (its line and impact config both say
   6 s, the impact program's default is 3 s), so the site shows it as an estimation (`gemValue`, core/gems.logic.ts).
   The %k of a "desc" are NOT in the order of "stats" (Toxic Betrayal, Meteoric Impact): the game's mapping is code.
+  "fill": [stats index | null] per %k of "desc", in the text's order, written by hand (GEM_FILL); null = the data has no
+  value for it. Two times the text needs and the stats lack (Storm's Eye: mark 5 s, cooldown 1 s; Corruption: 3 s) are
+  appended to "stats" from the TimeImpactConfig values (Storm's Eye: mark 5 s, cooldown 1 s, confirmed by the user).
   Every effect is a trigger (crit, kill, block, orb...): none is a permanent stat of the character. All gems carry
   the same item tag and no weapon category: the data puts no restriction on which socketed weapon takes which gem.
   The max gem level and the cost of a level are game code: not derived here.
@@ -55,6 +58,30 @@ import json
 import re
 
 from build_gear import attribute_names, impact_programs, load, program_constants
+
+
+# Where each %k of a gem's text takes its value, written by hand from the text and the stats' labels (the game's own
+# mapping is code and is not in the order of "stats"): per gem (English name), one entry per %k, in the text's order:
+# n = stats[n]; "tK" = the K-th TimeImpactConfig (ms), which the data lists without a label and the text needs (it is
+# appended to "stats" under TIME_LABELS); None = no value in the data (a count, a radius, a share of the base damage).
+GEM_FILL = {
+    "Gem of Bleeding": [0, 1], "Gem of Burning": [0, 1, 2], "Gem of Puncturing": [0, 1],
+    "Gem of Skulls": [1, 0], "Gem of Fracturing": [0, 1], "Gem of Hopeful Embers": [1],
+    "Gem of Retaliation": [0, 1], "Gem of Swiftness": [0, 1], "Gem of Toxic Betrayal": [1, 0],
+    "Gem of Agility": [0, 1], "Gem of Storm's Eye": ["t0", 0, "t1"], "Gem of Lesser Necromancy": [0, 1],
+    "Gem of Overpowering": [0], "Gem of Corruption": ["t0", 0, None], "Gem of Focused Light": [2, 3, 0],
+    "Gem of Battle Mania": [0, 1, 2, 3, 4], "Gem of Soul Reaping": [0, 1], "Gem of Bloodlust": [1, 3, 0, 2],
+    "Gem of Cold Composure": [1, 2, 0, 3], "Gem of Meteoric Impact": [2, 0, 1, 3, 4],
+    "Gem of Necromancy": [0, 1], "Gem of Aerobatics": [None, 0], "Gem of Currents": [1, 2, 0],
+    "Gem of Greater Necromancy": [0, 1], "Gem of Lycanthropy": [6, 2, 5, 4, 0, 7, 1, 3],
+    "Gem of Armoring": [0], "Gem of Cleansing": [0], "Gem of Destiny": [None, 0, 1, 2, 3],
+    "Gem of Hyperspecialization": [0, 1],
+}
+# Labels of the time configs that GEM_FILL uses: gem -> [(fr, en)] per K (the loca has none for them).
+TIME_LABELS = {
+    "Gem of Storm's Eye": [("Durée de la marque", "Mark Duration"), ("Temps de récupération", "Cooldown Duration")],
+    "Gem of Corruption": [("Délai avant l'explosion", "Explosion Delay")],
+}
 
 
 # (names, enemies.json id or None, DefaultInventoryResource guids [first 8 chars]); see the docstring
@@ -129,6 +156,17 @@ def build_gems(src, locas, export=None, out=None):
                         for u in d["uiValues"] if loca(u["locaId"]["value"])]
         gem["timesNs"] = [c["$value"]["value"]["value"] for c in d["impactValues"]["simple"]
                           if c["$type"] == "keen::impact::TimeImpactConfig"]
+        fill = GEM_FILL.get(gem["name"][1])
+        if fill and "desc" in gem:
+            used = {int(f[1:]) for f in fill if isinstance(f, str)}
+            for k in sorted(used):  # a time the text needs and the stats do not list
+                gem["stats"].append({"name": list(TIME_LABELS[gem["name"][1]][k]), "value": gem["timesNs"][k] // 10**6,
+                                     "format": "Duration"})
+            gem["fill"] = [len(gem["stats"]) - len(used) + sorted(used).index(int(f[1:])) if isinstance(f, str) else f
+                           for f in fill]
+            # a new game version that adds or reorders a value must stop here, not shift the values shown
+            assert all(t.count("%k") == len(gem["fill"]) for t in gem["desc"]), f"GEM_FILL: %k count: {gem['name']}"
+            assert all(f is None or f < len(gem["stats"]) for f in gem["fill"]), f"GEM_FILL: index: {gem['name']}"
         gems.append(gem)
     for g, srcs in gem_sources(src, [g["id"] for g in gems]).items():
         if srcs:
