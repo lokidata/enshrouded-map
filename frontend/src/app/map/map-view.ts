@@ -425,7 +425,7 @@ export class MapView {
       // shortcut: only the placed markers follow the explored area, not the dots of chests and plants
       const explored =
         !cells || NOT_FOGGED.has(p.m.cat) || isExplored(cells, p.m.x, p.m.z, this.size);
-      const hidden = hiddenAsDone(hideDone, !!p.id && done!.has(p.id), p.m.fastTravel);
+      const hidden = hiddenAsDone(hideDone, !!p.id && !!done?.has(p.id), p.m.fastTravel);
       p.wanted = this.filters.isShown(p.m.cat, p.key) && matches && zoomOk && explored && !hidden;
     }
     for (const p of this.placed) {
