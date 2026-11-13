@@ -69,11 +69,12 @@ def start_session(db: Session, response: Response, user: User, old_token: str | 
     set_session_cookie(response, token)
 
 
-def current_user(
+def current_session(
     response: Response,
     db: DbSession,
     session: Annotated[str | None, Cookie()] = None,
-) -> User | None:
+) -> AuthSession | None:
+    """The valid session of the cookie (expiry slid forward at most once an hour), no user read."""
     if not session:
         return None
     now = utcnow()
@@ -89,7 +90,13 @@ def current_user(
         row.expires_at = now + lifetime
         db.commit()
         set_session_cookie(response, session)
-    return db.get(User, row.user_id)
+    return row
+
+
+def current_user(
+    db: DbSession, row: Annotated[AuthSession | None, Depends(current_session)]
+) -> User | None:
+    return db.get(User, row.user_id) if row else None
 
 
 def require_user(user: Annotated[User | None, Depends(current_user)]) -> User:
@@ -99,3 +106,8 @@ def require_user(user: Annotated[User | None, Depends(current_user)]) -> User:
 
 
 CurrentUser = Annotated[User, Depends(require_user)]
+
+
+def require_session(row: Annotated[AuthSession | None, Depends(current_session)]) -> None:
+    if row is None:
+        raise HTTPException(401, "login")

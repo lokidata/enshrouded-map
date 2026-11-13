@@ -11,6 +11,7 @@ from app.api.deps import (
     CurrentUser,
     DbSession,
     current_user,
+    require_session,
     start_session,
 )
 from app.api.limiter import limiter
@@ -221,8 +222,8 @@ def logout(
     return {}
 
 
-@router.get("/check", status_code=204)
-def check(_: CurrentUser) -> None:
+@router.get("/check", status_code=204, dependencies=[Depends(require_session)])
+def check() -> None:
     """Asked by nginx (auth_request) before a map file: 204 with a session, 401 without."""
 
 

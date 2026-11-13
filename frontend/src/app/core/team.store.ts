@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from './auth.service';
@@ -44,6 +44,7 @@ export class TeamStore {
   readonly dialogOpen = signal(false);
   readonly total = computed(() => this.team()?.members.length ?? 1);
 
+  private marksTag = ''; // ETag of the marks shown: the server answers 304 while nothing changed
   private timer: ReturnType<typeof setInterval> | undefined;
 
   constructor() {
@@ -53,20 +54,32 @@ export class TeamStore {
     });
   }
 
+  private async loadMarks(): Promise<void> {
+    const headers: Record<string, string> = this.marksTag ? { 'If-None-Match': this.marksTag } : {};
+    try {
+      const res = await firstValueFrom(
+        this.http.get<{ marks: Record<string, number[]> }>('api/v1/team/marks', {
+          headers,
+          observe: 'response',
+        }),
+      );
+      this.others.set(res.body?.marks ?? {});
+      this.marksTag = res.headers.get('ETag') ?? ''; // no ETag (older server): ask in full each time
+    } catch (e) {
+      if (!(e instanceof HttpErrorResponse && e.status === 304)) throw e; // 304: keep what is shown
+    }
+  }
+
   async load(): Promise<void> {
     if (!this.auth.user()) return;
     try {
       const team = await firstValueFrom(this.http.get<Team | null>('api/v1/team'));
       this.team.set(team);
-      this.others.set(
-        team
-          ? (
-              await firstValueFrom(
-                this.http.get<{ marks: Record<string, number[]> }>('api/v1/team/marks'),
-              )
-            ).marks
-          : {},
-      );
+      if (team) await this.loadMarks();
+      else {
+        this.others.set({});
+        this.marksTag = '';
+      }
     } catch {
       return; // keeps what was shown
     }

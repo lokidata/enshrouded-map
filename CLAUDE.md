@@ -8,6 +8,7 @@ A private companion site for the game Enshrouded (map, workshop, lore, enemies, 
 
 ## Run and check
 - API: `cd backend && ENVIRONMENT=development uv run alembic upgrade head && uv run uvicorn app.main:app` (:8000, single worker: rate limit and passkey challenges are in memory).
+- nginx `/_auth` (map files) is cached 30 s per session cookie in `/tmp/auth-cache`: the container's /tmp must stay a tmpfs. `GET /team/marks` has an ETag (304).
 - Front: `cd frontend && npx ng serve` (proxies /api; serves `artifacts/map` through the git-ignored symlink `frontend/map-artifacts`; it lists those files at start, so a new file needs a restart; it does not protect them).
 - `make check` = backend (ruff, mypy, bandit, pip-audit, pytest) + frontend (npm audit, eslint, design guard, build, Vitest, Playwright) + gitleaks + Trivy. `make check-backend`, `make check-frontend` run one side. Playwright starts its own API on :8000 with an empty database: stop the dev API first.
 - `make e2e-stack` (separate: wipes the compose DB; uses `deploy/compose.e2e.yml` to lift the login rate limit; also checks the map files are refused without a session, `PROTECTED_ASSETS=1`). `make stack | scan | lock`.

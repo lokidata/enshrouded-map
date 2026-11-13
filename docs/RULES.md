@@ -53,7 +53,7 @@ The map stays mounted (hidden) when another screen is shown; the others load on 
 
 ### Session and protection of the files
 - Without a session the page shows only the login dialog (no map, not dismissible).
-- nginx serves the data files only with a valid session (`auth_request` -> `GET /auth/check`): `tiles`, `icons`, `biomes.png`, `overview.jpg`, `map-data.json`, `resources.json`, `craft.json`, `lore.json`, `enemies.json`, `enemies/`, `gear.json`, `gems.json`, `skills.json`, `skills/`, `ui/`, `settings-presets.json`. `ng serve` does not protect them.
+- nginx serves the data files only with a valid session (`auth_request` -> `GET /auth/check`): `tiles`, `icons`, `biomes.png`, `overview.jpg`, `map-data.json`, `resources.json`, `craft.json`, `lore.json`, `enemies.json`, `enemies/`, `gear.json`, `gems.json`, `skills.json`, `skills/`, `ui/`, `settings-presets.json`. `ng serve` does not protect them. `/auth/check` reads only the session (no user), still sliding its expiry. nginx caches its 204 for 30 s per session cookie (`proxy_cache` in `/tmp/auth-cache`, a tmpfs; never a 401; API down = refusal unless that session is cached): after a logout or an expiry, map files stay readable for up to 30 s (the API itself refuses at once).
 - Login is rate-limited per client address (10 per 5 minutes; setup and invitations 10 per hour) and an account locks progressively after 5 failed logins. The limit is in memory: a single API worker.
 
 ### Passwords
@@ -88,7 +88,7 @@ The map stays mounted (hidden) when another screen is shown; the others load on 
 - At most one team per player. The creator is the **owner**: only the owner renames, disbands or hands the team over (`POST /team/owner`; the former owner stays a member).
 - Any member: adds an existing player who has no team (immediate, `POST /team/members`), removes another member (not the owner, not themself), creates an invitation link whose new account joins the team.
 - Leaving is always possible. If the owner leaves, the longest-standing member becomes owner; the last one to leave closes the team. Marks stay personal in every case.
-- The team shares only **who marked what on the map** (the popup lists the players). The others' marks are refetched every 60 s and when the tab comes back. Recipe, lore and quest ticks are never shared.
+- The team shares only **who marked what on the map** (the popup lists the players). The others' marks are refetched every 60 s and when the tab comes back, with `If-None-Match`: `GET /team/marks` sends an ETag (hash of who follows which profile, the count and the newest `created_at` of the shared marks) and answers 304 while nothing changed (an added or removed mark, or a changed profile, changes it); the front keeps what it shows on a 304 and asks in full when the server sends no ETag. Recipe, lore and quest ticks are never shared.
 - The game configuration of a team belongs to its owner (section 9). The explored areas are shared only on request (section 4).
 
 ---
