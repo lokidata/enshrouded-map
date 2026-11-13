@@ -1,6 +1,7 @@
 import json
 
 from fastapi import APIRouter, HTTPException
+from sqlalchemy.exc import IntegrityError
 
 from app.api.deps import CurrentUser, DbSession
 from app.core.config import get_settings
@@ -26,5 +27,12 @@ def put_user_settings(body: SettingsIn, user: CurrentUser, db: DbSession) -> dic
         db.add(UserSettings(user_id=user.id, data=body.settings))
     else:
         row.data = body.settings
-    db.commit()
+    try:
+        db.commit()
+    except (
+        IntegrityError
+    ):  # two first saves at once: the other one made the row, this one updates it
+        db.rollback()
+        db.get_one(UserSettings, user.id).data = body.settings
+        db.commit()
     return {}

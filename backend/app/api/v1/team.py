@@ -15,7 +15,7 @@ from app.core.logging import audit
 from app.core.security import new_token, token_digest
 from app.db.base import utcnow
 from app.db.models import ActiveCharacter, Fog, Invitation, Mark, Team, TeamMember, User
-from app.db.queries import leave_team
+from app.db.queries import leave_team, unshare_fog
 from app.schemas.auth import InvitationOut
 from app.schemas.team import (
     Member,
@@ -102,7 +102,10 @@ def rename_team(body: NameIn, user: CurrentUser, db: DbSession) -> TeamOut:
 
 @router.delete("")
 def dissolve_team(user: CurrentUser, db: DbSession) -> dict[str, str]:
-    db.delete(_own_team(db, user))  # members and invitations go with it
+    team = _own_team(db, user)
+    for member_id in db.scalars(select(TeamMember.user_id).where(TeamMember.team_id == team.id)):
+        unshare_fog(db, member_id)  # nobody keeps showing their area to a team that is gone
+    db.delete(team)  # members and invitations go with it
     db.commit()
     return {}
 
@@ -128,6 +131,7 @@ def remove_member(user_id: int, user: CurrentUser, db: DbSession) -> dict[str, s
     )
     if removed.rowcount != 1:  # type: ignore[attr-defined]
         raise HTTPException(404, "no_member")
+    unshare_fog(db, user_id)
     db.commit()
     return {}
 
@@ -181,6 +185,7 @@ def add_member(body: MemberIn, user: CurrentUser, db: DbSession) -> TeamOut:
     target = db.get(User, body.user_id)
     if target is None:
         raise HTTPException(404, "no_member")
+    unshare_fog(db, target.id)  # added by someone else: nothing is shown until they choose to
     db.add(TeamMember(user_id=target.id, team_id=team.id))
     try:
         db.commit()

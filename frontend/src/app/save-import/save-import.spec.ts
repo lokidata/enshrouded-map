@@ -91,6 +91,12 @@ describe('ksd', () => {
     const bad = knowledge([[1, 1]]).subarray(0, 12);
     expect(() => readKnowledge(bad)).toThrow(KsdError);
   });
+
+  it('stops when the sections together are too big', () => {
+    const two = makeKsd({ a: new Uint8Array(100), b: new Uint8Array(100) });
+    expect(readKsd(two, 200).size).toBe(2);
+    expect(() => readKsd(two, 150)).toThrow(KsdError);
+  });
 });
 
 describe('ids', () => {

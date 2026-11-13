@@ -85,3 +85,15 @@ def test_only_skills_are_saved(user: ApiClient) -> None:
     assert set(made) == {"id", "name", "nodes", "updated_at"}
     assert user.put(f"{URL}/{made['id']}", json=old).status_code == 200
     assert set(user.get(URL).json()[0]) == {"id", "name", "nodes", "updated_at"}
+
+
+def test_a_build_belongs_to_its_profile(user: ApiClient) -> None:
+    c = "/api/v1/characters"
+    first = user.get(c).json()[0]["id"]
+    made = user.post(URL, json=BUILD).json()
+    user.post(c, json={"name": "Autre"})  # now following the new profile
+    assert user.get(URL).json() == []
+    assert user.put(f"{URL}/{made['id']}", json=BUILD).status_code == 404
+    assert user.delete(f"{URL}/{made['id']}").status_code == 404
+    user.post(f"{c}/{first}/activate")
+    assert user.put(f"{URL}/{made['id']}", json=BUILD).status_code == 200

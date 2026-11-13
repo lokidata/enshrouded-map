@@ -5,13 +5,15 @@ import { Decompress } from 'fzstd';
 export const MAX_FILE = 50_000_000;
 export const MAX_SECTIONS = 64;
 export const MAX_SECTION = 64_000_000;
+/** All the sections together: a save of a few MB must not be able to ask for 64 x 64 MB. */
+export const MAX_TOTAL = 256_000_000;
 
 export class KsdError extends Error {}
 
 const text = new TextDecoder();
 
 /** The sections of a save, decompressed, by name. Every offset and size is checked before it is used. */
-export function readKsd(file: Uint8Array): Map<string, Uint8Array> {
+export function readKsd(file: Uint8Array, maxTotal = MAX_TOTAL): Map<string, Uint8Array> {
   if (file.length > MAX_FILE || file.length < 0x30) throw new KsdError('size');
   const v = new DataView(file.buffer, file.byteOffset, file.byteLength);
   if (text.decode(file.subarray(0, 4)) !== 'SV2C') throw new KsdError('magic');
@@ -19,6 +21,7 @@ export function readKsd(file: Uint8Array): Map<string, Uint8Array> {
   const count = v.getUint32(0x2c, true);
   if (count > MAX_SECTIONS || table + 20 * count > file.length) throw new KsdError('table');
   const sections = new Map<string, Uint8Array>();
+  let left = maxTotal; // what the sections may still take, once decompressed
   for (let i = 0; i < count; i++) {
     const at = table + 20 * i;
     const nameAt = at + v.getUint32(at, true);
@@ -31,19 +34,22 @@ export function readKsd(file: Uint8Array): Map<string, Uint8Array> {
     if (text.decode(block.subarray(0, 4)) !== 'S2BH') throw new KsdError('block');
     const data = block.subarray(14);
     const name = text.decode(file.subarray(nameAt, nameAt + nameLen));
-    sections.set(name, block[9] === 1 ? unzstd(data) : data);
+    const out = block[9] === 1 ? unzstd(data, Math.min(MAX_SECTION, left)) : data;
+    left -= out.length;
+    if (left < 0) throw new KsdError('too_big');
+    sections.set(name, out);
   }
   return sections;
 }
 
-/** zstd decompression that stops as soon as the output goes over the cap (no allocation from a size the file claims). */
-function unzstd(data: Uint8Array): Uint8Array {
+/** zstd decompression that stops as soon as the output goes over `cap` (no allocation from a size the file claims). */
+function unzstd(data: Uint8Array, cap: number): Uint8Array {
   const parts: Uint8Array[] = [];
   let total = 0;
   try {
     const d = new Decompress((chunk) => {
       total += chunk.length;
-      if (total > MAX_SECTION) throw new KsdError('too_big');
+      if (total > cap) throw new KsdError('too_big');
       parts.push(chunk);
     });
     d.push(data, true);
