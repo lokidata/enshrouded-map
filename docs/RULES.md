@@ -120,6 +120,7 @@ The map stays mounted (hidden) when another screen is shown; the others load on 
 - A player marks an element as done; the mark id is `category:x:z` (rounded metres). Marking shows at once and is sent in order (`PUT /progress`, idempotent: a concurrent identical request is retried once; a persistent conflict answers 409). A refused change is put back and an error shows.
 - A marked element shows as a faint ghost, except **landmarks** (`start`, `fastTravel`): icon 1.4x bigger, above the others, never faded; their halo still applies.
 - **Halo** by who marked: none = nobody; blue = only me (team of 2+); violet = me and some, not all, of the others (3+ members); orange = others did, I did not; green = every member (no team or a team of one: green when I marked it). Dots use the same colours for their outline. A foldable legend lists only the colours the team size can produce.
+- **Hide what I marked** (side menu checkbox, off by default, kept in the browser): hides the markers and the chest, plant and ore dots that **I** marked (a teammate's mark hides nothing), except the fast travel points (`fastTravel: true`), which always stay. A loot stack keeps showing its unmarked items; an element marked while the option is on disappears at once (untick the option to unmark it).
 - The profile counter counts map marks only (recipes, lore pages and quests are left out).
 
 ### Popups
@@ -302,6 +303,7 @@ Our own rule, not the game's, and never an equipment suggestion. For each armour
 | Character sheet | `character_sheets` (per profile) | cache `skillDraft:<id>`, `itemLevels:<id>`, `activeWeapon:<id>` |
 | Saved builds | `builds` (per profile) | — |
 | Explored area | `fogs` (per profile) | cache `fog:<id>`, `fogShare:<id>`; ticked layers `fogView`; `onlyExplored` |
+| Hide what I marked | — | `hideDone` |
 | Last import | — | `lastImport:<id>` |
 | Game configuration | `game_configs` (per team, else per player) | unsaved draft `gameSettings` |
 | Calculator project | — | `project` |

@@ -18,6 +18,10 @@ const WHOLE = '*';
  * that differs from its category. Elements added to the map later follow their
  * category, so a category shown in full stays in full.
  */
+/** "Hide what I marked": a marked element is hidden, except the fast travel points. */
+export const hiddenAsDone = (hideDone: boolean, done: boolean, fastTravel?: boolean): boolean =>
+  hideDone && done && !fastTravel;
+
 const read = (key: string): boolean => {
   try {
     return localStorage.getItem(key) === '1';
@@ -35,12 +39,23 @@ export class FilterStore {
   readonly query = signal('');
   /** Show only the markers on a cell of the explored area imported from a save (this browser only). */
   readonly onlyExplored = signal(read('onlyExplored'));
+  /** Hide what I marked, fast travel points excepted (this browser only). */
+  readonly hideDone = signal(read('hideDone'));
   private readonly normalizedQuery = computed(() => normalize(this.query().trim()));
 
   setOnlyExplored(on: boolean): void {
     this.onlyExplored.set(on);
     try {
       localStorage.setItem('onlyExplored', on ? '1' : '0');
+    } catch {
+      // storage blocked: not remembered
+    }
+  }
+
+  setHideDone(on: boolean): void {
+    this.hideDone.set(on);
+    try {
+      localStorage.setItem('hideDone', on ? '1' : '0');
     } catch {
       // storage blocked: not remembered
     }

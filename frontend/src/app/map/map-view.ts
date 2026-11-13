@@ -13,7 +13,7 @@ import {
 import * as L from 'leaflet';
 import { AuthService } from '../core/auth.service';
 import { Catalog, PlacedResource } from '../core/catalog.service';
-import { FilterStore } from '../core/filter.store';
+import { FilterStore, hiddenAsDone } from '../core/filter.store';
 import { LangService } from '../core/lang.service';
 import { EnemiesService } from '../core/enemies.service';
 import { FogStore } from '../save-import/fog.store';
@@ -134,6 +134,8 @@ class IconDot extends L.CircleMarker {
 interface DotLayer {
   layer: L.FeatureGroup;
   dots: IconDot[];
+  /** Some dots may be out of the layer: hidden as marked. */
+  filtered?: boolean;
 }
 
 type MarkedDot = IconDot & { markId: string; index: number };
@@ -413,6 +415,8 @@ export class MapView {
     this.filters.overrides();
     const searching = this.filters.query().trim() !== '';
     const cells = this.filters.onlyExplored() ? this.fog.known() : null;
+    const hideDone = this.filters.hideDone();
+    const done = hideDone ? this.progress.done() : null; // read (and followed) only when needed
     for (const p of this.placed) {
       const matches = this.filters.matchesText(...p.m.name, p.m.raw);
       // Labels only show from their zoom level, unless they match a search.
@@ -421,7 +425,8 @@ export class MapView {
       // shortcut: only the placed markers follow the explored area, not the dots of chests and plants
       const explored =
         !cells || NOT_FOGGED.has(p.m.cat) || isExplored(cells, p.m.x, p.m.z, this.size);
-      p.wanted = this.filters.isShown(p.m.cat, p.key) && matches && zoomOk && explored;
+      const hidden = hiddenAsDone(hideDone, !!p.id && done!.has(p.id), p.m.fastTravel);
+      p.wanted = this.filters.isShown(p.m.cat, p.key) && matches && zoomOk && explored && !hidden;
     }
     for (const p of this.placed) {
       const group = this.groups.get(p.m.cat)!;
@@ -439,6 +444,14 @@ export class MapView {
       if (!dl) continue;
       if (visible && !this.map.hasLayer(dl.layer)) dl.layer.addTo(this.map);
       if (!visible && this.map.hasLayer(dl.layer)) this.map.removeLayer(dl.layer);
+      if (!visible || (!hideDone && !dl.filtered)) continue;
+      dl.filtered = hideDone;
+      dl.dots.forEach((dot, i) => {
+        const hidden = hiddenAsDone(hideDone, !!done?.has(r.ids[i]));
+        if (hidden === dl.layer.hasLayer(dot))
+          if (hidden) dl.layer.removeLayer(dot);
+          else dl.layer.addLayer(dot);
+      });
     }
   }
 

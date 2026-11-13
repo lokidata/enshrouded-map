@@ -617,6 +617,7 @@
   "progressTitle": "My progress",
   "progressHint": "What you have ticked, by category. \"—\": the site data does not list it yet.",
   "progressUnknown": "—",
+  "hideDone": "Hide what I marked (except fast travel)",
   "onlyExplored": "Only the explored area (imported save)",
   "saveImportLast": "Last import: {{ name }}, on {{ date }}.",
   "saveImportSlot": "character {{ n }}",

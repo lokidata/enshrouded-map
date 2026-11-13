@@ -16,6 +16,14 @@
     />
     {{ 'onlyExplored' | transloco }}
   </label>
+  <label class="only-explored">
+    <input
+      type="checkbox"
+      [checked]="filters.hideDone()"
+      (change)="filters.setHideDone($any($event.target).checked)"
+    />
+    {{ 'hideDone' | transloco }}
+  </label>
   <div class="toggles">
     <button type="button" (click)="filters.showAll()">{{ 'all' | transloco }}</button>
     <button type="button" (click)="filters.hideAll()">{{ 'none' | transloco }}</button>
