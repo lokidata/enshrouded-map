@@ -105,7 +105,7 @@ def special_loot(src, scene, locas):
     """Items the game puts at a given place: in a chest, on a skeleton or an enemy, or lying on the ground.
 
     Returns [(category, names, debug name, item guid, amount, x, y, z)], category
-    being "unique", "cosmetic", "collectible" (items that get their own marker)
+    being "unique", "cosmetic", "palette", "collectible" (items that get their own marker)
     or None (other guaranteed loot: materials, blocks, gems...). Two sources:
 
     - SceneRandomLootResource.specialItems with a single candidate container:
@@ -144,6 +144,8 @@ def special_loot(src, scene, locas):
         debug = info["debugName"]
         if info["category"] == "Collectibles" or COLLECTIBLE.match(debug):
             cat = "collectible"
+        elif info["category"] == "ColorPalette":
+            cat = "palette"
         elif info["category"] in UNIQUE_ITEM_CATEGORIES and not SPECIAL_LOOT_EXCLUDE.search(debug):
             cat = "cosmetic" if debug.startswith("Vanity_") else "unique"
         else:
@@ -154,27 +156,39 @@ def special_loot(src, scene, locas):
             continue
         out.append((cat, names, debug, info["$guid"], amount, pos["x"], pos["y"], pos["z"]))
     print(f"special loot ({from_scene} from the scene's placed items):",
-          {str(c): sum(1 for o in out if o[0] == c) for c in ("unique", "cosmetic", "collectible", None)})
+          {str(c): sum(1 for o in out if o[0] == c) for c in ("unique", "cosmetic", "palette", "collectible", None)})
     return out
 
 
+WIG_PICKUP = "LootPickup_NPC_Barber_hairstyle_wigHead_"  # a wig head unlocks hairstyles at the Barber
+WIG_ITEM = "Prop_NPC_barber_hairstyle_dummy_wigHead_"
+
+
 def collectible_templates(src, locas, texts, raws):
-    """Collectibles lying in the world (LootPickup_Collections_* templates).
+    """Collectibles, colour palettes and hairstyle wig heads lying in the world (LootPickup_Collections_*,
+    LootPickup_colorPalette_reward_* and LootPickup_NPC_Barber_hairstyle_wigHead_* templates).
 
     Returns {template guid: marker template} as in build_data.main. Most of
     them are also special loot; build_data drops those duplicates.
     """
     items = item_table(src, locas)
+    wig_heads = {d: g for g, (d, _) in items.items() if d.startswith(WIG_ITEM)}
     out = {}
     for guid, raw in raws.items():
-        if not raw.startswith("LootPickup_Collections_"):
+        if raw.startswith(WIG_PICKUP):  # the pickup name ends like the item's: 02_cowlick
+            ref = wig_heads.get(WIG_ITEM + raw[len(WIG_PICKUP):])
+            if ref and all(items[ref][1]):
+                out[guid] = {"raw": raw, "names": items[ref][1], "cat": "hairstyle", "fastTravel": False, "item": ref}
+            continue
+        if not raw.startswith(("LootPickup_Collections_", "LootPickup_colorPalette_reward_")):
             continue
         for ref in re.findall(rf'"item": "({GUID})"', texts[guid]):
             debug, names = items.get(ref, ("", []))
-            if COLLECTIBLE.match(debug) and names and all(names):
-                out[guid] = {"raw": raw, "names": names, "cat": "collectible", "fastTravel": False, "item": ref}
+            cat = "collectible" if COLLECTIBLE.match(debug) else "palette" if debug.startswith("ColorPalette_") else None
+            if cat and names and all(names):
+                out[guid] = {"raw": raw, "names": names, "cat": cat, "fastTravel": False, "item": ref}
                 break
-    print(f"{len(out)} collectible pickup templates")
+    print(f"{len(out)} collectible and palette pickup templates")
     return out
 
 
