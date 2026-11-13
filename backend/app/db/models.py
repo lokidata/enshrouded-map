@@ -51,6 +51,18 @@ class Character(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
 
+class CharacterSheet(Base):
+    """The Character screen of a profile (level, Flame, gear...): a JSON the front end reads."""
+
+    __tablename__ = "character_sheets"
+
+    character_id: Mapped[int] = mapped_column(
+        ForeignKey("characters.id", ondelete="CASCADE"), primary_key=True
+    )
+    data: Mapped[dict[str, Any]] = mapped_column(JSON)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
 class ActiveCharacter(Base):
     """The profile a player follows now: what /progress, /builds and the team halos use."""
 

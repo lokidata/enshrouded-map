@@ -1,5 +1,6 @@
 import { Component, computed, inject, input, linkedSignal, signal } from '@angular/core';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
+import { GemText } from '../build/gem-text';
 import { GearItem, SlotKey } from '../core/gear.model';
 import {
   attackSpeed,
@@ -19,7 +20,7 @@ const RARITIES = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'];
 /** The items that fit a slot, with the worn one and its upgrades: shared by the Equipment screen and the character sheet's dialog. */
 @Component({
   selector: 'app-slot-picker',
-  imports: [TranslocoPipe],
+  imports: [TranslocoPipe, GemText],
   template: `
     <section class="picker" [attr.aria-label]="'equipSlot_' + slot() | transloco">
       <h3>{{ 'equipSlot_' + slot() | transloco }}</h3>
@@ -114,21 +115,23 @@ const RARITIES = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'];
                     />
                     <small>({{ e.gem.lvl[0] }}–{{ e.gem.lvl[1] }})</small>
                   </label>
-                  @if (e.text) {
-                    <p class="meta gem-text">{{ e.text }}</p>
+                  @if (e.parts.length) {
+                    <p class="meta gem-text"><app-gem-text [parts]="e.parts" /></p>
                   }
-                  <ul class="lines">
-                    @for (l of e.lines; track $index) {
-                      <li>
-                        {{ l.name }}: {{ l.text }}
-                        @if (l.estimate) {
-                          <span class="est" [title]="'buildGemTip' | transloco">{{
-                            'buildEstimate' | transloco
-                          }}</span>
-                        }
-                      </li>
-                    }
-                  </ul>
+                  @if (e.extra.length) {
+                    <ul class="lines">
+                      @for (l of e.extra; track $index) {
+                        <li>
+                          {{ l.name }}: {{ l.text }}
+                          @if (l.estimate) {
+                            <span class="est" [title]="'buildGemTip' | transloco">{{
+                              'buildEstimate' | transloco
+                            }}</span>
+                          }
+                        </li>
+                      }
+                    </ul>
+                  }
                 }
               </div>
             }

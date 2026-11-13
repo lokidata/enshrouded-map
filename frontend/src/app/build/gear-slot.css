@@ -188,9 +188,35 @@ ol button:focus-visible {
   bottom: 2px;
   pointer-events: none;
 }
+.gem-card {
+  margin: 8px 0;
+  padding: 6px 0;
+  border-top: 1px solid var(--gold-dim);
+  border-bottom: 1px solid var(--gold-dim);
+}
+.gem-card h5 {
+  margin: 0 0 4px;
+  font-size: 1rem;
+}
 .gem-text {
-  margin: 6px 0;
+  margin: 4px 0 6px;
   font-size: 0.85rem;
+}
+.gem-lines {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85rem;
+}
+.gem-lines li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.gem-lines b {
+  font-weight: normal;
+  color: var(--gold);
+  white-space: nowrap;
 }
 .alert {
   font-weight: 700;

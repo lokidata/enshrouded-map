@@ -1,6 +1,7 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
+import { keepalivePut } from './keepalive';
 import {
   add,
   canAdd,
@@ -27,6 +28,9 @@ export type Gems = Partial<Record<WeaponSlot, GemPick>>;
 const DRAFT = 'skillDraft';
 const LEVELS = 'itemLevels';
 const ACTIVE = 'activeWeapon';
+/** Where the server's copy stood when this browser last synced, and whether this browser holds changes it has not sent. */
+const STAMP = 'sheetStamp';
+const DIRTY = 'sheetDirty';
 /** Each character profile keeps its own sheet in this browser: the keys carry the profile id. */
 const keyOf = (base: string, id: number): string => `${base}:${id}`;
 const clamp = (n: number, min: number, max: number) =>
@@ -35,29 +39,40 @@ const clamp = (n: number, min: number, max: number) =>
 export const WEAPON_SLOTS = ['weapon1', 'weapon2', 'weapon3', 'ranged'] as const;
 export type WeaponSlot = (typeof WEAPON_SLOTS)[number];
 const isWeapon = (k: string) => (WEAPON_SLOTS as readonly string[]).includes(k);
+function cleanLevels(raw: Record<string, unknown>): Upgrades {
+  return Object.fromEntries(
+    Object.entries(raw).filter(([k, v]) => isSlot(k) && Number.isInteger(v) && (v as number) > 0),
+  ) as Upgrades;
+}
 function readLevels(id: number | null): Upgrades {
   if (id === null) return {};
   try {
-    const raw = JSON.parse(localStorage.getItem(keyOf(LEVELS, id)) ?? '{}') as Record<
-      string,
-      unknown
-    >;
-    return Object.fromEntries(
-      Object.entries(raw).filter(([k, v]) => isSlot(k) && Number.isInteger(v) && (v as number) > 0),
-    ) as Upgrades;
+    return cleanLevels(JSON.parse(localStorage.getItem(keyOf(LEVELS, id)) ?? '{}'));
   } catch {
     return {};
   }
 }
 const isSlot = (k: string) => (GEAR_SLOTS as readonly string[]).includes(k);
+const cleanActive = (v: unknown): WeaponSlot => WEAPON_SLOTS.find((s) => s === v) ?? 'weapon1';
 function readActive(id: number | null): WeaponSlot {
   if (id === null) return 'weapon1';
   try {
-    const v = localStorage.getItem(keyOf(ACTIVE, id));
-    return WEAPON_SLOTS.find((s) => s === v) ?? 'weapon1';
+    return cleanActive(localStorage.getItem(keyOf(ACTIVE, id)));
   } catch {
     return 'weapon1';
   }
+}
+const PUSH_DELAY_MS = 800;
+
+interface Draft {
+  levels: Levels;
+  level: number;
+  flame: number;
+  comfort: number;
+  gear: Gear;
+  arrow: string | null;
+  upgrades: Upgrades;
+  gems: Gems;
 }
 
 /** The build being planned, and the builds the player saved (api/v1/builds). */
@@ -70,6 +85,10 @@ export class PlannerStore {
 
   /** The character profile whose sheet this is (null before the login: nothing is read or written). */
   private profile: number | null = null;
+  private touched = false; // the player changed the sheet since the profile was opened
+  private stamp: string | null = null; // updated_at of the server copy this sheet is based on
+  private pushTimer: ReturnType<typeof setTimeout> | undefined;
+  private unsent: number | null = null; // the profile whose last change is still waiting to be sent
   private readonly draft = this.readDraft(null);
   readonly levels = signal<Levels>(this.draft.levels);
   /** Character level and Flame level, and what is worn (see gear.json). */
@@ -109,6 +128,7 @@ export class PlannerStore {
   setActive(slot: WeaponSlot): void {
     this.active.set(slot);
     if (this.profile === null) return;
+    this.schedulePush();
     try {
       localStorage.setItem(keyOf(ACTIVE, this.profile), slot);
     } catch {
@@ -185,6 +205,7 @@ export class PlannerStore {
     );
     this.itemLevels.set(levels);
     if (this.profile === null) return;
+    this.schedulePush();
     try {
       localStorage.setItem(keyOf(LEVELS, this.profile), JSON.stringify(levels));
     } catch {
@@ -233,6 +254,7 @@ export class PlannerStore {
     else delete next[slot];
     this.itemLevels.set(next);
     if (this.profile === null) return;
+    this.schedulePush();
     try {
       localStorage.setItem(keyOf(LEVELS, this.profile), JSON.stringify(next));
     } catch {
@@ -293,7 +315,10 @@ export class PlannerStore {
    * sheet per browser: the first profile that asks takes it.
    */
   async switchProfile(id: number | null): Promise<void> {
+    await this.flush(); // the last change of the profile being left
     this.profile = null; // nothing is written while the sheet is swapped
+    this.touched = false;
+    this.stamp = null;
     this.currentId.set(null);
     this.name.set('');
     this.error.set(null);
@@ -310,16 +335,173 @@ export class PlannerStore {
     this.itemLevels.set(readLevels(id));
     this.active.set(readActive(id));
     this.profile = id;
-    await this.load();
+    await Promise.all([this.load(), id === null ? undefined : this.pullSheet(id)]);
   }
+
+  /**
+   * The server keeps the sheet of each profile, stamped with the time of its last write. This browser keeps the
+   * stamp it last saw and whether it holds changes it did not send: changes made here on top of the server's
+   * copy are sent; if the server's copy changed since (another device), it wins. `force` = the server just
+   * refused a write: take its copy.
+   */
+  private async pullSheet(id: number, force = false): Promise<void> {
+    try {
+      const { sheet, updated_at } = await firstValueFrom(
+        this.http.get<{ sheet: Record<string, unknown> | null; updated_at: string | null }>(
+          `api/v1/characters/${id}/sheet`,
+        ),
+      );
+      if (this.profile !== id) return;
+      this.stamp = updated_at;
+      if (sheet === null) {
+        if (this.hasContent()) this.schedulePush(); // first time on the server: what this browser holds
+        return;
+      }
+      const unsent =
+        !force && (this.touched || (this.isDirty(id) && this.savedStamp(id) === updated_at));
+      if (unsent) {
+        this.saveStamp(id, updated_at);
+        void this.push();
+        return;
+      }
+      const d = this.parseDraft(sheet);
+      this.levels.set(d.levels);
+      this.level.set(d.level);
+      this.flame.set(d.flame);
+      this.comfort.set(d.comfort);
+      this.gear.set(d.gear);
+      this.arrow.set(d.arrow);
+      this.upgrades.set(d.upgrades);
+      this.gems.set(d.gems);
+      this.itemLevels.set(cleanLevels((sheet['itemLevels'] ?? {}) as Record<string, unknown>));
+      this.active.set(cleanActive(sheet['active']));
+      this.unsent = null;
+      clearTimeout(this.pushTimer);
+      this.writeLocal();
+      this.saveStamp(id, updated_at);
+      this.setDirty(id, false);
+      try {
+        localStorage.setItem(keyOf(LEVELS, id), JSON.stringify(this.itemLevels()));
+        localStorage.setItem(keyOf(ACTIVE, id), this.active());
+      } catch {
+        // storage blocked: the server copy is read again next time
+      }
+    } catch {
+      // offline or an older server: this browser's copy stays
+    }
+  }
+
+  private hasContent(): boolean {
+    return (
+      this.level() > 1 ||
+      this.flame() > 0 ||
+      this.comfort() > 0 ||
+      Object.keys(this.gear()).length > 0 ||
+      Object.keys(this.levels()).length > 0
+    );
+  }
+
+  private isDirty(id: number): boolean {
+    try {
+      return localStorage.getItem(keyOf(DIRTY, id)) === '1';
+    } catch {
+      return false;
+    }
+  }
+
+  private setDirty(id: number, on: boolean): void {
+    try {
+      if (on) localStorage.setItem(keyOf(DIRTY, id), '1');
+      else localStorage.removeItem(keyOf(DIRTY, id));
+    } catch {
+      // storage blocked: the change is still sent this visit
+    }
+  }
+
+  private savedStamp(id: number): string | null {
+    try {
+      return localStorage.getItem(keyOf(STAMP, id));
+    } catch {
+      return null;
+    }
+  }
+
+  private saveStamp(id: number, stamp: string | null): void {
+    this.stamp = stamp;
+    try {
+      if (stamp) localStorage.setItem(keyOf(STAMP, id), stamp);
+      else localStorage.removeItem(keyOf(STAMP, id));
+    } catch {
+      // storage blocked: the next visit reads the server copy
+    }
+  }
+
+  /** The sheet is sent a moment after the last change. */
+  private schedulePush(): void {
+    this.touched = true;
+    const id = this.profile;
+    if (id === null) return;
+    this.setDirty(id, true);
+    clearTimeout(this.pushTimer);
+    this.unsent = id;
+    this.pushTimer = setTimeout(() => void this.push(), PUSH_DELAY_MS);
+  }
+
+  /** Sends the changes still waiting (before the profile is left or the player logs out). */
+  async flush(): Promise<void> {
+    if (this.unsent !== null) await this.push();
+  }
+
+  /**
+   * Writes the sheet on the server, based on the copy this browser last saw. A refusal (409) means another
+   * device wrote since: its copy is taken. Any other failure is silent: the changes stay marked as unsent.
+   */
+  private async push(): Promise<void> {
+    const id = this.profile;
+    if (id === null) return;
+    clearTimeout(this.pushTimer);
+    this.unsent = null;
+    try {
+      const saved = await firstValueFrom(
+        this.http.put<{ updated_at: string }>(`api/v1/characters/${id}/sheet`, this.sheetBody()),
+      );
+      if (this.profile !== id) return;
+      this.saveStamp(id, saved.updated_at);
+      if (this.unsent === null) this.setDirty(id, false); // nothing changed while it was on its way
+    } catch (e) {
+      if (e instanceof HttpErrorResponse && e.status === 409) await this.pullSheet(id, true);
+    }
+  }
+
+  private sheetBody(): { settings: Record<string, unknown>; base: string | null } {
+    return {
+      settings: { ...this.draftObject(), itemLevels: this.itemLevels(), active: this.active() },
+      base: this.stamp,
+    };
+  }
+
+  /** Leaving the page right after a change: send it anyway (as SessionService does for the filters). */
+  private readonly onLeave = addEventListener('pagehide', () => {
+    if (this.unsent === null || this.unsent !== this.profile) return;
+    keepalivePut(`api/v1/characters/${this.unsent}/sheet`, this.sheetBody());
+  });
 
   /** A deleted profile's sheet goes with it. */
   forgetProfile(id: number): void {
-    this.wipe([keyOf(DRAFT, id), keyOf(LEVELS, id), keyOf(ACTIVE, id)]);
+    this.wipe([
+      keyOf(DRAFT, id),
+      keyOf(LEVELS, id),
+      keyOf(ACTIVE, id),
+      keyOf(STAMP, id),
+      keyOf(DIRTY, id),
+    ]);
   }
 
   clear(): void {
     this.profile = null;
+    this.unsent = null;
+    this.stamp = null;
+    clearTimeout(this.pushTimer);
     this.saved.set([]);
     this.currentId.set(null);
     this.name.set('');
@@ -327,7 +509,7 @@ export class PlannerStore {
     this.resetAll();
     this.wipe(
       Object.keys(this.storage()).filter((k) =>
-        [DRAFT, LEVELS, ACTIVE].some((b) => k === b || k.startsWith(`${b}:`)),
+        [DRAFT, LEVELS, ACTIVE, STAMP, DIRTY].some((b) => k === b || k.startsWith(`${b}:`)),
       ),
     );
   }
@@ -439,22 +621,17 @@ export class PlannerStore {
     return Math.min(this.gearData.data()?.constants[key] ?? api, api);
   }
 
-  private readDraft(id: number | null): {
-    levels: Levels;
-    level: number;
-    flame: number;
-    comfort: number;
-    gear: Gear;
-    arrow: string | null;
-    upgrades: Upgrades;
-    gems: Gems;
-  } {
+  private readDraft(id: number | null): Draft {
     try {
       if (id === null) throw new Error('no profile');
-      const raw = JSON.parse(localStorage.getItem(keyOf(DRAFT, id)) ?? '{}') as Record<
-        string,
-        unknown
-      >;
+      return this.parseDraft(JSON.parse(localStorage.getItem(keyOf(DRAFT, id)) ?? '{}'));
+    } catch {
+      return this.parseDraft({});
+    }
+  }
+
+  private parseDraft(raw: Record<string, unknown>): Draft {
+    try {
       // before the Build screen the draft was only the levels
       const levels = (raw['levels'] ?? raw) as Record<string, number>;
       const gear = Object.fromEntries(
@@ -496,22 +673,29 @@ export class PlannerStore {
     }
   }
 
+  private draftObject(): Draft {
+    return {
+      levels: this.levels(),
+      level: this.level(),
+      flame: this.flame(),
+      comfort: this.comfort(),
+      gear: this.gear(),
+      arrow: this.arrow(),
+      upgrades: this.upgrades(),
+      gems: this.gems(),
+    };
+  }
+
   private writeDraft(): void {
     if (this.profile === null) return;
+    this.schedulePush();
+    this.writeLocal();
+  }
+
+  private writeLocal(): void {
+    if (this.profile === null) return;
     try {
-      localStorage.setItem(
-        keyOf(DRAFT, this.profile),
-        JSON.stringify({
-          levels: this.levels(),
-          level: this.level(),
-          flame: this.flame(),
-          comfort: this.comfort(),
-          gear: this.gear(),
-          arrow: this.arrow(),
-          upgrades: this.upgrades(),
-          gems: this.gems(),
-        }),
-      );
+      localStorage.setItem(keyOf(DRAFT, this.profile), JSON.stringify(this.draftObject()));
     } catch {
       // storage blocked: the draft is just not kept between visits
     }

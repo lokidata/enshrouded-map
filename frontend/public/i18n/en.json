@@ -403,6 +403,7 @@
   "equipGemSet": "Socketed gem",
   "equipGemNone": "No gem",
   "equipGemNoSlot": "The data gives this weapon no gem slot: the chosen gem is shown anyway.",
+  "gemUnknownValue": "Value not in the game data",
   "buildGemTip": "Value above level 1: estimation. The game scales a gem on its own level (not the weapon's); value + scale × 0.15 × level matches in-game samples at level 15 (Bleeding 14 /s for 7.1 s, Toxic Betrayal 8 damage) except Toxic Betrayal's duration (5.2 s in game). The effect is a trigger (crit, kill, block…): it is in no total.",
   "equipGemOpen": "unlocked",
   "buildPerkTip": "Upgrade: {{ d }}. How it adds to the weapon's damage is not in the game data: counted apart.",

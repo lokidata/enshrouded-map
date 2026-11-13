@@ -403,6 +403,7 @@
   "equipGemSet": "Pierre sertie",
   "equipGemNone": "Aucune pierre",
   "equipGemNoSlot": "Les données ne donnent pas d'emplacement de pierre à cette arme : la pierre choisie est quand même affichée.",
+  "gemUnknownValue": "Valeur absente des données du jeu",
   "buildGemTip": "Valeur au-dessus du niveau 1 : estimation. Le jeu calcule la pierre sur son propre niveau (pas celui de l'arme) ; la formule valeur + échelle × 0,15 × niveau reproduit les mesures en jeu au niv. 15 (Saignement 14 /s pendant 7,1 s, Trahison toxique 8 dégâts) sauf la durée de Trahison toxique (5,2 s en jeu). L'effet est déclenché (critique, mort, blocage…) : il n'entre dans aucun total.",
   "equipGemOpen": "déverrouillé",
   "buildPerkTip": "Amélioration : {{ d }}. Comment elle s'ajoute aux dégâts de l'arme n'est pas dans les données du jeu : comptée à part.",

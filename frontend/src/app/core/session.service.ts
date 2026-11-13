@@ -1,3 +1,4 @@
+import { keepalivePut } from './keepalive';
 import { HttpClient } from '@angular/common/http';
 import { Injectable, effect, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
@@ -70,14 +71,7 @@ export class SessionService {
     // Leaving the page right after a change: send it anyway.
     addEventListener('pagehide', () => {
       if (!this.auth.user() || !this.pending || this.pending === this.saved) return;
-      const token = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]*)/)?.[1] ?? '';
-      void fetch('api/v1/settings', {
-        method: 'PUT',
-        keepalive: true,
-        credentials: 'same-origin',
-        headers: { 'Content-Type': 'application/json', 'X-XSRF-TOKEN': decodeURIComponent(token) },
-        body: JSON.stringify({ settings: JSON.parse(this.pending) }),
-      });
+      keepalivePut('api/v1/settings', { settings: JSON.parse(this.pending) });
     });
   }
 
@@ -123,6 +117,7 @@ export class SessionService {
   async logout(): Promise<void> {
     clearTimeout(this.timer);
     await this.flush(); // last change before leaving the profile
+    await this.planner.flush();
     try {
       await this.auth.logout();
     } finally {

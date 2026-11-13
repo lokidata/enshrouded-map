@@ -20,6 +20,8 @@ export interface Gem {
   id: string;
   name: Names;
   desc?: Names;
+  /** Per %k of `desc`, in the text's order: the index of the stat that gives its value, null when the data has none. */
+  fill?: readonly (number | null)[];
   rarity: string;
   tier: number;
   lvl: readonly [number, number];

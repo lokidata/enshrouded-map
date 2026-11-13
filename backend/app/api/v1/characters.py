@@ -1,3 +1,6 @@
+import json
+from typing import Any
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import func, select
@@ -6,8 +9,10 @@ from sqlalchemy.exc import IntegrityError
 from app.api.deps import CurrentUser, DbSession
 from app.core.config import get_settings
 from app.core.logging import audit
-from app.db.models import ActiveCharacter, Character
+from app.db.base import utcnow
+from app.db.models import ActiveCharacter, Character, CharacterSheet
 from app.db.queries import active_character
+from app.schemas.common import StrictModel
 from app.schemas.team import NameIn
 
 router = APIRouter(prefix="/characters", tags=["characters"])
@@ -100,3 +105,48 @@ def delete_character(character_id: int, user: CurrentUser, db: DbSession) -> lis
     db.commit()
     audit.info("character_deleted", extra={"user_id": user.id})
     return _list(db, user)
+
+
+class SheetOut(BaseModel):
+    sheet: dict[str, object] | None
+    updated_at: str | None  # the stamp of the stored copy, sent back as `base` by the next write
+
+
+class SheetIn(StrictModel):
+    settings: dict[str, Any]
+    base: str | None = None  # the stamp this copy was read at; None = the client saw no stored copy
+
+
+def _stamp(row: CharacterSheet | None) -> str | None:
+    return row.updated_at.isoformat() if row else None
+
+
+@router.get("/{character_id}/sheet", response_model=SheetOut)
+def get_sheet(character_id: int, user: CurrentUser, db: DbSession) -> SheetOut:
+    """The Character screen of one of the player's profiles; null when it was never saved."""
+    row = db.get(CharacterSheet, _own(db, user, character_id).id)
+    return SheetOut(sheet=row.data if row else None, updated_at=_stamp(row))
+
+
+@router.put("/{character_id}/sheet", response_model=SheetOut)
+def put_sheet(character_id: int, body: SheetIn, user: CurrentUser, db: DbSession) -> SheetOut:
+    """Replaces the sheet, only when nobody wrote it since `base` (409 otherwise: read it again)."""
+    character = _own(db, user, character_id)
+    size = len(json.dumps(body.settings, ensure_ascii=False, separators=(",", ":")).encode())
+    if size > get_settings().max_settings_bytes:
+        raise HTTPException(400, "sheet_too_large")
+    row = db.get(CharacterSheet, character.id)
+    if _stamp(row) != body.base:
+        raise HTTPException(409, "sheet_changed")
+    if row is None:
+        row = CharacterSheet(character_id=character.id, data=body.settings, updated_at=utcnow())
+        db.add(row)
+    else:
+        row.data = body.settings
+        row.updated_at = utcnow()
+    try:
+        db.commit()
+    except IntegrityError:  # two first writes at once: the other one won
+        db.rollback()
+        raise HTTPException(409, "sheet_changed") from None
+    return SheetOut(sheet=row.data, updated_at=_stamp(row))

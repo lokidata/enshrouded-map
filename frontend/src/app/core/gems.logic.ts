@@ -45,12 +45,40 @@ export function gemLines(
   });
 }
 
+/** A piece of a gem's text: plain, a value taken from a stat, or a value the data does not give. */
+export type GemPart =
+  | { kind: 'text'; text: string }
+  | { kind: 'value'; text: string; estimate: boolean }
+  | { kind: 'unknown' };
+
 /**
- * The gem's text with "…" for its %k. Not filled in: the order of the %k is not the order of the data's lines
- * (Toxic Betrayal, Meteoric Impact), and the game's own mapping is code; the values are shown as labelled lines.
+ * The gem's text cut at its %k, each one filled from `fill` (the stat that gives it, see Gem.fill) with the line
+ * already computed at the gem's level. A gem without `fill`, or a value the data does not give, stays "…".
  */
-export function gemText(desc: string): string {
-  return desc.replaceAll('%k', '…').replaceAll('%%', '%').replace(/\s+/g, ' ').trim();
+export function gemParts(
+  desc: string,
+  fill: readonly (number | null)[] | undefined,
+  lines: readonly { text: string; estimate: boolean }[],
+): GemPart[] {
+  const pieces = desc.replaceAll('%%', '%').split('%k');
+  const parts: GemPart[] = [];
+  pieces.forEach((piece, i) => {
+    let text = piece.replace(/\s+/g, ' ');
+    if (i === 0) text = text.trimStart();
+    if (i === pieces.length - 1) text = text.trimEnd();
+    const line = i > 0 ? lines[fill?.[i - 1] ?? -1] : undefined;
+    if (i > 0) {
+      // "pendant %k secondes": the text already says the unit, the value is just the number ("6", not "6 s")
+      const unitInText = /^ sec(onde)?s?\b/.test(text);
+      const value =
+        line && unitInText && line.text.endsWith(' s') ? line.text.slice(0, -2) : line?.text;
+      parts.push(
+        line ? { kind: 'value', text: value!, estimate: line.estimate } : { kind: 'unknown' },
+      );
+    }
+    if (text) parts.push({ kind: 'text', text });
+  });
+  return parts;
 }
 
 export function filterGems(
