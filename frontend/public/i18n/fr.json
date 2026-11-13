@@ -617,6 +617,7 @@
   "progressTitle": "Ma progression",
   "progressHint": "Ce que vous avez coché, par catégorie. « — » : les données du site ne le listent pas encore.",
   "progressUnknown": "—",
+  "hideDone": "Masquer ce que j'ai marqué (sauf voyages rapides)",
   "onlyExplored": "Seulement la zone explorée (sauvegarde importée)",
   "saveImportLast": "Dernier import : {{ name }}, le {{ date }}.",
   "saveImportSlot": "personnage {{ n }}",

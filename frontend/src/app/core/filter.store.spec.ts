@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { describe, expect, it } from 'vitest';
-import { FilterStore } from './filter.store';
+import { FilterStore, hiddenAsDone } from './filter.store';
 import { MapData } from './map-data.model';
 import { MapDataService } from './map-data.service';
 
@@ -23,6 +23,18 @@ function setup(): FilterStore {
   TestBed.inject(MapDataService).data = data;
   return TestBed.inject(FilterStore);
 }
+
+describe('hiddenAsDone', () => {
+  it('hides a marked element only when the option is on', () => {
+    expect(hiddenAsDone(true, true)).toBe(true);
+    expect(hiddenAsDone(false, true)).toBe(false);
+    expect(hiddenAsDone(true, false)).toBe(false);
+  });
+
+  it('never hides a fast travel point', () => {
+    expect(hiddenAsDone(true, true, true)).toBe(false);
+  });
+});
 
 describe('FilterStore', () => {
   it('follows the category default until an element is changed', () => {
