@@ -11,9 +11,18 @@ router = APIRouter(prefix="/builds", tags=["builds"])
 
 
 def _own(db: DbSession, user: CurrentUser, build_id: int) -> Build:
-    build = db.scalar(select(Build).where(Build.id == build_id, Build.user_id == user.id))
+    build = db.scalar(
+        select(Build).where(
+            Build.id == build_id,
+            Build.user_id == user.id,
+            Build.character_id
+            == active_character(db, user).id,  # the profile followed, like the list
+        )
+    )
     if build is None:
-        raise HTTPException(404, "build_not_found")  # also for someone else's build
+        raise HTTPException(
+            404, "build_not_found"
+        )  # also for someone else's or another profile's build
     return build
 
 

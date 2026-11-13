@@ -3,6 +3,7 @@ import json
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 from app.api.deps import CurrentUser, DbSession
 from app.core.config import get_settings
@@ -52,5 +53,15 @@ def put_config(body: SettingsIn, user: CurrentUser, db: DbSession) -> ConfigOut:
         db.add(GameConfig(**{"team_id" if scope == "team" else "user_id": key}, data=body.settings))
     else:
         row.data = body.settings
-    db.commit()
+    try:
+        db.commit()
+    except (
+        IntegrityError
+    ):  # two first saves at once: the other one made the row, this one updates it
+        db.rollback()
+        found = _row(db, scope, key)
+        if found is None:
+            raise HTTPException(409, "conflict") from None
+        found.data = body.settings
+        db.commit()
     return ConfigOut(config=body.settings, can_edit=True, scope=scope)

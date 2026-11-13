@@ -51,4 +51,28 @@ describe('ProgressStore', () => {
     await second;
     expect(store.done().has('boss:1:2')).toBe(false);
   });
+
+  it('does not flip a mark that was clicked again when the first change is refused', async () => {
+    const first = store.toggle('boss:1:2'); // mark
+    const second = store.toggle('boss:1:2'); // unmark before the first answer
+    http.expectOne('api/v1/progress').flush({ detail: 'x' }, { status: 500, statusText: 'err' });
+    await first;
+    await new Promise((r) => setTimeout(r));
+    // the first was refused: the unmark that follows still goes out and succeeds
+    http.expectOne('api/v1/progress').flush({});
+    await second;
+    expect(store.done().has('boss:1:2')).toBe(false); // what the server holds, not a stale flip back to marked
+  });
+
+  it('goes back to what the server holds when two changes in a row are refused', async () => {
+    const first = store.toggle('boss:1:2');
+    const second = store.toggle('boss:1:2');
+    http.expectOne('api/v1/progress').flush({ detail: 'x' }, { status: 500, statusText: 'err' });
+    await first;
+    await new Promise((r) => setTimeout(r));
+    http.expectOne('api/v1/progress').flush({ detail: 'x' }, { status: 500, statusText: 'err' });
+    await second;
+    expect(store.done().has('boss:1:2')).toBe(false); // the server never had it
+    expect(store.saveFailed()).toBe(true);
+  });
 });

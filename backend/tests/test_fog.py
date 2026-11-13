@@ -130,3 +130,30 @@ def test_deleting_a_profile_deletes_its_area(user: ApiClient, bob: ApiClient) ->
     assert len(user.get(TF).json()["members"]) == 1
     bob.delete(f"{C}/{second}")
     assert user.get(TF).json() == {"members": []}
+
+
+def test_sharing_does_not_follow_a_player_to_another_team(user: ApiClient, bob: ApiClient) -> None:
+    team_of_two(user, bob)
+    put(bob, 5, shared=True)
+    assert bob.post("/api/v1/team/leave").status_code == 200
+    assert bob.get(F).json()["shared"] is False  # stored, but no longer shown
+    # another team's member adds them: nothing is shown until they choose
+    bob.post("/api/v1/team", json={"name": "Other"})
+    bob.post("/api/v1/team/leave")
+    user.post("/api/v1/team/members", json={"user_id": 2})
+    assert user.get(TF).json() == {"members": []}
+    assert bob.get(F).json()["bits"] == bits(5)
+
+
+def test_a_removed_member_and_a_dissolved_team_stop_sharing(
+    user: ApiClient, bob: ApiClient
+) -> None:
+    team_of_two(user, bob)
+    put(bob, 5, shared=True)
+    put(user, 6, shared=True)
+    assert user.delete("/api/v1/team/members/2").status_code == 200
+    assert bob.get(F).json()["shared"] is False
+    user.post("/api/v1/team/members", json={"user_id": 2})
+    put(bob, 5, shared=True)
+    assert user.delete("/api/v1/team").status_code == 200
+    assert bob.get(F).json()["shared"] is False and user.get(F).json()["shared"] is False

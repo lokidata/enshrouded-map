@@ -127,7 +127,7 @@ The map stays mounted (hidden) when another screen is shown; the others load on 
 ### Explored area
 - Comes from a save import (section 10): a grid of 1280 x 1280 cells of 8 m, north up. It is drawn as a dark veil over what is not explored.
 - **Kept by the server for the profile** (table `fogs`, one bit per cell, readable by its owner only): it survives a logout and comes back on another browser. The browser caches it with the server's stamp and takes the server copy when the stamp differs. An area imported before the server kept them is sent on the next load.
-- **Sharing with the team** is opt-in, off by default, switchable at any time: from the import dialog ("Share this area with my team", shown only in a team), from "My progress", or from the map's side menu. `PUT /fog` stores the area of the profile followed (`bits` + `shared`, replaces the last), `PATCH` switches `shared`, `DELETE` removes it. Nothing else is stored: no position, no discovered places. Never share without the explicit tick.
+- **Sharing with the team** is opt-in, off by default, switchable at any time, and **never follows a player to another team**: leaving a team, being removed, a team that is dissolved or being added to a team by someone else all switch it off (every profile of the player), and a player must tick it again for each team: from the import dialog ("Share this area with my team", shown only in a team), from "My progress", or from the map's side menu. `PUT /fog` stores the area of the profile followed (`bits` + `shared`, replaces the last), `PATCH` switches `shared`, `DELETE` removes it. Nothing else is stored: no position, no discovered places. Never share without the explicit tick.
 - **Layers**: each area is its own layer in the layers control: "My explored area" and one "Explored area of <name>" per member who shares (`GET /team/fog` lists them with a stamp, `GET /team/fog/{user id}` gives one; only new or changed ones are fetched). Ticking is the player's choice, kept in the browser; new members start shown. The map draws **one veil** over everything outside the union of the ticked layers; nothing ticked, no veil. Leaving the team, deleting the profile or unsharing removes the layer for the others.
 - **Only the explored area** (side menu checkbox, enabled once an area exists): hides the markers whose cell is not explored, by the same union. Names of places and regions stay; chest, plant and ore dots are not filtered.
 
@@ -200,7 +200,7 @@ Recipes, Items, Building, Stations, Altar (with a cost planner between two level
 - 243 nodes, 312 links, 12 roots. A node is reachable from a root or a taken neighbour; the last level of a node that others hang from cannot be removed. Click +1, right click -1, Enter / Delete, plus +/- buttons in the detail panel.
 - Points = cost x level against a budget of 212 (taken from enshrouded.tools, not from the game). The six Flame nodes add floor(Flame / 2) attribute points once taken (exact).
 - 91 of the 163 descriptions with a value show it; the others show "…".
-- **Saved builds** (skills page only): name (1-60) + skill nodes, 50 per profile, private; opened, replaced by saving under the same name, deleted. The share link `#build=` carries the nodes by their index in `skills.json` (it breaks if the game adds nodes).
+- **Saved builds** (skills page only): name (1-60) + skill nodes, 50 per profile, private, reachable (open, replace, delete) only while that profile is the one followed; opened, replaced by saving under the same name, deleted. The share link `#build=` carries the nodes by their index in `skills.json` (it breaks if the game adds nodes).
 
 ### Formulas
 - **Exact**:
@@ -242,7 +242,7 @@ Our own rule, not the game's, and never an equipment suggestion. For each armour
 
 ## 10. Save import (profile menu > Import a save)
 
-- The player picks a local `character*.ksd`. It is **read in the browser and never sent**. Limits: 50 MB file, 64 sections, 64 MB per section, every offset checked. Never commit a real save.
+- The player picks a local `character*.ksd`. It is **read in the browser and never sent**. Limits: 50 MB file, 64 sections, 64 MB per section and 256 MB for all of them once decompressed, every offset checked. Never commit a real save.
 - A preview shows, per kind, what is new; each kind has its checkbox. Applying only ticks, never unticks (`PUT /progress`).
 - **Kinds**:
   - Known recipes and building pieces (`recipe:<guid>`): the id in the save is the FNV-1a 32 of the GUID bytes; flag not 0.
