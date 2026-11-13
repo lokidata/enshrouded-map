@@ -118,6 +118,8 @@ CATEGORY_LABELS = {
     "chest": ("Coffre", "Chest"),
     "unique": ("Objet unique", "Unique item"),
     "cosmetic": ("Cosmétique", "Cosmetic"),
+    "palette": ("Palette de couleurs", "Color palette"),
+    "hairstyle": ("Coiffure", "Hairstyle"),
     "collectible": ("Objet de collection", "Collectible"),
     "plant": ("Plante", "Plant"),
     "ore": ("Minerai", "Ore"),
@@ -128,13 +130,14 @@ RESOURCE_CATEGORIES = {"chest": "icon_chest", "plant": "icon_plants", "ore": "ic
 # Hidden until checked: thousands of points each.
 CRYPT_NAME = re.compile(r"^Crypte des Anciens")
 # Markers of a single item (special loot), see build_resources.special_loot.
-LOOT_MARKER_CATEGORIES = ("unique", "cosmetic", "collectible")
-HIDDEN_BY_DEFAULT = {"chest", "plant", "ore", "unique", "cosmetic", "collectible"}
+LOOT_MARKER_CATEGORIES = ("unique", "cosmetic", "palette", "hairstyle", "collectible")
+HIDDEN_BY_DEFAULT = {"chest", "plant", "ore", "unique", "cosmetic", "palette", "hairstyle", "collectible"}
 
 # Categories that do not come from map markers: category -> icon (game icon
 # debug name, or an svg written by this script).
 EXTRA_CATEGORIES = {"start": "mapmarker_spawn_flame_altar", "boss": "boss.svg", "elite": "elite.svg",
-                    "summon": "summon.svg", "unique": "unique.svg", "cosmetic": "cosmetic.svg",
+                    "summon": "summon.svg", "unique": "unique.svg", "cosmetic": "cosmetic.svg", "palette": "palette.svg",
+                    "hairstyle": "hairstyle.svg",
                     "collectible": "collectible.svg"}
 # Technical suffixes of enemy template names (see enemy_key).
 ENEMY_SUFFIX = re.compile(r"bosshealthbar|bosshealtbar|healthbar|hookpte|hook|summonstone|ag2|elite|deprecated|"
@@ -198,6 +201,21 @@ ICON_SVGS = {
     "cosmetic.svg": """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
 <path d="M32 2 L62 32 L32 62 L2 32 Z" fill="#26103d" stroke="#b36cf0" stroke-width="3"/>
 <path d="M32 20 a4 4 0 1 1 4 4 v3 L50 40 q3 4 -2 4 H16 q-5 0 -2 -4 L28 27 v-4" fill="#d9a8ff" stroke="#4a1f78" stroke-width="2" stroke-linejoin="round"/>
+</svg>
+""",
+    # color palette: three paint blobs on a dark rose diamond
+    "palette.svg": """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+<path d="M32 2 L62 32 L32 62 L2 32 Z" fill="#3d1030" stroke="#f06cb3" stroke-width="3"/>
+<circle cx="24" cy="29" r="6" fill="#ff8a8a" stroke="#4a1030" stroke-width="2"/>
+<circle cx="40" cy="29" r="6" fill="#ffd36b" stroke="#4a1030" stroke-width="2"/>
+<circle cx="32" cy="41" r="6" fill="#7bd3ff" stroke="#4a1030" stroke-width="2"/>
+</svg>
+""",
+    # hairstyle: wig head (round head with a tuft of hair) on a dark sand diamond
+    "hairstyle.svg": """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+<path d="M32 2 L62 32 L32 62 L2 32 Z" fill="#33250f" stroke="#e0b060" stroke-width="3"/>
+<ellipse cx="32" cy="35" rx="11" ry="13" fill="#e8c9a0" stroke="#4a3010" stroke-width="2"/>
+<path d="M20 33 q-2 -16 12 -17 q14 1 12 17 q-4 -8 -12 -8 q-8 0 -12 8" fill="#7a4a1c" stroke="#3a2008" stroke-width="2" stroke-linejoin="round"/>
 </svg>
 """,
     # collectible: ammonite fossil on a dark teal diamond
@@ -627,14 +645,14 @@ def main(src, export, out):
     # Unique items and collectibles: one marker per item, at its chest. Items
     # sharing a chest are moved apart by 1 m so that each one keeps its own
     # mark id (category:x:z).
-    # Collectibles lying in the world are often special loot too: keep one.
+    # Collectibles and palettes lying in the world are often special loot too: keep one.
     # The other guaranteed items of a container (materials, blocks...) are listed
     # in the popup of what stands there: the loot marker, the chest or the enemy.
     special = []
     taken = set()
     item_names = {}  # item guid -> names, for the items table
     container_loot = build_resources.ContainerLoot()
-    lying = {(tuple(m["name"]), round(m["x"]), round(m["z"])): m for m in markers if m["cat"] == "collectible"}
+    lying = {(tuple(m["name"]), round(m["x"]), round(m["z"])): m for m in markers if m["cat"] in ("collectible", "palette", "hairstyle")}
     special_items = [s for s in build_resources.special_loot(src, MAIN_SCENE, locas)
                      if not any(x0 <= s[5] <= x1 and z0 <= s[7] <= z1 for x0, z0, x1, z1 in dungeon_areas)]
     for cat, names, debug, item, amount, x, y, z in special_items:

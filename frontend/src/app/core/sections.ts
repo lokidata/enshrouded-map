@@ -39,7 +39,7 @@ export const SECTIONS: Section[] = [
   {
     label: ['Butin', 'Loot'],
     color: '#d1913f',
-    cats: ['unique', 'cosmetic', 'collectible', 'chest'],
+    cats: ['unique', 'cosmetic', 'palette', 'hairstyle', 'collectible', 'chest'],
   },
   { label: ['Brume', 'Shroud'], color: '#c95aa6', cats: ['shroudRoot', 'elixirWell'] },
   { label: ['Ressources', 'Resources'], color: '#5fb08c', cats: ['plant', 'ore'] },
