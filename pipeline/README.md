@@ -145,7 +145,7 @@ Writes, in `artifacts/map/`:
 | `items/`         | pictures of the items shown in the popups (64 px)                                           |
 
 It prints counts at the end; compare them with the previous run to spot a
-change in the game data. Current reference: 1260 markers (79 unique items,
+change in the game data. Current reference: 1268 markers in `map-data.json` (79 unique items,
 110 cosmetics, 23 colour palettes, 5 hairstyle wig heads, 4 hair colour and 11 eye colour places, 107 collectibles), 2578 chests, 6632 ores, 124,000 plant points in 52 kinds,
 1198 recipes, 1324 building pieces, 14 altar levels, 78 armour sets,
 320 lore notes (564 pages), 186 quests, 2912 item pictures,

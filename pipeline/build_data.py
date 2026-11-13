@@ -132,7 +132,11 @@ RESOURCE_CATEGORIES = {"chest": "icon_chest", "plant": "icon_plants", "ore": "ic
 # Hidden until checked: thousands of points each.
 CRYPT_NAME = re.compile(r"^Crypte des Anciens")
 # Markers of a single item (special loot), see build_resources.special_loot.
-LOOT_MARKER_CATEGORIES = ("unique", "cosmetic", "palette", "hairstyle", "haircolor", "eyecolor", "collectible")
+LOOT_MARKER_CATEGORIES = ("unique", "cosmetic", "palette", "hairstyle", "collectible")
+# Places that unlock a hair or eye colour (build_resources.APPEARANCE_PLACES): not items, and often on the
+# template of another marker, so they take neither its guaranteed loot nor its knowledge ids.
+APPEARANCE_CATEGORIES = ("haircolor", "eyecolor")
+APPEARANCE_OFFSET = 6  # metres east of the marker it shares a template with, so that both can be clicked
 HIDDEN_BY_DEFAULT = {"chest", "plant", "ore", "unique", "cosmetic", "palette", "hairstyle", "haircolor", "eyecolor", "collectible"}
 
 # Categories that do not come from map markers: category -> icon (game icon
@@ -605,30 +609,28 @@ def main(src, export, out):
     scene = load(glob.glob(f"{src}/SceneResource/{MAIN_SCENE}_*.json")[0])
     for e in scene["questEntities"]:
         guid = e["templateGuid"]
-        if guid in marker_templates or guid in resource_tpl:
+        if guid in marker_templates or guid in resource_tpl or guid in appearance:
             pos = e["transform"]["position"]
-            (placed if guid in marker_templates else resources_placed).append(
-                (guid, pos["x"] / 2**32, pos["y"] / 2**32, pos["z"] / 2**32))
-        if guid in appearance:
-            pos = e["transform"]["position"]
-            placed.append(("appearance:" + guid, pos["x"] / 2**32, pos["y"] / 2**32, pos["z"] / 2**32))
+            at = (pos["x"] / 2**32, pos["y"] / 2**32, pos["z"] / 2**32)
+            if guid in marker_templates or guid in resource_tpl:
+                (placed if guid in marker_templates else resources_placed).append((guid, *at))
+            if guid in appearance:
+                placed.append(("appearance:" + guid, *at))
 
     for p in glob.glob(f"{src}/SceneEntityChunkResource/{MAIN_SCENE}_*.json"):
         chunk = load(p)
         templates = chunk["templates"]
         for e in chunk["entities"]:
             guid = templates[e["templateIndex"]]
-            if guid in marker_templates or guid in resource_tpl:
+            if guid in marker_templates or guid in resource_tpl or guid in appearance:
                 tr = e["transform"]
                 fixed = lambda lo, hi: tr[hi] + tr[lo] / 65536  # 16.16 fixed point
-                (placed if guid in marker_templates else resources_placed).append(
-                    (guid, fixed("positionX0", "positionX1"), fixed("positionY0", "positionY1"),
-                     fixed("positionZ0", "positionZ1")))
-            if guid in appearance:
-                tr = e["transform"]
-                fixed = lambda lo, hi: tr[hi] + tr[lo] / 65536
-                placed.append(("appearance:" + guid, fixed("positionX0", "positionX1"),
-                               fixed("positionY0", "positionY1"), fixed("positionZ0", "positionZ1")))
+                at = (fixed("positionX0", "positionX1"), fixed("positionY0", "positionY1"),
+                      fixed("positionZ0", "positionZ1"))
+                if guid in marker_templates or guid in resource_tpl:
+                    (placed if guid in marker_templates else resources_placed).append((guid, *at))
+                if guid in appearance:
+                    placed.append(("appearance:" + guid, *at))
 
     # Dungeon interiors are stored in a corner of the world, outside of the map.
     dungeon_areas = [
@@ -644,6 +646,8 @@ def main(src, export, out):
         t = marker_templates[guid]
         if any(x0 <= x <= x1 and z0 <= z <= z1 for x0, z0, x1, z1 in dungeon_areas):
             continue
+        if guid.startswith("appearance:") and guid[len("appearance:"):] in marker_templates:
+            x += APPEARANCE_OFFSET
         # Same element placed twice (scene + chunk): keep one. The phases of a
         # boss (Vorgoth...) have their own names but share the spot: one marker,
         # named after the first phase (template names end with Phase1, Phase2...).
@@ -671,6 +675,8 @@ def main(src, export, out):
         if not t["names"][0]:
             unnamed += 1
         markers.append(marker)
+    lost = {t["raw"] for t in appearance.values()} - {m["raw"] for m in markers if m["cat"] in APPEARANCE_CATEGORIES}
+    assert not lost, f"hair or eye colour places without a marker (not placed, or in a dungeon area): {lost}"
     # Unique items and collectibles: one marker per item, at its chest. Items
     # sharing a chest are moved apart by 1 m so that each one keeps its own
     # mark id (category:x:z).
@@ -716,7 +722,7 @@ def main(src, export, out):
                                                 dungeon_areas, void, special, container_loot)
     # Guaranteed loot still unclaimed: an enemy, a skeleton... standing on a marker.
     for m in markers:
-        if categories[m["cat"]]["kind"] == "icon" and m["cat"] not in LOOT_MARKER_CATEGORIES:
+        if categories[m["cat"]]["kind"] == "icon" and m["cat"] not in LOOT_MARKER_CATEGORIES + APPEARANCE_CATEGORIES:
             contents = container_loot.take(m["x"], m["z"])
             if contents:
                 m["loot"] = contents
@@ -749,7 +755,7 @@ def main(src, export, out):
         rows.append(bytes(line))
     write_png(f"{out}/biomes.png", w, h, rows)
 
-    build_places.attach_kids(src, markers)
+    build_places.attach_kids(src, [m for m in markers if m["cat"] not in APPEARANCE_CATEGORIES])
     present = set(cells)
     data = {
         "worldSize": w * biome["mapScale"],
