@@ -1,5 +1,5 @@
 import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { AuthService } from './auth.service';
@@ -75,5 +75,44 @@ describe('TeamStore halo', () => {
     expect(store.halo('a:1:1')).toBe('all');
     team('alice', 'bob');
     expect(store.halo('a:1:1')).toBe('alone');
+  });
+});
+
+describe('TeamStore marks refresh', () => {
+  const mine = {
+    id: 1,
+    name: 'T',
+    owner_id: 1,
+    is_owner: true,
+    members: [{ id: 1, username: 'a' }],
+  };
+
+  it('sends the ETag back and keeps the marks on a 304', async () => {
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    });
+    const store = TestBed.inject(TeamStore);
+    const http = TestBed.inject(HttpTestingController);
+    TestBed.inject(AuthService).user.set('alice');
+    const run = async (marks: { status: number; body?: object; etag?: string }) => {
+      const done = store.load();
+      http.expectOne('api/v1/team').flush(mine);
+      await Promise.resolve();
+      await Promise.resolve();
+      const req = http.expectOne('api/v1/team/marks');
+      const sent = req.request.headers.get('If-None-Match');
+      req.flush(marks.body ?? null, {
+        status: marks.status,
+        statusText: '',
+        headers: marks.etag ? { ETag: marks.etag } : {},
+      });
+      await done;
+      return sent;
+    };
+    expect(await run({ status: 200, body: { marks: { 'a:1:1': [2] } }, etag: '"x"' })).toBeNull();
+    expect(await run({ status: 304 })).toBe('"x"');
+    expect(store.others()).toEqual({ 'a:1:1': [2] }); // kept
+    expect(await run({ status: 200, body: { marks: {} }, etag: '"y"' })).toBe('"x"');
+    expect(store.others()).toEqual({});
   });
 });

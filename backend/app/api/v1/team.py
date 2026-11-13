@@ -1,10 +1,11 @@
 import base64
+import hashlib
 from collections import defaultdict
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.sql import Select
 
@@ -196,24 +197,56 @@ def add_member(body: MemberIn, user: CurrentUser, db: DbSession) -> TeamOut:
     return _out(db, team, user)
 
 
+# known recipes and found notes are personal, not map halos
+_SHARED_MARKS = (
+    Mark.mark_id.not_like("recipe:%"),
+    Mark.mark_id.not_like("lore:%"),
+    Mark.mark_id.not_like("quest:%"),
+)
+
+
 @router.get("/marks", response_model=TeamMarks)
-def team_marks(user: CurrentUser, db: DbSession) -> TeamMarks:
-    """What the other members marked; the caller's own marks come from /progress."""
+def team_marks(
+    request: Request, response: Response, user: CurrentUser, db: DbSession
+) -> TeamMarks | Response:
+    """What the other members marked; the caller's own marks come from /progress.
+
+    ETag from a cheap marker (who follows which profile, mark count, newest mark): 304 when the
+    browser's copy is still good. An added or removed mark, or a changed profile, changes it.
+    """
     member = _membership(db, user)
     marks: dict[str, list[int]] = defaultdict(list)
+    if member:
+        others = (
+            TeamMember.team_id == member.team_id,
+            ActiveCharacter.user_id != user.id,
+        )
+        follows = db.execute(
+            select(ActiveCharacter.user_id, ActiveCharacter.character_id)
+            .join(TeamMember, TeamMember.user_id == ActiveCharacter.user_id)
+            .where(*others)
+            .order_by(ActiveCharacter.user_id)
+        ).all()
+        count, newest = db.execute(
+            select(func.count(), func.max(Mark.created_at))
+            .join(ActiveCharacter, ActiveCharacter.character_id == Mark.character_id)
+            .join(TeamMember, TeamMember.user_id == ActiveCharacter.user_id)
+            .where(*others, *_SHARED_MARKS)
+        ).one()
+        marker = f"{[tuple(f) for f in follows]}|{count}|{newest}"
+    else:
+        marker = "none"
+    etag = f'"{hashlib.sha256(marker.encode()).hexdigest()[:20]}"'
+    if request.headers.get("if-none-match") == etag:
+        return Response(status_code=304, headers={"ETag": etag})
+    response.headers["ETag"] = etag
     if member:
         rows = db.execute(
             select(Mark.mark_id, ActiveCharacter.user_id)
             # a member counts with the profile they follow now
             .join(ActiveCharacter, ActiveCharacter.character_id == Mark.character_id)
             .join(TeamMember, TeamMember.user_id == ActiveCharacter.user_id)
-            .where(
-                TeamMember.team_id == member.team_id,
-                ActiveCharacter.user_id != user.id,
-                Mark.mark_id.not_like("recipe:%"),  # known recipes and found notes are personal,
-                Mark.mark_id.not_like("lore:%"),  # not map halos
-                Mark.mark_id.not_like("quest:%"),
-            )
+            .where(*others, *_SHARED_MARKS)
         )
         for mark_id, user_id in rows:
             marks[mark_id].append(user_id)

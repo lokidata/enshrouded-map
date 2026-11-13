@@ -159,3 +159,34 @@ def test_admin_deletes_another_account(user: ApiClient, bob: ApiClient) -> None:
     )
     assert [m["username"] for m in user.get(T).json()["members"]] == ["alice"]
     assert user.get(U).json() == []
+
+
+def test_team_marks_etag(user: ApiClient, bob: ApiClient) -> None:
+    M = f"{T}/marks"
+    user.post(T, json={"name": "Braves"})
+    add(user, 2)
+
+    def etag() -> str:
+        return str(user.get(M).headers["etag"])
+
+    def not_modified(tag: str) -> bool:
+        return bool(user.get(M, headers={"If-None-Match": tag}).status_code == 304)
+
+    first = etag()
+    assert not_modified(first)  # nothing changed: no body
+    bob.put("/api/v1/progress", json={"ids": ["chest:1:2"]})  # a mark added
+    second = etag()
+    assert second != first and not not_modified(first)
+    assert not_modified(second)
+    bob.put("/api/v1/progress", json={"ids": ["boss:3:4"]})
+    third = etag()
+    assert third != second
+    bob.put("/api/v1/progress", json={"ids": ["boss:3:4"], "done": False})  # a mark removed
+    fourth = etag()
+    assert fourth != third
+    assert not not_modified(third)
+    bob.post("/api/v1/characters", json={"name": "Autre"})  # followed profile changed
+    assert etag() != fourth
+    user.delete(f"{T}/members/2")
+    assert user.get(M).status_code == 200
+    assert user.get(M, headers={"If-None-Match": "*"}).status_code == 200

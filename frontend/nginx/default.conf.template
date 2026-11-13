@@ -1,5 +1,8 @@
 # Rendered by the image entrypoint (envsubst): only ${REVERSE_PROXY_IP} is substituted.
 # HSTS and TLS are left to the reverse proxy in front of this container.
+# Answers of /_auth, in /tmp (a tmpfs: the container is read-only). A few KB at most.
+proxy_cache_path /tmp/auth-cache levels=1 keys_zone=auth:1m max_size=2m inactive=2m use_temp_path=off;
+
 server {
     listen 8080;
     server_name _;
@@ -36,9 +39,14 @@ server {
     }
 
     # Asked before every map file: the API answers 204 for a logged-in session, 401 otherwise.
-    # shortcut: one API call per file (a map view loads dozens), no cache; add proxy_cache if it ever hurts.
+    # A map view loads dozens of files: the 204 is cached 30 s per session cookie (only 204s, never
+    # a 401; an API that is down is a refusal). A logout or an expired session is therefore still
+    # honoured for map files for up to 30 s.
     location = /_auth {
         internal;
+        proxy_cache auth;
+        proxy_cache_key $cookie_session;
+        proxy_cache_valid 204 30s;
         proxy_pass http://api:8000/api/v1/auth/check;
         proxy_http_version 1.1;
         proxy_pass_request_body off;
