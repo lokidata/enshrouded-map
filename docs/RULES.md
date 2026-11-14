@@ -66,6 +66,9 @@ The map stays mounted (hidden) when another screen is shown; the others load on 
 - Optional: on only when `WEBAUTHN_RP_ID` and `WEBAUTHN_ORIGIN` are set (https, one host name); `/auth/me` returns `passkeys_enabled`.
 - An alternative to the password: managed in profile > Passkeys, "Use a passkey" on the login screen. Challenges are kept in memory (single worker).
 
+### Optional server add-on
+- Off by default. Only when `ADDON_URL` is set (origin of a separate add-on container, e.g. `http://addon:8000`, on the api and web containers) the add-on is reachable. The auth answers always have the same shape, with or without `ADDON_URL`: for a logged-in user, `GET /auth/me`, login, setup, invitation accept, password change/reset accept and passkey login all send `id` and `created_at` (the add-on identifies an account as `id:created_at`, since ids can be reused) and `addon` (true only when `ADDON_URL` is set; built by `logged_in_user` in `schemas/auth.py`); logged out, `id` and `created_at` are absent and `addon` is false. `GET /auth/users` always has `created_at`. The web container proxies `/addon/` to the add-on (`40-addon.sh` writes the nginx block at start; invalid URL = the container stops) and the profile menu shows "Game server" (`/addon/`) when `addon` is true. Without `ADDON_URL`: no menu entry, no route, no nginx block; the extra fields above are still sent.
+
 ### Deleting an account
 - A player deletes their own account (`POST /auth/delete-account`, password required): progress, builds, profiles and sessions are erased.
 - The administrator deletes another account (profile > Administration, `DELETE /auth/users/{id}`): same cascade plus leaving the team (an owner hands it over). Never itself, never the first account. The Administration dialog also holds the reset links.
@@ -314,7 +317,7 @@ Everything personal in the browser is wiped at logout. The first version's singl
 ### API (`/api/v1`)
 | Prefix | Routes |
 | --- | --- |
-| `/auth` | `POST setup`, `POST invitations` (+ `/check`, `/accept`), `POST login`, `POST logout`, `GET check`, `GET me`, `POST password`, `POST delete-account`, `GET users`, `DELETE users/{id}`, `POST password-resets` (+ `/check`, `/accept`) |
+| `/auth` | `POST setup`, `POST invitations` (+ `/check`, `/accept`), `POST login`, `POST logout`, `GET check`, `GET me` (`username`, `is_admin`, `setup_required`, `passkeys_enabled`, `addon`; `id`, `created_at` when logged in), `POST password`, `POST delete-account`, `GET users` (admin; `id`, `username`, `created_at`), `DELETE users/{id}`, `POST password-resets` (+ `/check`, `/accept`) |
 | `/auth/passkeys` | `GET`, `DELETE {id}`, `POST register/options`, `POST register/verify`, `POST login/options`, `POST login/verify` |
 | `/characters` | `GET`, `POST`, `POST {id}/activate`, `PATCH {id}`, `DELETE {id}`, `GET|PUT {id}/sheet` |
 | `/progress` | `GET`, `PUT` |

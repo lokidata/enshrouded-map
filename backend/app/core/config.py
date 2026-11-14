@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     webauthn_origin: str = ""  # its full origin, e.g. https://carte.example.lan
     webauthn_rp_name: str = "Carte Enshrouded"
 
+    # Optional server add-on (separate container behind nginx /addon/). Empty = feature off.
+    addon_url: str = ""
+
     login_rate_limit: str = "10/5 minutes"  # per client address
     register_rate_limit: str = "10/hour"  # setup and invitations
     lockout_threshold: int = 5  # failed logins before an account is locked progressively

@@ -62,6 +62,9 @@ import { TeamStore } from '../core/team.store';
                 {{ 'passkeys' | transloco }}
               </button>
             }
+            @if (auth.addonEnabled()) {
+              <a role="menuitem" href="/addon/">{{ 'addonMenu' | transloco }}</a>
+            }
             @if (auth.isAdmin()) {
               <button type="button" role="menuitem" (click)="pick(openAdmin)">
                 {{ 'adminMenu' | transloco }}
@@ -136,11 +139,19 @@ import { TeamStore } from '../core/team.store';
       border-radius: 3px;
       background: var(--panel);
     }
+    .menu a {
+      padding: 6px 9px;
+      color: var(--text);
+      font-size: 14px;
+      text-decoration: none;
+    }
     .menu button {
       text-align: left;
       border: 0;
       padding: 6px 9px;
     }
+    .menu a:hover,
+    .menu a:focus-visible,
     .menu button:hover,
     .menu button:focus-visible {
       background: var(--bg);

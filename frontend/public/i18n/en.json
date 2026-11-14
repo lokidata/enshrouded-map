@@ -86,6 +86,7 @@
   "teamLink": "Invitation link (creates an account in the team)",
   "teamLeave": "Leave team",
   "teamDissolve": "Disband team",
+  "addonMenu": "Game server",
   "adminMenu": "Administration",
   "teamOwner": "owner",
   "teamTransferShort": "Make owner",

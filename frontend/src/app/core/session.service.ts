@@ -130,6 +130,7 @@ export class SessionService {
     clearTimeout(this.timer);
     this.auth.user.set(null);
     this.auth.isAdmin.set(false);
+    this.auth.addonEnabled.set(false);
     this.progress.set([]);
     this.team.clear();
     this.craft.clear();
@@ -175,6 +176,7 @@ export class SessionService {
     if (settings.settings) this.filters.restore(settings.settings);
     this.saved = settings.settings ? JSON.stringify({ filters: this.filters.overrides() }) : null;
     this.auth.isAdmin.set(info.is_admin);
+    this.auth.addonEnabled.set(!!info.addon);
     this.auth.user.set(info.username);
     await this.team.load();
     await this.gameSettings.load();

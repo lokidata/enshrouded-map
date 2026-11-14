@@ -10,6 +10,8 @@ export interface UserInfo {
   setup_required: boolean;
   is_admin: boolean;
   passkeys_enabled?: boolean;
+  /** ADDON_URL is set on the server (sent by /me for a logged-in user). */
+  addon?: boolean;
 }
 
 export interface Passkey {
@@ -59,6 +61,8 @@ export class AuthService {
   readonly progressOpen = signal(false);
   /** The server is set up for passkeys (WEBAUTHN_*). */
   readonly passkeysEnabled = signal(false);
+  /** The optional server add-on is installed: the account menu links to /addon/. */
+  readonly addonEnabled = signal(false);
   /** Passkeys can be used here: the server and this browser both support them. */
   readonly passkeysAvailable = computed(
     () =>

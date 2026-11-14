@@ -32,6 +32,8 @@ async function onTop(locator: Locator): Promise<void> {
 async function menu(page: Page, item: string): Promise<void> {
   await page.locator('button.who').click();
   for (const entry of await page.getByRole('menuitem').all()) await onTop(entry);
+  // no ADDON_URL in the test stack: the optional add-on entry must not exist
+  await expect(page.getByRole('menuitem', { name: /Serveur de jeu|Game server/ })).toHaveCount(0);
   await page.getByRole('menuitem', { name: item }).click();
 }
 

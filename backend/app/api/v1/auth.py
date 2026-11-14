@@ -46,6 +46,7 @@ from app.schemas.auth import (
     TokenIn,
     UserItem,
     UserOut,
+    logged_in_user,
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -102,7 +103,7 @@ def setup(
     db.commit()
     start_session(db, response, user, session)
     audit.info("setup", extra={"user_id": user.id, "ip": _ip(request)})
-    return UserOut(username=user.username, is_admin=bool(user.first_account))
+    return logged_in_user(user)
 
 
 @router.post("/invitations", response_model=InvitationOut)
@@ -168,7 +169,7 @@ def accept_invitation(
     db.commit()
     start_session(db, response, user, session)
     audit.info("register", extra={"user_id": user.id, "ip": _ip(request)})
-    return UserOut(username=user.username, is_admin=bool(user.first_account))
+    return logged_in_user(user)
 
 
 @router.post("/login", response_model=UserOut)
@@ -204,7 +205,7 @@ def login(
         user.password_hash = hash_password(body.password)
     start_session(db, response, user, session)
     audit.info("login", extra={"user_id": user.id, "ip": _ip(request)})
-    return UserOut(username=user.username, is_admin=bool(user.first_account))
+    return logged_in_user(user)
 
 
 @router.post("/logout")
@@ -232,9 +233,7 @@ def me(user: Annotated[User | None, Depends(current_user)], db: DbSession) -> Us
     # 200 either way: not being logged in is a normal state for the page
     enabled = passkeys_enabled()
     if user:
-        return UserOut(
-            username=user.username, is_admin=bool(user.first_account), passkeys_enabled=enabled
-        )
+        return logged_in_user(user, enabled)
     return UserOut(username=None, setup_required=no_users(db), passkeys_enabled=enabled)
 
 
@@ -279,7 +278,7 @@ def change_password(
     db.commit()
     start_session(db, response, user, session)
     audit.info("password_changed", extra={"user_id": user.id, "ip": _ip(request)})
-    return UserOut(username=user.username, is_admin=bool(user.first_account))
+    return logged_in_user(user)
 
 
 @router.post("/delete-account")
@@ -305,7 +304,7 @@ def delete_account(
 @router.get("/users", response_model=list[UserItem])
 def list_users(admin: Admin, db: DbSession) -> list[UserItem]:
     rows = db.scalars(select(User).where(User.id != admin.id).order_by(User.username_key))
-    return [UserItem(id=u.id, username=u.username) for u in rows]
+    return [UserItem(id=u.id, username=u.username, created_at=u.created_at) for u in rows]
 
 
 @router.delete("/users/{user_id}")
@@ -405,4 +404,4 @@ def accept_password_reset(
     db.commit()
     start_session(db, response, user, session)
     audit.info("password_reset", extra={"user_id": user.id, "ip": _ip(request)})
-    return UserOut(username=user.username, is_admin=bool(user.first_account))
+    return logged_in_user(user)

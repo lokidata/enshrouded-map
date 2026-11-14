@@ -34,6 +34,7 @@ docker compose cp backup.db api:/data/app.db   # restore (stop the stack first: 
 ## Notes
 
 - `REVERSE_PROXY_IP` must be the address your reverse proxy connects from: nginx only trusts `X-Forwarded-For` from it, and the API only trusts nginx (`172.28.0.10`).
+- Optional server add-on: set `ADDON_URL` (origin only, e.g. `http://addon:8000`, reachable from the web container) in `.env`. The web container then proxies `/addon/` to it and the profile menu shows "Game server". Unset (default): no proxy block, no menu entry.
 - The API runs a single worker because the login rate limit is counted in memory.
 - Switching to PostgreSQL: add a `db` service, set `DATABASE_URL` and add `psycopg[binary]` to the image's requirements.
 - CSP allows inline *styles* (Angular injects component styles at run time); scripts are `'self'` only.
