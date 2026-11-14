@@ -30,7 +30,7 @@ from app.core.config import get_settings
 from app.core.logging import audit
 from app.db.base import utcnow
 from app.db.models import Passkey, User
-from app.schemas.auth import UserOut
+from app.schemas.auth import UserOut, logged_in_user
 from app.schemas.common import StrictModel
 
 router = APIRouter(prefix="/auth/passkeys", tags=["passkeys"])
@@ -213,4 +213,4 @@ def login_verify(
     passkey.last_used_at = utcnow()
     start_session(db, response, user, session)
     audit.info("passkey_login", extra={"user_id": user.id, "ip": _ip(request)})
-    return UserOut(username=user.username, is_admin=bool(user.first_account))
+    return logged_in_user(user)

@@ -32,7 +32,9 @@ def test_setup_is_required_until_the_first_account_exists(client: ApiClient) -> 
         "addon": False,
     }
     r = client.post(SETUP, json={"username": "Alice", "password": PW, "setup_token": SETUP_TOKEN})
-    assert r.json() == {
+    body = r.json()
+    assert isinstance(body.pop("id"), int) and body.pop("created_at")
+    assert body == {
         "username": "Alice",
         "setup_required": False,
         "is_admin": True,
@@ -64,6 +66,12 @@ def test_me_carries_the_addon_fields_only_when_enabled(
     assert isinstance(me["id"], int) and me["created_at"]
     monkeypatch.setattr(get_settings(), "addon_url", "http://addon:8000")
     assert client.get("/api/v1/auth/me").json()["addon"] is True
+    # login answers carry the flag too: the menu entry shows without a reload
+    client.post("/api/v1/auth/logout")
+    r = client.post(LOGIN, json={"username": "alice", "password": PW})
+    assert r.json()["addon"] is True and isinstance(r.json()["id"], int) and r.json()["created_at"]
+    monkeypatch.setattr(get_settings(), "addon_url", "")
+    assert client.post(LOGIN, json={"username": "alice", "password": PW}).json()["addon"] is False
     client.post("/api/v1/auth/logout")
     out = client.get("/api/v1/auth/me").json()
     assert out["addon"] is False and "id" not in out

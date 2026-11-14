@@ -1,9 +1,13 @@
 from datetime import datetime
-from typing import Annotated, Any
+from typing import TYPE_CHECKING, Annotated, Any
 
 from pydantic import BaseModel, Field, StringConstraints, model_serializer
 
+from app.core.config import get_settings
 from app.schemas.common import StrictModel
+
+if TYPE_CHECKING:
+    from app.db.models import User
 
 Username = Annotated[str, StringConstraints(pattern=r"^[A-Za-z0-9_.-]{3,32}$")]
 
@@ -42,6 +46,18 @@ class UserOut(BaseModel):
             out.pop("id", None)
             out.pop("created_at", None)
         return out
+
+
+def logged_in_user(user: "User", passkeys_enabled: bool = False) -> UserOut:
+    """The answer for a logged-in user, the same for /me, login, setup, accept and passkey login."""
+    return UserOut(
+        username=user.username,
+        is_admin=bool(user.first_account),
+        passkeys_enabled=passkeys_enabled,
+        id=user.id,
+        created_at=user.created_at,
+        addon=bool(get_settings().addon_url),
+    )
 
 
 class InvitationOut(BaseModel):
