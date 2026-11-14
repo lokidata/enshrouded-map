@@ -35,7 +35,8 @@ A private companion site for the game Enshrouded (map, workshop, lore, enemies, 
 
 ## Deployment and CI
 - `deploy/` (compose, nginx template, security headers, `backup.sh`), `backend/Dockerfile`, `frontend/Dockerfile`: base images pinned by digest, hash-locked deps (`backend/requirements.lock`), read-only non-root containers. LAN only, behind the user's reverse proxy (it terminates TLS).
-- GitHub `lokidata/enshrouded-map`. Workflows in `.github/workflows` (ci, codeql, trivy, gitleaks, dependency-review, zizmor, scorecard, publish-images -> GHCR for Portainer, see `deploy/portainer/`). Actions pinned by SHA (Dependabot updates them).
+- GitHub `lokidata/enshrouded-map`. Workflows in `.github/workflows` (ci, codeql, trivy, gitleaks, dependency-review, zizmor, scorecard, publish-images -> GHCR for Portainer, see `deploy/portainer/`, release). Actions pinned by SHA (Dependabot updates them).
+- Versions: SemVer, first `v0.1.0`. The number lives in `backend/pyproject.toml` and `frontend/package.json` (+ lock), the `v*.*.*` tag must match (the `release` workflow checks). Procedure: `deploy/README.md` > Releases.
 
 ## Decisions taken with the user
 - Stack: FastAPI + SQLAlchemy 2 + Alembic + Pydantic v2 (uv), Angular standalone + signals + Leaflet + Transloco, docker compose (nginx-unprivileged web + api), SQLite in a volume, code portable to PostgreSQL/MySQL via `DATABASE_URL`.

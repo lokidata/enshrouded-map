@@ -1,0 +1,37 @@
+name: Release
+
+# A v1.2.3 tag creates the GitHub release with generated notes (categories: .github/release.yml).
+# The images for the same tag are built by publish-images.yml.
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions: {}
+
+jobs:
+  release:
+    name: release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write # create the release
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # One source of truth: the version in backend/pyproject.toml. The tag must match it.
+      - name: Check the tag matches the versions in the files
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          py=$(sed -n 's/^version = "\(.*\)"/\1/p' backend/pyproject.toml | head -1)
+          js=$(sed -n 's/^  "version": "\(.*\)",/\1/p' frontend/package.json | head -1)
+          [ "$TAG" = "v$py" ] && [ "$TAG" = "v$js" ] || { echo "tag $TAG, pyproject $py, package.json $js: bump them first"; exit 1; }
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          pre=""; case "$TAG" in *-*) pre="--prerelease";; esac
+          gh release create "$TAG" --repo "$REPO" --verify-tag --generate-notes --title "$TAG" $pre

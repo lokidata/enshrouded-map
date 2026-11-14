@@ -325,6 +325,15 @@ Everything personal in the browser is wiped at logout. The first version's singl
 | `/settings` | `GET`, `PUT` |
 | — | `GET health` |
 
+### Versions and releases
+| What | Rule |
+| --- | --- |
+| Scheme | SemVer tag `vMAJOR.MINOR.PATCH`; first release `v0.1.0` (0.x until stable) |
+| Source of the number | `backend/pyproject.toml` = `frontend/package.json` (+ lock); the `Release` workflow refuses a tag that differs |
+| Release notes | generated from merged PRs, grouped by label (`.github/release.yml`) |
+| Images | tag `v1.2.3` -> `ghcr.io/lokidata/enshrouded-map-{api,web}:1.2.3`, `:1.2`, `:latest`; `main` -> `:latest`, `:sha-xxxxxxx` |
+| Procedure | `deploy/README.md` > Releases |
+
 ### Limits
 | What | Limit |
 | --- | --- |

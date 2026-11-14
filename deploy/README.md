@@ -43,3 +43,15 @@ docker compose cp backup.db api:/data/app.db   # restore (stop the stack first: 
 - Anyone can change their own password (**Compte** in the menu). The **first account** can also generate a single-use reset link (valid 20 minutes) for another user there.
 - If the first account itself loses its password, reset it from the server:
   `docker compose exec -it api python -m app.cli reset-password USERNAME` (on Portainer: the `api` container's Console, command `python -m app.cli reset-password USERNAME`, with *Interactive & TTY*).
+
+## Releases
+
+SemVer `vMAJOR.MINOR.PATCH`, first release `v0.1.0` (0.x: the data formats and the database still change; `v1.0.0` when the site is stable). The version lives in `backend/pyproject.toml` and `frontend/package.json` / `package-lock.json` (same number, no `v`).
+
+1. In a PR: bump the three files, merge, wait for CI green on `main`.
+2. `git tag v0.2.0 && git push origin v0.2.0` (on the merged `main` commit).
+3. Two workflows start on the tag: **Release** (checks tag = file versions, creates the GitHub release with notes generated from the merged PRs, grouped by label through `.github/release.yml`; a tag with `-rc1` is a pre-release) and **Publish images** (scan, push `0.2.0`, `0.2`, `latest`, sign).
+4. Check the release page and `ghcr.io/lokidata/enshrouded-map-{api,web}:0.2.0`. A wrong tag: delete the release and the tag, fix, tag again.
+5. Portainer: set `IMAGE_TAG=0.2.0` (instead of `latest`) and redeploy.
+
+Label PRs `enhancement`, `bug`, `documentation` for the notes; `skip-changelog` hides one.
