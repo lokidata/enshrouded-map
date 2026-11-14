@@ -2,7 +2,7 @@
 changelog:
   exclude:
     labels: [skip-changelog]
-    authors: [dependabot, dependabot[bot]]
+    authors: [dependabot, "dependabot[bot]"]
   categories:
     - title: New
       labels: [enhancement]
