@@ -233,7 +233,12 @@ def me(user: Annotated[User | None, Depends(current_user)], db: DbSession) -> Us
     enabled = passkeys_enabled()
     if user:
         return UserOut(
-            username=user.username, is_admin=bool(user.first_account), passkeys_enabled=enabled
+            username=user.username,
+            is_admin=bool(user.first_account),
+            passkeys_enabled=enabled,
+            id=user.id,
+            created_at=user.created_at,
+            addon=bool(get_settings().addon_url),
         )
     return UserOut(username=None, setup_required=no_users(db), passkeys_enabled=enabled)
 
@@ -305,7 +310,7 @@ def delete_account(
 @router.get("/users", response_model=list[UserItem])
 def list_users(admin: Admin, db: DbSession) -> list[UserItem]:
     rows = db.scalars(select(User).where(User.id != admin.id).order_by(User.username_key))
-    return [UserItem(id=u.id, username=u.username) for u in rows]
+    return [UserItem(id=u.id, username=u.username, created_at=u.created_at) for u in rows]
 
 
 @router.delete("/users/{user_id}")

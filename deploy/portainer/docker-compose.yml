@@ -10,6 +10,7 @@ services:
     environment:
       ENVIRONMENT: production
       DATABASE_URL: sqlite:////data/app.db
+      ADDON_URL: ${ADDON_URL:-} # optional server add-on (see deploy/README.md)
       SETUP_TOKEN: ${SETUP_TOKEN:-} # empty: generated at start and printed in the api log
       COOKIE_SECURE: ${COOKIE_SECURE:-true}
       INVITATION_MINUTES: ${INVITATION_MINUTES:-20}
@@ -42,6 +43,7 @@ services:
         condition: service_healthy
     environment:
       REVERSE_PROXY_IP: ${REVERSE_PROXY_IP:-127.0.0.1} # address your reverse proxy connects from
+      ADDON_URL: ${ADDON_URL:-} # optional server add-on origin (see deploy/README.md)
     ports:
       - "${WEB_BIND:-0.0.0.0}:${WEB_PORT:-8080}:8080"
     volumes:

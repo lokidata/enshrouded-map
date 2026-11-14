@@ -10,6 +10,7 @@ services:
     environment:
       ENVIRONMENT: production
       DATABASE_URL: sqlite:////data/app.db
+      ADDON_URL: ${ADDON_URL:-} # optional server add-on: /auth/me then tells the page to show its menu entry
       SETUP_TOKEN: ${SETUP_TOKEN:-} # empty: generated at start and printed in the api log
       FORWARDED_ALLOW_IPS: 172.28.0.10 # the web container: the only one allowed to tell the client address
     volumes:
@@ -38,6 +39,7 @@ services:
         condition: service_healthy
     environment:
       REVERSE_PROXY_IP: ${REVERSE_PROXY_IP:-127.0.0.1}
+      ADDON_URL: ${ADDON_URL:-} # optional server add-on origin, e.g. http://addon:8000 (see README)
     ports:
       - "${WEB_BIND:-127.0.0.1}:${WEB_PORT:-8080}:8080"
     volumes:

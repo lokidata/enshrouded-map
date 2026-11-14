@@ -1,7 +1,7 @@
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Any
 
-from pydantic import BaseModel, Field, StringConstraints
+from pydantic import BaseModel, Field, StringConstraints, model_serializer
 
 from app.schemas.common import StrictModel
 
@@ -30,6 +30,18 @@ class UserOut(BaseModel):
     setup_required: bool = False  # no account exists yet: the first one must be created
     is_admin: bool = False  # the first account: can generate password reset links
     passkeys_enabled: bool = False  # the server is configured for passkeys (sent by /me only)
+    # Sent by /me for a logged-in user (the optional server add-on identifies accounts with them).
+    id: int | None = None
+    created_at: datetime | None = None
+    addon: bool = False  # ADDON_URL is set: the page shows the add-on's menu entry
+
+    @model_serializer(mode="wrap")
+    def _omit_empty_identity(self, handler: Any) -> dict[str, Any]:
+        out: dict[str, Any] = handler(self)
+        if self.id is None:
+            out.pop("id", None)
+            out.pop("created_at", None)
+        return out
 
 
 class InvitationOut(BaseModel):
@@ -53,6 +65,7 @@ class ChangePasswordIn(StrictModel):
 class UserItem(BaseModel):
     id: int
     username: str
+    created_at: datetime  # with id, the stable key of an account (ids can be reused)
 
 
 class ResetCreateIn(StrictModel):

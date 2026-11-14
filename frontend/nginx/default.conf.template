@@ -113,6 +113,9 @@ server {
         expires -1;
     }
 
+    # Optional server add-on: addon.inc exists only when ADDON_URL is set (40-addon.sh).
+    include /etc/nginx/conf.d/addon*.inc;
+
     location ~ /\. {
         return 404;
     }

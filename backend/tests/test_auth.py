@@ -6,7 +6,7 @@ from conftest import PW, SETUP_TOKEN, ApiClient
 from pydantic import SecretStr
 from sqlalchemy import update
 
-from app.core.config import Settings
+from app.core.config import Settings, get_settings
 from app.core.setup_token import setup_token
 from app.db.base import utcnow
 from app.db.models import Invitation, User
@@ -29,6 +29,7 @@ def test_setup_is_required_until_the_first_account_exists(client: ApiClient) -> 
         "setup_required": True,
         "is_admin": False,
         "passkeys_enabled": False,
+        "addon": False,
     }
     r = client.post(SETUP, json={"username": "Alice", "password": PW, "setup_token": SETUP_TOKEN})
     assert r.json() == {
@@ -36,6 +37,7 @@ def test_setup_is_required_until_the_first_account_exists(client: ApiClient) -> 
         "setup_required": False,
         "is_admin": True,
         "passkeys_enabled": False,
+        "addon": False,
     }
     cookie = r.headers["set-cookie"].lower()
     assert "httponly" in cookie and "samesite=strict" in cookie
@@ -47,7 +49,24 @@ def test_setup_is_required_until_the_first_account_exists(client: ApiClient) -> 
         "setup_required": False,
         "is_admin": False,
         "passkeys_enabled": False,
+        "addon": False,
     }
+
+
+def test_me_carries_the_addon_fields_only_when_enabled(
+    client: ApiClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    out = client.get("/api/v1/auth/me").json()
+    assert "id" not in out and "created_at" not in out  # logged out
+    client.post(SETUP, json={"username": "alice", "password": PW, "setup_token": SETUP_TOKEN})
+    me = client.get("/api/v1/auth/me").json()
+    assert me["addon"] is False  # no ADDON_URL: nothing changes for the page
+    assert isinstance(me["id"], int) and me["created_at"]
+    monkeypatch.setattr(get_settings(), "addon_url", "http://addon:8000")
+    assert client.get("/api/v1/auth/me").json()["addon"] is True
+    client.post("/api/v1/auth/logout")
+    out = client.get("/api/v1/auth/me").json()
+    assert out["addon"] is False and "id" not in out
 
 
 def test_setup_needs_the_setup_token(client: ApiClient) -> None:
@@ -249,3 +268,12 @@ def test_invitation_is_not_stored_in_clear(user: ApiClient) -> None:
     with patch("app.api.v1.auth.audit") as audit:
         accept(ApiClient(user.app), token)
     assert token not in str(audit.mock_calls)
+
+
+def test_users_list_carries_created_at_for_the_addon(user: ApiClient, bob: ApiClient) -> None:
+    rows = user.get("/api/v1/auth/users").json()
+    assert [set(r) for r in rows] == [{"id", "username", "created_at"}]  # the admin is excluded
+    assert rows[0]["username"] == "bob"
+    bob_me = bob.get("/api/v1/auth/me").json()
+    assert (rows[0]["id"], rows[0]["created_at"]) == (bob_me["id"], bob_me["created_at"])
+    assert bob.get("/api/v1/auth/users").status_code == 403
