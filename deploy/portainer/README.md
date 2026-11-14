@@ -5,7 +5,7 @@ The **Publish images** workflow builds, scans, pushes and signs two images on ev
 - `ghcr.io/lokidata/enshrouded-map-api`
 - `ghcr.io/lokidata/enshrouded-map-web`
 
-Tags: `latest` (main or newest release), `sha-xxxxxxx` (one commit), `1.2.3` and `1.2` (releases). Pin `IMAGE_TAG` to a version for a stable server.
+Tags: `latest` (main or newest release), `sha-xxxxxxx` (one commit), `1.2.3` and `1.2` (releases: the tag `v1.2.3` gives `1.2.3`, no `v`). Pin `IMAGE_TAG` to a version for a stable server.
 
 ## 1. Map data on the server
 
