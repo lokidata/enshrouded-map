@@ -21,7 +21,24 @@ Open questions: which settings the server file really exposes in the current gam
 - [x] **Save the Personnage page on the server**: the page's state (level, Flame, gear, upgrades, gems, weapon in hand) lives only in the browser per profile (`localStorage`); store it per character in the backend (table + migration) so it follows the player across devices.
 - [x] **Appearance unlocks on the map**: the 23 colour palettes lying in the world have a position (20 `LootPickup_colorPalette_reward_*` pickups, found like the collectibles in `collectible_templates`, + 3 in the scene's special loot: Draped In Envy, Cathedral, Golden Ball); they are the new rose `palette` category (pipeline `special_loot` and `collectible_templates`, icon `palette.svg`, hidden by default, local `artifacts/map` patched; rerun the pipeline on tora to regenerate). The 5 `LootPickup_NPC_Barber_hairstyle_wigHead_*` wig heads (they unlock hairstyles; the 6th, "Barber's Favorite", has no pickup) are the `hairstyle` category. Eye and hair colours (second pass, 2026-11-13): the journal's "Player customisation" item sets give hints per colour; the tales and search areas they point to are the `eyecolor` (9 of 10 colours) and `haircolor` (5 of 15) categories, see RULES section 4. Not mappable: the hairstyles themselves, 10 hair colours and the dark red eyes (their hints name no place); the 4 `LoreText_*colorPalette*` pages (barber quests) are lore pages, not palettes, and left out; the other palettes are crafted at the Coloring Station or quest rewards; the game has no horse coat data.
 
-## Profile page (done, awaiting commit)
+## Custom markers and altar zones (issue #81, planned, not started)
+
+Plan: per-profile custom markers (name, note, `shared` per marker, 100 per profile), team members see shared ones read-only in a layer per member; sharing is reset when leaving a team (same rule as the explored area). The Flame Altar is a marker type with a centred square build area: level 1-4 = 40, 80, 120, 160 m (given by the user, not extracted from the game).
+
+- [ ] **Marker types** (1): base, farm, resource spot, danger, to do, meeting point; one icon and colour each, filter like the categories.
+- [ ] **Shared ping** (2): a click sends a point the team sees for a few minutes, nothing stored (the map already has local pings).
+- [ ] **Altar position from the save** (3): place the existing altars on import from a world save. Decoded and confirmed in game (positions and levels, see `docs/DESIGN-save-import.md`, section `base00..05`); only the import UI is left.
+- [ ] **Measure tool** (4): a ruler between two points, in metres.
+
+## More languages (planned, not started)
+
+The game has 15 text languages (Steam: English, French, Italian, German, Spanish (Spain), Japanese, Korean, Polish, Portuguese (Brazil), Russian, Simplified and Traditional Chinese, Turkish, Ukrainian, Thai); the site has FR and EN. Not checked: that the 13 other `loca/*.tsv` files exist in the extracted data (needs Tora).
+
+- [ ] **Common refactor, 2 -> N languages** (about a day): `LANGUAGES` in `build_data.py`, `build_lore.py`, `build_skills.py`; the `for lang in (0, 1)` loops in `build_craft.py` and `build_enemies.py`; the hand-written two-column tables (`TEXTS`, `CLASS_LABEL`, `APPEARANCE_PLACES`...); the `fr:` / `en:` labels of `game-settings.model.ts`; the language switch of the top bar.
+- [ ] **Data weight**: every language adds several MB to the JSON files (9.7 MB for 2 languages today) that all players download; consider one file per language.
+- [ ] **One more language first** (e.g. German) to validate the refactor: translate the 687 keys of `frontend/public/i18n/*.json` (human review), run the pipeline on Tora with its `loca` file, translate the hand-written tables, Vitest + Playwright + AXE. About half a day per language after the refactor.
+
+## Profile page (done, PR #82)
 
 Account menu > Profile (popup): tabs Account (language kept by the account, password), Passkeys, Customization (menu layout), Danger zone. See RULES.md "Profile page".
 
