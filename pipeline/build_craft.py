@@ -39,6 +39,8 @@ import json
 import math
 import re
 
+import languages
+
 ALTAR_RECIPE = re.compile(r"^(Flame_Level_|FlameAltar_HomeBase_Upgrade_)")
 # Knowledge action name -> English name of the NPC in the workshop registry.
 NPC_ACTIONS = [
@@ -58,26 +60,34 @@ STATION_KNOWLEDGE = re.compile(r"(?i)(craftable|placed|_set)(_WK|_PK)?$")
 LEVEL_FIELDS = {"MotherFlameLevel": "flame", "PlayerLevel": "playerLevel", "FlameAltarLevel": "altarLevel",
                 "FlameAltarCount": "altars"}
 TEXTS = {
-    "items": ("Obtenir : {}", "Get: {}"),
-    "npcs": ("Avec : {}", "With: {}"),
-    "flame": ("Flamme niveau {}", "Flame level {}"),
-    "playerLevel": ("Joueur niveau {}", "Player level {}"),
-    "altarLevel": ("Autel de la Flamme niveau {}", "Flame Altar level {}"),
-    "altars": ("{} autels de la Flamme", "{} Flame Altars"),
-    "quest": ("Progression de quête", "Quest progress"),
-    "none": ("Sans condition", "No condition"),
-    "altarLevelName": ("Flamme niveau {}", "Flame level {}"),
+    "items": dict(fr="Obtenir : {}", en="Get: {}", de="Erhalten: {}"),
+    "npcs": dict(fr="Avec : {}", en="With: {}", de="Mit: {}"),
+    "flame": dict(fr="Flamme niveau {}", en="Flame level {}", de="Flammenstufe {}"),
+    "playerLevel": dict(fr="Joueur niveau {}", en="Player level {}", de="Spielerstufe {}"),
+    "altarLevel": dict(fr="Autel de la Flamme niveau {}", en="Flame Altar level {}", de="Flammenaltar Stufe {}"),
+    "altars": dict(fr="{} autels de la Flamme", en="{} Flame Altars", de="{} Flammenaltäre"),
+    "quest": dict(fr="Progression de quête", en="Quest progress", de="Questfortschritt"),
+    "none": dict(fr="Sans condition", en="No condition", de="Keine Bedingung"),
+    "altarLevelName": dict(fr="Flamme niveau {}", en="Flame level {}", de="Flammenstufe {}"),
 }
 # Building pieces: second word of "Prop_*" item names, or first word of the others.
 BLOCK_GROUPS = {
-    "Decoration": ("Décoration", "Decoration"), "Block": ("Blocs", "Blocks"), "Flower": ("Plantes", "Plants"),
-    "Collection": ("Collections", "Collections"), "Production": ("Production", "Production"),
-    "Craftingstation": ("Production", "Production"), "Component": ("Production", "Production"),
-    "Storage": ("Stockage", "Storage"), "Logic": ("Mécanismes", "Mechanisms"), "NPC": ("PNJ", "NPCs"),
-    "WaterDrain": ("Eau", "Water"), "WaterDispenser": ("Eau", "Water"), "WaterGate": ("Eau", "Water"),
-    "WaterBarrier": ("Eau", "Water"),
+    "Decoration": dict(fr="Décoration", en="Decoration", de="Dekoration"),
+    "Block": dict(fr="Blocs", en="Blocks", de="Blöcke"),
+    "Flower": dict(fr="Plantes", en="Plants", de="Pflanzen"),
+    "Collection": dict(fr="Collections", en="Collections", de="Sammlungen"),
+    "Production": dict(fr="Production", en="Production", de="Produktion"),
+    "Craftingstation": dict(fr="Production", en="Production", de="Produktion"),
+    "Component": dict(fr="Production", en="Production", de="Produktion"),
+    "Storage": dict(fr="Stockage", en="Storage", de="Stauraum"),
+    "Logic": dict(fr="Mécanismes", en="Mechanisms", de="Mechanismen"),
+    "NPC": dict(fr="PNJ", en="NPCs", de="NSCs"),
+    "WaterDrain": dict(fr="Eau", en="Water", de="Wasser"),
+    "WaterDispenser": dict(fr="Eau", en="Water", de="Wasser"),
+    "WaterGate": dict(fr="Eau", en="Water", de="Wasser"),
+    "WaterBarrier": dict(fr="Eau", en="Water", de="Wasser"),
 }
-OTHER_GROUP = ("Divers", "Other")
+OTHER_GROUP = dict(fr="Divers", en="Other", de="Sonstiges")
 
 
 def empty_condition():
@@ -170,18 +180,18 @@ def describe(c, item_names, npc_names):
     """The unlock entry of craft.json."""
     out = {"items": sorted(c["items"]), "npcs": sorted(c["npcs"])}
     lines = []
-    for lang in (0, 1):
+    for n, code in enumerate(languages.BUILD):
         parts = []
         if c["items"]:
-            parts.append(TEXTS["items"][lang].format(", ".join(sorted(item_names[i][lang] for i in c["items"]))))
+            parts.append(languages.tr(TEXTS["items"], code).format(", ".join(sorted(item_names[i][n] for i in c["items"]))))
         if c["npcs"]:
-            parts.append(TEXTS["npcs"][lang].format(", ".join(sorted(npc_names[n][lang] for n in c["npcs"]))))
+            parts.append(languages.tr(TEXTS["npcs"], code).format(", ".join(sorted(npc_names[k][n] for k in c["npcs"]))))
         for field in LEVEL_FIELDS.values():
             if c.get(field):
-                parts.append(TEXTS[field][lang].format(c[field]))
+                parts.append(languages.tr(TEXTS[field], code).format(c[field]))
         if c["quest"]:
-            parts.append(TEXTS["quest"][lang])
-        lines.append(" · ".join(parts) or TEXTS["none"][lang])
+            parts.append(languages.tr(TEXTS["quest"], code))
+        lines.append(" · ".join(parts) or languages.tr(TEXTS["none"], code))
     for field in LEVEL_FIELDS.values():
         if c.get(field):
             out[field] = c[field]
@@ -265,7 +275,8 @@ def item_type(d):
 SET_SLOTS = ("Head", "Chest", "Hands", "Legs", "Feet")
 SLOT_WORDS = re.compile(r"(?i)_(head|helmet|chest|upperbody|legs|lowerbody|feet|boots|arms|hands|gloves)(?=_|$)")
 CLASS_WORD = re.compile(r"_(mage|ranger|warrior)(?=_|$)")
-STOP_WORDS = {"de", "du", "des", "d", "la", "le", "l", "et", "the", "of", "and", "a", "s"}
+STOP_WORDS = {"de", "du", "des", "d", "la", "le", "l", "et", "the", "of", "and", "a", "s",
+              "der", "die", "das", "dem", "den", "von", "und", "zu", "zur", "zum"}
 
 
 def armor_set(d):
@@ -291,12 +302,15 @@ def set_name(piece_names):
     return piece_names[0]
 
 
-CLASS_LABEL = {"Mage": ("Mage", "Mage"), "Ranger": ("Rôdeur", "Ranger"), "Warrior": ("Guerrier", "Warrior")}
+CLASS_LABEL = {"Mage": dict(fr="Mage", en="Mage", de="Magier"), "Ranger": dict(fr="Rôdeur", en="Ranger", de="Waldläufer"),
+               "Warrior": dict(fr="Guerrier", en="Warrior", de="Krieger")}
+VANITY_LABEL = dict(fr="cosmétique", en="cosmetic", de="Prestige-Kleidung")
+LOOT_LABEL = dict(fr="butin", en="loot", de="Beute")
 
 
-def distinct_set_names(sets, items, languages):
+def distinct_set_names(sets, items):
     """Appends what tells two sets with the same name apart: loot or cosmetic, then the class, then the key."""
-    for lang in range(languages):
+    for lang, code in enumerate(languages.BUILD):
         by_name = {}
         for key, s in sets.items():
             by_name.setdefault(s["name"][lang], []).append(key)
@@ -306,9 +320,9 @@ def distinct_set_names(sets, items, languages):
             for key in keys:
                 classes = {items[g].get("cls") for g in sets[key]["pieces"]} - {None}
                 vanity = key.startswith("vanity")
-                tag = (CLASS_LABEL[next(iter(classes))][lang] if len(classes) == 1
+                tag = (languages.tr(CLASS_LABEL[next(iter(classes))], code) if len(classes) == 1
                        and len({items[g].get("cls") for k in keys for g in sets[k]["pieces"]}) > 1
-                       else ("cosmétique", "cosmetic")[lang] if vanity and not all(k.startswith("Vanity") for k in keys)
+                       else languages.tr(VANITY_LABEL, code) if vanity and not all(k.startswith("Vanity") for k in keys)
                        else key)
                 sets[key]["name"][lang] = f"{name} ({tag})"
 
@@ -407,17 +421,17 @@ def build_craft(src, locas, markers, resources, categories, export, out):
             e = {**entry(r), "kind": kind, "level": r["level"], "unlocks": []}
             del e["unlock"]
             if kind == "flame":
-                e["name"] = [text.format(r["level"] + 1) for text in TEXTS["altarLevelName"]]
+                e["name"] = [languages.tr(TEXTS["altarLevelName"], code).format(r["level"] + 1) for code in languages.BUILD]
             altar.append(e)
-        elif not info or info["$guid"] not in item_names or item_names[info["$guid"]][0] == info["debugName"]:
+        elif not info or info["$guid"] not in item_names or item_names[info["$guid"]][languages.FR] == info["debugName"]:
             dropped += 1  # no name in the game: not meant to be shown
         elif info["category"] == "BuildTools":
             parts = info["debugName"].lstrip("_").split("_")
             tier = next((p for p in parts if re.fullmatch(r"T[0-9X]", p)), None)
             group = parts[1] if parts[0] == "Prop" and len(parts) > 1 else parts[0]
             labels = BLOCK_GROUPS.get(group, OTHER_GROUP)
-            blocks.append({**entry(r), "group": labels[1], "tier": tier})
-            groups_seen[labels[1]] = list(labels)
+            blocks.append({**entry(r), "group": labels["en"], "tier": tier})
+            groups_seen[labels["en"]] = languages.row(labels)
         else:
             recipes.append(entry(r))
 
@@ -481,11 +495,11 @@ def build_craft(src, locas, markers, resources, categories, export, out):
         names = [[item_names[g][i] for g in guids] for i in range(len(locas))]
         label = [set_name(n) for n in names]
         if key.lower().endswith("_loot"):
-            label = [f"{n} ({t})" for n, t in zip(label, ("butin", "loot"))]
+            label = [f"{n} ({languages.tr(LOOT_LABEL, code)})" for n, code in zip(label, languages.BUILD)]
         sets[key] = {"name": label, "pieces": guids}
         for g in guids:
             items[g]["set"] = key
-    distinct_set_names(sets, items, len(locas))
+    distinct_set_names(sets, items)
     data = {"items": items, "stations": {str(k): v for k, v in stations.items()},
             "sets": sets, "categories": input_categories, "groups": groups_seen, "recipes": recipes, "blocks": blocks, "altar": altar}
     types = {}

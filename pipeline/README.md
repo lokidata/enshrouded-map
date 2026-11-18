@@ -79,7 +79,7 @@ textures, terrain voxels) is read by the Lua mod in `eml_mod/`, run by `emm`.
 
 | `args` key     | Output in `$WORK/export/`             | Used by                                               |
 | -------------- | ------------------------------------- | ----------------------------------------------------- |
-| `translations` | `loca/Fr_Fr.tsv`, `loca/En_Us.tsv`    | build_data.py (all names)                             |
+| `translations` | `loca/<Game name>.tsv` for each language (the mod writes all 15: `De_De`, `En_Us`, ..., `Zh_Tw`) | build_data.py (all names)       |
 | `icons`        | `icons/<guid>.png`, `icons/index.tsv` | build_data.py (marker icons)                          |
 | `map`          | `map/*.png`, `map/*.r16`              | render_map.py, build_data.py (Shroud, island outline) |
 | `voxels`       | `voxels/5/<x>_<y>.bin` (1 m terrain)  | extract_surface.py, extract_ores.py                   |
@@ -119,6 +119,16 @@ it writes only `preview.png`, the whole island at 1/8 of the resolution, and
 no tiles.
 
 ## 5. Build the markers and resources
+
+**Languages.** `languages.py` is the one list: `GAME_NAMES` (site code -> the name of the entry in the game's
+`LocaTagCollectionResource`, 15 of them) and `BUILD` (the codes this run writes, today `fr, en, de`; its order is
+the order of every name array in the JSON files and of `languages` in `map-data.json`; `fr` and `en` must stay in
+it). The loca file of each language of `BUILD` must be in `export/loca/`. A text the game lacks in a language falls
+back to English; a hand-written text (a dict `{code: text}` in `build_*.py`) falls back to English, then French;
+the run prints how many fell back. Add a language: put its code in `BUILD`, add its entries to the hand tables
+(`grep -n "dict(fr=" build_*.py`), add the code to `frontend/src/app/core/lang.ts` and
+`backend/app/schemas/settings.py`, translate `frontend/public/i18n/`, give the e2e fixture arrays a third entry.
+`python3 test_languages.py` checks the fallback rules.
 
 ```sh
 python build_data.py "$WORK/unpacked/all" "$WORK/export" "$REPO/artifacts/map"

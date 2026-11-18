@@ -634,7 +634,7 @@ export class Game {
   }
 
   protected text(t: Text): string {
-    return this.lang.lang() === 'fr' ? t.fr : t.en;
+    return t[this.lang.lang()] ?? t.en;
   }
 
   protected isDefault(d: SettingDef): boolean {

@@ -37,13 +37,14 @@ import json
 import math
 import re
 
-LANGUAGES = ("Fr_Fr", "En_Us")
+import languages
+
 TYPES = {"Root": "Root", "PassiveSkill": "Passive", "ActiveSkill": "Active", "Attribute": "Attribute"}
 BUDGET = 212
 
 
 # The 12 specializations, clockwise from the top-left, one start point every 30 degrees around the centre of
-# the tree (the order of the labels on the game's skill screen); the English names come from the game's texts.
+# the tree (the order of the labels on the game's skill screen); the other languages' names come from the game's texts.
 SPECIALIZATIONS = ["Survivant", "Maître de la bête", "Garde forestier", "Assassin", "Farceur", "Magicien",
                    "Guérisseur", "Mage de combat", "Tank", "Guerrier", "Barbare", "Athlète"]
 START_ANGLE = -135  # degrees, y pointing down: the first start point is up and to the left
@@ -116,7 +117,7 @@ def effects(node, programs, ids):
 
 def build_skills(src, export, out):
     from build_gear import attribute_names, impact_programs
-    texts = [load_texts(f"{export}/loca/{lang}.tsv") for lang in LANGUAGES]
+    texts = languages.load_all(export, load_texts)
     ids, _ = attribute_names(src)
     programs = impact_programs(src)
 
@@ -128,7 +129,7 @@ def build_skills(src, export, out):
         tree = json.load(f)
     nodes, resolved, with_k = [], 0, 0
     for n in tree["nodes"]:
-        name, desc = loca(n["name"]["value"]), loca(n["description"]["value"]) or ["", ""]
+        name, desc = loca(n["name"]["value"]), loca(n["description"]["value"]) or [""] * len(languages.BUILD)
         if not name:
             continue
         per = loca(n["perLevelEffectDescription"]["value"]) if n["perLevelEffectDescription"]["value"] else None
@@ -149,23 +150,24 @@ def build_skills(src, export, out):
             "cost": n["costs"], "max": levels, "vals": vals, "per": per, "effects": effects(n, programs, ids),
         })
         if n["type"] == "Attribute":
-            effect, big = GAIN.search(desc[1]), FLAME.search(desc[1])
+            effect, big = GAIN.search(desc[languages.EN]), FLAME.search(desc[languages.EN])
             if effect and effect.group(1) in ATTRIBUTES:
                 nodes[-1].update(attr=ATTRIBUTES[effect.group(1)], gain=int(effect.group(2)))
             elif big and big.group(1) in ATTRIBUTES:
                 nodes[-1].update(attr=ATTRIBUTES[big.group(1)], flame=True, perFlame=PER_FLAME)
     # name the start points by where they stand around the centre
-    names_en = {}
-    for key, fr_text in texts[0].items():
-        if fr_text in SPECIALIZATIONS and key in texts[1]:
-            names_en.setdefault(fr_text, []).append(texts[1][key])
+    names_by_fr = {}  # French name -> the texts that share its id, per language
+    for key, fr_text in texts[languages.FR].items():
+        if fr_text in SPECIALIZATIONS:
+            for i, t in enumerate(texts):
+                names_by_fr.setdefault(fr_text, [[] for _ in texts])[i].append(t[key])
     roots = [n for n in nodes if n["type"] == "Root"]
     cx, cy = sum(n["x"] for n in roots) / len(roots), sum(n["y"] for n in roots) / len(roots)
     for n in roots:
         angle = math.degrees(math.atan2(n["y"] - cy, n["x"] - cx))
         fr_name = SPECIALIZATIONS[round(((angle - START_ANGLE) % 360) / 30) % len(SPECIALIZATIONS)]
-        en_name = max(set(names_en.get(fr_name, [fr_name])), key=names_en.get(fr_name, [fr_name]).count)
-        n["label"] = [fr_name, en_name]
+        found = names_by_fr.get(fr_name) or [[fr_name]] * len(texts)
+        n["label"] = [max(set(names), key=names.count) for names in found]
     ids = {n["id"] for n in nodes}
     links = [[l["sourceNode"]["value"], l["targetNode"]["value"]] for l in tree["links"]
              if l["sourceNode"]["value"] in ids and l["targetNode"]["value"] in ids]
@@ -183,5 +185,5 @@ def build_skills(src, export, out):
           f"{resolved} of them resolved, {sum(1 for n in nodes if n['icon'])} with an icon, "
           f"{sum(1 for n in nodes if n['attr'])} raising an attribute, "
           f"{sum(1 for n in nodes if n['effects'])} with attribute effects, specializations "
-          f"{[n['label'][1] for n in roots]}", flush=True)
+          f"{[n['label'][languages.EN] for n in roots]}", flush=True)
     return {"budget": BUDGET, "nodes": nodes, "links": links}

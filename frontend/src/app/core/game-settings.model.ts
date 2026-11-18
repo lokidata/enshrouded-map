@@ -1,8 +1,12 @@
 /** Dedicated-server game settings (docs/server-settings.md, official article 0.9.0.0, corrected with the game's own ranges from settings-presets.json). */
+import { SETTINGS_DE } from './game-settings.de';
+
 export type SettingValue = number | string | boolean;
+/** A text in each language; a language without one shows the English text. */
 export interface Text {
   fr: string;
   en: string;
+  [lang: string]: string | undefined;
 }
 export type GroupId =
   'player' | 'survival' | 'world' | 'daynight' | 'resources' | 'xp' | 'enemies' | 'bosses';
@@ -247,6 +251,14 @@ export const SETTINGS: readonly SettingDef[] = [
   num('bossDamageFactor', 'bosses', 0.2, 5, 'Dégâts des boss', 'Boss damage'),
   num('bossHealthFactor', 'bosses', 0.2, 4, 'Santé des boss', 'Boss health'),
 ];
+
+for (const d of SETTINGS) {
+  const de = SETTINGS_DE[d.key];
+  if (de) {
+    d.label['de'] = de.label;
+    if (d.help && de.help) d.help['de'] = de.help;
+  }
+}
 
 /**
  * The default enshrouded_server.json minus gameSettings. Group names, flags and the placeholder

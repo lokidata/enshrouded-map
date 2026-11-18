@@ -1,5 +1,5 @@
 /** The site's languages, in one place (the backend keeps the same list in schemas/settings.py). */
-export const LANGUAGES: readonly string[] = ['fr', 'en'];
+export const LANGUAGES: readonly string[] = ['fr', 'en', 'de'];
 export const DEFAULT_LANG = 'fr';
 
 /** The code when the site supports it, else null. */
