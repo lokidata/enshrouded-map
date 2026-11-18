@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Codex of the Shroud</title>
+<link rel="preload" href="fonts/im-fell-english-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/im-fell-english-sc-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/alegreya-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="codex.css">
+<style>
+body{height:auto}
+main{max-width:980px;margin:0 auto;padding:24px}
+.sw{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.sw div{padding:30px 8px 6px;border:1px solid var(--border);border-radius:3px;font-size:13px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+</style>
+</head>
+<body class="mist">
+<nav class="tabs" role="tablist"><button class="active" role="tab" aria-selected="true">Couleurs</button><button role="tab" aria-selected="false">Texte</button><button role="tab" aria-selected="false">Composants</button></nav>
+<main>
+<h1 style="font-size:34px;color:var(--gold);margin:0">Codex of the Shroud</h1>
+<p class="meta">Brume bleu-ardoise, bronze pour les lignes, braise seulement pour ce qui est actif.</p>
+
+<h2 class="cx">Couleurs</h2>
+<div class="sw" id="sw"></div>
+
+<h2 class="cx">Texte</h2>
+<p style="font:400 34px var(--display);margin:0">Display, IM Fell English</p>
+<p style="font:400 20px var(--display-sc);letter-spacing:.05em;margin:6px 0">Display SC, petites capitales</p>
+<p style="margin:6px 0">UI, Alegreya Sans : <em>italique</em>, <strong>gras</strong>, 0123456789.</p>
+<code style="font-family:var(--mono)">mono 0x140d1c990</code>
+
+<h2 class="cx">Composants</h2>
+<div class="row">
+  <button class="btn">Bouton</button><button class="btn primary">Principal</button><button class="btn danger">Danger</button>
+  <button class="pill" aria-pressed="false">Pill</button><button class="pill" aria-pressed="true">Pill actif</button>
+  <span class="chip">Chip</span>
+</div>
+<div class="row" style="margin-top:12px">
+  <label class="label">Champ <input type="text" value="Texte"></label>
+  <label class="label">Choix <select><option>Un</option><option>Deux</option></select></label>
+</div>
+<p class="hint">Indice en gris, sous un champ.</p>
+<p class="empty">Rien à afficher.</p>
+<div class="cards" style="margin-top:12px">
+  <div class="plate"><div class="label">Plaque</div><p style="margin:6px 0 0">Deux coins de bronze, rayon 3 px au plus.</p></div>
+  <div class="plate lit"><div class="label">Plaque allumée</div><p style="margin:6px 0 0">Coins braise : survolée ou choisie.</p></div>
+  <div class="plate ok"><div class="label">Plaque validée</div><p style="margin:6px 0 0">Bordure verte pour « connu ».</p></div>
+</div>
+</main>
+<script>
+const sw=document.getElementById('sw'),cs=getComputedStyle(document.documentElement);
+for(const n of ['bg','panel','panel-deep','hover','border','ink','text','muted','gold','gold-dim','accent','accent-ink','shroud','ok','bad','danger']){
+ const d=document.createElement('div');d.style.background='var(--'+n+')';d.style.color=['text','muted','gold','accent','shroud','ok','bad'].includes(n)?'#000':'var(--text)';
+ d.textContent='--'+n+' '+cs.getPropertyValue('--'+n).trim();sw.append(d)}
+</script>
+</body>
+</html>

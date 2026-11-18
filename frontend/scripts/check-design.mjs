@@ -1,7 +1,7 @@
 // Design guard: the look of the site lives in the tokens of src/styles.css ("Codex of the Shroud", see CLAUDE.md).
 // This script fails when a style brings its own colour, font or big radius instead of using a token.
 // Run by `npm run lint:design` (make check-frontend and CI).
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
 const root = new URL('../src', import.meta.url).pathname;
@@ -99,6 +99,25 @@ function inStyles(lines, index) {
       return false;
   }
   return false;
+}
+
+// design-system/ is the copy other projects take (the add-on): its tokens must not drift from src/styles.css.
+const DS_TOKENS = new URL('../../design-system/tokens.css', import.meta.url).pathname;
+if (existsSync(DS_TOKENS)) {
+  const tokens = (text) =>
+    new Map(
+      [...text.matchAll(/^\s*(--[\w-]+)\s*:\s*([^;]+);/gm)].map((m) => [
+        m[1],
+        m[2].trim().replace(/\s+/g, ' '),
+      ]),
+    );
+  const mine = tokens(readFileSync(join(root, TOKENS), 'utf8'));
+  for (const [name, value] of tokens(readFileSync(DS_TOKENS, 'utf8'))) {
+    if (mine.get(name) !== value)
+      found.push(
+        `design-system/tokens.css  [drift] ${name}: ${value}  -> src/styles.css has ${mine.get(name) ?? 'nothing'}; keep both in step`,
+      );
+  }
 }
 
 if (found.length) {

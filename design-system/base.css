@@ -1,0 +1,51 @@
+/* Codex of the Shroud: base. Needs tokens.css and fonts.css. */
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font:
+    15px/1.45 var(--ui),
+    sans-serif;
+  font-variant-numeric: lining-nums tabular-nums;
+  /* Alegreya Sans has a narrow space: words run together at small sizes */
+  word-spacing: 0.09em;
+}
+::selection {
+  background: #eb944066;
+}
+/* form controls do not inherit the font by themselves (the notice toast is a button) */
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+h1,
+h2,
+h3 {
+  font-family: var(--display);
+  font-weight: 400;
+}
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+/* cold, thin scrollbars that do not break the mist */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--gold-dim) transparent;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
