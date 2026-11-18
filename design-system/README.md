@@ -31,8 +31,12 @@ Les chemins des polices sont relatifs à `fonts.css`. Si le dossier `fonts/` bou
 
 ## Non repris
 
-Les couleurs propres à la carte et aux compétences (`--halo-*`, `--magic-*`, `--mana`, `--void`) restent dans `frontend/src/styles.css` : ce sont des données du jeu, pas l'identité. Le garde-fou `frontend/scripts/check-design.mjs` ne couvre pas ce dossier.
+Les couleurs propres à la carte et aux compétences (`--halo-*`, `--magic-*`, `--mana`, `--void`) restent dans `frontend/src/styles.css` : ce sont des données du jeu, pas l'identité.
 
-## Source
+## Source et copies
 
-Copie de `frontend/src/styles.css` et de `frontend/src/app/workshop/workshop.css`. Pas synchronisée automatiquement : si les jetons changent là-bas, les reporter ici.
+Ce dossier est la **référence** que reprennent les autres projets (l'add-on serveur, `enshrouded-map-addon`, en a une copie dans `frontend/src/ds/`). Il est extrait de `frontend/src/styles.css` et de `frontend/src/app/workshop/workshop.css`.
+
+- **Ici vers le site** : `frontend/scripts/check-design.mjs` (lancé par `npm run lint`) échoue si un jeton de `tokens.css` n'a pas la même valeur dans `frontend/src/styles.css`. Changer un jeton : le changer aux deux endroits.
+- **Ici vers l'add-on** : le script `scripts/check-ds.mjs` de l'add-on compare sa copie à ce dossier, à un commit fixé dans `frontend/src/ds/SOURCE`. Après un changement ici : fusionner, puis dans l'add-on lancer `node scripts/check-ds.mjs --update` pour reprendre le dernier commit de `main`.
+- Les fichiers sont formatés avec Prettier (la configuration de l'add-on) : une copie identique octet pour octet est ce que le contrôle attend.
