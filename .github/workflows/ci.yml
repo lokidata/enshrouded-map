@@ -137,7 +137,6 @@ jobs:
         working-directory: backend
       - run: npm ci --ignore-scripts
         working-directory: frontend
-        working-directory: frontend
       # The real map data is not in git: the dev server serves a tiny fixture map instead.
       - run: ln -sfn e2e/fixtures/map map-artifacts
         working-directory: frontend
