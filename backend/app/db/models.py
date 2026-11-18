@@ -88,6 +88,30 @@ class Fog(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
 
 
+class CustomMarker(Base):
+    """A pin or Flame Altar zone a player placed on the map (not a map element: no progress, no
+    filter). Private to its owner unless `shared`: teammates see it only while the owner is in
+    their team."""
+
+    __tablename__ = "custom_markers"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    character_id: Mapped[int] = mapped_column(
+        ForeignKey("characters.id", ondelete="CASCADE"), index=True
+    )
+    x: Mapped[int] = mapped_column(Integer)  # metres, like the mark ids
+    z: Mapped[int] = mapped_column(Integer)
+    name: Mapped[str] = mapped_column(String(40))
+    note: Mapped[str] = mapped_column(String(500), default="", server_default="")
+    kind: Mapped[str] = mapped_column(String(8))  # "pin" or "altar"
+    level: Mapped[int | None] = mapped_column(Integer, default=None)  # 1-4, altar only
+    icon: Mapped[str | None] = mapped_column(String(32), default=None)  # a pin's picture key
+    color: Mapped[str | None] = mapped_column(String(16), default=None)  # colour name, null = white
+    shared: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
 class Mark(Base):
     __tablename__ = "marks"
 

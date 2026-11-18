@@ -10,6 +10,7 @@ import { LoreService } from './lore.service';
 import { PlannerStore } from './planner.store';
 import { GearService } from './gear.service';
 import { GamePresetsService } from './game-presets.service';
+import { MarkerStore } from './marker.store';
 import { FogStore } from '../save-import/fog.store';
 import { forgetImport } from '../save-import/import-history';
 import { GameSettingsStore } from './game-settings.store';
@@ -47,6 +48,7 @@ export class SessionService {
   private readonly planner = inject(PlannerStore);
   private readonly gameSettings = inject(GameSettingsStore);
   private readonly fog = inject(FogStore);
+  private readonly markers = inject(MarkerStore);
   private readonly characters = inject(CharacterStore);
 
   /** The language the account holds, as far as this tab knows. */
@@ -148,6 +150,7 @@ export class SessionService {
     this.planner.clear();
     this.gameSettings.clear();
     this.fog.clear();
+    this.markers.clear();
     forgetImport();
     this.characters.clear();
     this.views.set('map');
@@ -192,6 +195,7 @@ export class SessionService {
     this.configFor = this.teamKey();
     await this.characters.load();
     this.fog.use(this.characters.active()?.id ?? null);
+    await this.markers.loadMine();
     await this.planner.switchProfile(this.characters.active()?.id ?? null);
     if (this.enemies.openFromHash()) this.views.set('enemies');
     if (this.planner.openFromHash()) this.views.set('skills');
@@ -224,7 +228,7 @@ export class SessionService {
     ]);
     this.progress.set(marks.marks);
     this.fog.use(this.characters.active()?.id ?? null);
-    await this.team.load();
+    await Promise.all([this.markers.loadMine(), this.team.load()]);
   }
 
   /** What is saved with the account's settings. The language goes only when this tab changed it (or the

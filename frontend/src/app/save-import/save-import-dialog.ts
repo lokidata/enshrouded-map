@@ -13,7 +13,10 @@ import { PlannerStore } from '../core/planner.store';
 import { ProgressStore } from '../core/progress.store';
 import { SkillsService } from '../core/skills.service';
 import { SessionService } from '../core/session.service';
+import { MarkerStore } from '../core/marker.store';
+import { MAX_MARKERS } from '../core/markers.logic';
 import { TeamStore } from '../core/team.store';
+import { Altar, newAltars, readAltars } from './altars';
 import { readCharacter } from './character';
 import { Sheet, indexItems, sheetOf } from './character.logic';
 import { FogStore } from './fog.store';
@@ -68,6 +71,34 @@ type Target = 'active' | 'new';
               : ''
         }}
       </div>
+      @if (world(); as w) {
+        <p>{{ 'saveImportWorldFound' | transloco: { name: fileName(), n: w.rows.length } }}</p>
+        @if (w.skipped) {
+          <p class="hint">{{ 'saveImportWorldSkipped' | transloco: { n: w.skipped } }}</p>
+        }
+        @if (w.rows.length) {
+          <p class="hint">{{ 'saveImportAltarRoom' | transloco: { n: room(), max: max } }}</p>
+          <ul class="members">
+            @for (a of w.rows; track $index; let i = $index) {
+              <li>
+                <label>
+                  <input
+                    type="checkbox"
+                    [checked]="a.take"
+                    [disabled]="a.already || (!a.take && taken() >= room())"
+                    (change)="toggleAltar(i)"
+                  />
+                  {{ 'saveImportAltar' | transloco: { n: i + 1, level: a.level, x: a.x, z: a.z } }}
+                </label>
+                @if (a.already) {
+                  <span class="hint">{{ 'saveImportAltarThere' | transloco }}</span>
+                }
+              </li>
+            }
+          </ul>
+          <p class="hint">{{ 'saveImportAltarAdds' | transloco }}</p>
+        }
+      }
       @if (lines().length) {
         <p>
           {{ 'saveImportFound' | transloco: { name: fileName() } }}
@@ -161,7 +192,12 @@ type Target = 'active' | 'new';
         <p class="hint">{{ 'saveImportAdds' | transloco }}</p>
       }
       @if (done() !== null) {
-        <div class="ok" role="status">{{ 'saveImportDone' | transloco: { n: done() } }}</div>
+        <div class="ok" role="status">
+          {{
+            (world() === null && mode() === 'world' ? 'saveImportAltarsDone' : 'saveImportDone')
+              | transloco: { n: done() }
+          }}
+        </div>
       }
       <div class="footer">
         @if (done() === null) {
@@ -215,6 +251,18 @@ export class SaveImportDialog {
   protected readonly target = signal<Target>('active');
   protected readonly newName = signal('');
   protected readonly serverError = signal('');
+  /** What the file was: a character save or a world save (decides the message once applied). */
+  protected readonly mode = signal<'character' | 'world'>('character');
+  private readonly markers = inject(MarkerStore);
+  protected readonly max = MAX_MARKERS;
+  /** The altars of a world save: each with its level and place, whether it is already a marker of mine, and whether to add it. */
+  protected readonly world = signal<{
+    rows: (Altar & { already: boolean; take: boolean })[];
+    skipped: number;
+  } | null>(null);
+  /** How many more markers my profile can take. */
+  protected readonly room = computed(() => Math.max(0, MAX_MARKERS - this.markers.mine().length));
+  protected readonly taken = computed(() => this.world()?.rows.filter((a) => a.take).length ?? 0);
   /** What each kind would add: new marks only, against the profile that receives them (a new one is empty). */
   protected readonly lines = computed<Line[]>(() => {
     const p = this.proposal();
@@ -250,6 +298,7 @@ export class SaveImportDialog {
         this.proposal.set(null);
         this.fog.set(null);
         this.sheet.set(null);
+        this.world.set(null);
         this.error.set('');
         this.serverError.set('');
         this.done.set(null);
@@ -264,8 +313,30 @@ export class SaveImportDialog {
     return (
       this.lines().reduce((n, l) => n + (l.take ? l.ids.length : 0), 0) +
       (this.fog()?.take ? 1 : 0) +
-      (this.sheet()?.take ? 1 : 0)
+      (this.sheet()?.take ? 1 : 0) +
+      this.taken()
     );
+  }
+
+  protected toggleAltar(i: number): void {
+    this.world.update((w) =>
+      w ? { ...w, rows: w.rows.map((a, j) => (j === i ? { ...a, take: !a.take } : a)) } : w,
+    );
+  }
+
+  /** The altars of a world save, against the markers I already have; the first ones that fit are ticked. */
+  private altarRows(found: readonly Altar[]): NonNullable<ReturnType<typeof this.world>> {
+    const { fresh } = newAltars(found, this.markers.mine());
+    let room = this.room();
+    return {
+      skipped: 0,
+      rows: found.map((a) => {
+        const already = !fresh.includes(a);
+        const take = !already && room > 0;
+        if (take) room--;
+        return { ...a, already, take };
+      }),
+    };
   }
 
   protected toggleSheet(): void {
@@ -307,6 +378,7 @@ export class SaveImportDialog {
     this.unticked.set(new Set());
     this.fog.set(null);
     this.sheet.set(null);
+    this.world.set(null);
     this.error.set('');
     this.serverError.set('');
     this.done.set(null);
@@ -315,7 +387,8 @@ export class SaveImportDialog {
     try {
       const sections = readKsd(new Uint8Array(await file.arrayBuffer()));
       const data = sections.get('player_knowledge');
-      if (!data) return this.error.set('character');
+      if (!data) return this.readWorld(file.name, sections);
+      this.mode.set('character');
       const p = propose(
         readKnowledge(data),
         this.craft.data(),
@@ -344,7 +417,51 @@ export class SaveImportDialog {
     }
   }
 
+  /** A server's world save: its Flame Altars. Anything without bases is neither kind of save. */
+  private readWorld(name: string, sections: ReadonlyMap<string, Uint8Array>): void {
+    if (![...sections.keys()].some((n) => /^base\d+$/.test(n))) return this.error.set('unknown');
+    const { altars, skipped } = readAltars(sections); // too many bases throws: shown as an unreadable save
+    this.mode.set('world');
+    this.fileName.set(name);
+    this.world.set({ ...this.altarRows(altars), skipped });
+  }
+
+  /** Adds the ticked altars as private markers of the profile followed (one after the other: the server counts the limit). */
+  private async applyWorld(): Promise<void> {
+    const rows = (this.world()?.rows ?? []).filter((a) => a.take);
+    let n = this.markers.mine().filter((m) => m.kind === 'altar').length;
+    this.busy.set(true);
+    this.serverError.set('');
+    let added = 0;
+    try {
+      for (const a of rows) {
+        await this.markers.add({
+          x: a.x,
+          z: a.z,
+          name: this.lang.t('saveImportAltarName', { n: ++n }),
+          note: '',
+          kind: 'altar',
+          level: a.level,
+          icon: null,
+          color: null,
+          shared: false,
+        });
+        added++;
+      }
+    } catch (err) {
+      this.serverError.set(errorCode(err));
+    }
+    this.busy.set(false);
+    if (this.serverError()) {
+      this.world.update((w) => (w ? { ...w, rows: this.altarRows(w.rows).rows } : w)); // what is left to add
+      return;
+    }
+    this.done.set(added);
+    this.world.set(null);
+  }
+
   protected async apply(): Promise<void> {
+    if (this.world()) return this.applyWorld();
     const ids = this.lines().flatMap((l) => (l.take ? l.ids : []));
     const counts: ImportEntry['counts'] = {};
     for (const l of this.lines()) if (l.take) counts[l.kind] = l.ids.length;

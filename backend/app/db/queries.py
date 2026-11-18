@@ -2,7 +2,7 @@ from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.db.models import ActiveCharacter, Character, Fog, Team, TeamMember, User
+from app.db.models import ActiveCharacter, Character, CustomMarker, Fog, Team, TeamMember, User
 
 
 def no_users(db: Session) -> bool:
@@ -10,11 +10,12 @@ def no_users(db: Session) -> bool:
     return db.scalar(select(User.id).limit(1)) is None
 
 
-def unshare_fog(db: Session, user_id: int) -> None:
-    """Stops showing the explored area of every profile of the player (not committed). Sharing is a
-    choice made for one team: it does not follow the player to another one."""
+def unshare_all(db: Session, user_id: int) -> None:
+    """Stops showing the explored area and the custom markers of every profile of the player (not
+    committed). Sharing is a choice made for one team: it does not follow the player to another."""
     mine = select(Character.id).where(Character.user_id == user_id)
     db.execute(update(Fog).where(Fog.character_id.in_(mine)).values(shared=False))
+    db.execute(update(CustomMarker).where(CustomMarker.character_id.in_(mine)).values(shared=False))
 
 
 def leave_team(db: Session, user_id: int) -> bool:
@@ -25,7 +26,7 @@ def leave_team(db: Session, user_id: int) -> bool:
         return False
     team = db.get(Team, member.team_id)
     db.delete(member)
-    unshare_fog(db, user_id)
+    unshare_all(db, user_id)
     db.flush()
     if team and team.owner_id == user_id:
         heir = db.scalar(

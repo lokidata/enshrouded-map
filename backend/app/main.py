@@ -18,6 +18,7 @@ from app.api.v1 import (
     fog,
     game_config,
     health,
+    markers,
     passkeys,
     progress,
     settings,
@@ -97,6 +98,7 @@ def create_app() -> FastAPI:
         game_config,
         characters,
         fog,
+        markers,
     ):
         app.include_router(module.router, prefix="/api/v1")
     return app

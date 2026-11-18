@@ -3,6 +3,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from './auth.service';
 import { FogStore } from '../save-import/fog.store';
+import { MarkerStore } from './marker.store';
 import { ProgressStore } from './progress.store';
 
 export interface Team {
@@ -37,6 +38,7 @@ export class TeamStore {
   private readonly auth = inject(AuthService);
   private readonly progress = inject(ProgressStore);
   private readonly fog = inject(FogStore);
+  private readonly markers = inject(MarkerStore);
 
   readonly team = signal<Team | null>(null);
   /** What the other members marked: mark id -> user ids. Mine come from the ProgressStore. */
@@ -83,6 +85,7 @@ export class TeamStore {
     } catch {
       return; // keeps what was shown
     }
+    void this.markers.loadTeam(!!this.team());
     void this.fog.loadTeam(!!this.team()); // not awaited: the areas come in later, the team is ready now
     clearInterval(this.timer);
     if (this.team()) this.timer = setInterval(() => void this.load(), REFRESH_MS);

@@ -21,14 +21,16 @@ Open questions: which settings the server file really exposes in the current gam
 - [x] **Save the Personnage page on the server**: the page's state (level, Flame, gear, upgrades, gems, weapon in hand) lives only in the browser per profile (`localStorage`); store it per character in the backend (table + migration) so it follows the player across devices.
 - [x] **Appearance unlocks on the map**: the 23 colour palettes lying in the world have a position (20 `LootPickup_colorPalette_reward_*` pickups, found like the collectibles in `collectible_templates`, + 3 in the scene's special loot: Draped In Envy, Cathedral, Golden Ball); they are the new rose `palette` category (pipeline `special_loot` and `collectible_templates`, icon `palette.svg`, hidden by default, local `artifacts/map` patched; rerun the pipeline on tora to regenerate). The 5 `LootPickup_NPC_Barber_hairstyle_wigHead_*` wig heads (they unlock hairstyles; the 6th, "Barber's Favorite", has no pickup) are the `hairstyle` category. Eye and hair colours (second pass, 2026-11-13): the journal's "Player customisation" item sets give hints per colour; the tales and search areas they point to are the `eyecolor` (9 of 10 colours) and `haircolor` (5 of 15) categories, see RULES section 4. Not mappable: the hairstyles themselves, 10 hair colours and the dark red eyes (their hints name no place); the 4 `LoreText_*colorPalette*` pages (barber quests) are lore pages, not palettes, and left out; the other palettes are crafted at the Coloring Station or quest rewards; the game has no horse coat data.
 
-## Custom markers and altar zones (issue #81, planned, not started)
+## Custom markers and altar zones (issue #81, first version done 2026-11-18, not committed yet)
 
-Plan: per-profile custom markers (name, note, `shared` per marker, 100 per profile), team members see shared ones read-only in a layer per member; sharing is reset when leaving a team (same rule as the explored area). The Flame Altar is a marker type with a centred square build area: level 1-4 = 40, 80, 120, 160 m (given by the user, not extracted from the game).
+Done: per-profile custom markers (name, note, `shared` per marker, 100 per profile), team members see shared ones read-only in a layer per member; sharing is reset when leaving a team (same rule as the explored area). The Flame Altar is a marker type with a centred square build area: level 1-4 = 40, 80, 120, 160 m (given by the user, not extracted from the game).
 
+- [x] **First version**: custom pins and altar zones (levels 1-4 = 40/80/120/160 m), per profile, `shared` per marker, 100 per profile, a layer per teammate, privacy reset with the explored area, tests (pytest, Vitest, e2e). Also done the same day: moving a marker, the ticked layers kept per browser, the list "My markers" in the menu (count, search, shared by teammates).
 - [ ] **Marker types** (1): base, farm, resource spot, danger, to do, meeting point; one icon and colour each, filter like the categories.
 - [ ] **Shared ping** (2): a click sends a point the team sees for a few minutes, nothing stored (the map already has local pings).
-- [ ] **Altar position from the save** (3): place the existing altars on import from a world save. Decoded and confirmed in game (positions and levels, see `docs/DESIGN-save-import.md`, section `base00..05`); only the import UI is left.
-- [ ] **Measure tool** (4): a ruler between two points, in metres.
+- [x] **Altar position from the save** (3): done 2026-11-18 in the save import dialog (`world0.ksd`, parser `save-import/altars.ts`, see RULES section 10 and DESIGN-save-import.md). Tested on synthetic files and once, by hand, on the user's real save (5 altars read as expected); not tried in the browser with the real file.
+- [x] **Measure tool** (4): done 2026-11-18 (button "Measure" on the map, see RULES section 4).
+- [x] **Altar zone contents** and **build area in the Workshop altar tab** (done 2026-11-18, RULES sections 4 and 5). Not done: "show these elements on the map".
 
 ## More languages (planned, not started)
 

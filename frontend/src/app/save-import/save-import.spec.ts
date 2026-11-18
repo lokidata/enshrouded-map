@@ -17,6 +17,7 @@ import {
 } from './fog';
 import { characterNumber, forgetImport, lastImport, rememberImport } from './import-history';
 import { fresh, propose } from './save-import.logic';
+import { newAltars, readAltars } from './altars';
 
 const enc = new TextEncoder();
 
@@ -242,5 +243,98 @@ describe('shared explored area', () => {
     other[1] = 255;
     const u = unionCells(cells, other);
     expect([u[0], u[1], u[2], u[1000]]).toEqual([255, 255, 0, 255]);
+  });
+});
+
+/** A `base` section: GUID, then the min and max corners in half metres, then some voxel bytes. */
+function base(min: [number, number, number], max: [number, number, number]): Uint8Array {
+  const b = new Uint8Array(16 + 24 + 10);
+  const v = new DataView(b.buffer);
+  [...min, ...max].forEach((n, i) => v.setUint32(16 + 4 * i, n, true));
+  return b;
+}
+const box = (cx: number, cz: number, level: number, y = 1700): Uint8Array => {
+  const half = level * 40; // half the side, in half metres: 40 m per level = 80 half metres of side
+  return base([2 * cx - half, y, 2 * cz - half], [2 * cx + half, y + 60, 2 * cz + half]);
+};
+
+describe('altars in a world save', () => {
+  it('reads the level, the centre and the height of each base (half metres)', () => {
+    const world = makeKsd({
+      world_metadata: new Uint8Array(8),
+      base00: box(3194, 2018, 4),
+      base01: box(5838, 2019.5, 1), // centre on a half metre: rounded to whole metres
+      base02: box(6974, 2826, 2),
+      base03: box(100, 200, 3),
+    });
+    const { altars, skipped } = readAltars(readKsd(world));
+    expect(skipped).toBe(0);
+    expect(altars).toEqual([
+      { x: 3194, z: 2018, y: 865, level: 4 },
+      { x: 5838, z: 2020, y: 865, level: 1 },
+      { x: 6974, z: 2826, y: 865, level: 2 },
+      { x: 100, z: 200, y: 865, level: 3 },
+    ]);
+  });
+
+  it('skips and counts what is not a clean altar box', () => {
+    const wrong = {
+      short: new Uint8Array(30),
+      degenerate: base([100, 0, 100], [100, 0, 100]),
+      notSquare: base([0, 0, 0], [80, 10, 160]),
+      notALevel: base([0, 0, 0], [100, 10, 100]),
+      tooBig: base([0, 0, 0], [400, 10, 400]), // level 5
+      outside: base([20_400, 0, 0], [20_480 + 80, 10, 80]),
+      upsideDown: base([0, 50, 0], [80, 10, 80]),
+    };
+    const world = makeKsd({
+      base00: box(500, 500, 1),
+      base01: wrong.short,
+      base02: wrong.degenerate,
+      base03: wrong.notSquare,
+      base04: wrong.notALevel,
+      base05: wrong.tooBig,
+    });
+    const r = readAltars(readKsd(world));
+    expect(r.altars).toHaveLength(1);
+    expect(r.skipped).toBe(5);
+    for (const [name, section] of Object.entries(wrong)) {
+      if (name === 'short' || name === 'degenerate' || name === 'notSquare') continue;
+      const one = readAltars(readKsd(makeKsd({ base00: section })));
+      expect(one, name).toEqual({ altars: [], skipped: 1 });
+    }
+  });
+
+  it('keeps a box at the very edge of the world, refuses one past it', () => {
+    const edge = box(10_220, 10_220, 1); // 40 m square ending exactly at 10,240 m
+    expect(readAltars(new Map([['base00', edge]])).altars).toHaveLength(1);
+    expect(readAltars(new Map([['base00', box(10_221, 10_220, 1)]])).altars).toHaveLength(0);
+  });
+
+  it('skips a base outside the six slots and refuses a file with more than six', () => {
+    expect(readAltars(new Map([['base06', box(1, 1, 1)]]))).toEqual({ altars: [], skipped: 1 });
+    const seven = new Map(
+      [0, 1, 2, 3, 4, 5, 6].map((i) => [`base0${i}`, box(100 * i + 100, 100, 1)] as const),
+    );
+    expect(() => readAltars(seven)).toThrow(KsdError);
+  });
+
+  it('is empty for a file with no base, and does not read other sections', () => {
+    expect(readAltars(new Map([['world_metadata', new Uint8Array(100)]]))).toEqual({
+      altars: [],
+      skipped: 0,
+    });
+  });
+
+  it('flags the altars already there: same x and z within 1 m, and an altar', () => {
+    const found = [
+      { x: 100, z: 100, y: 0, level: 1 as const },
+      { x: 500, z: 500, y: 0, level: 4 as const },
+    ];
+    const r = newAltars(found, [
+      { x: 101, z: 99, kind: 'altar' }, // within 1 m: the same
+      { x: 500, z: 500, kind: 'pin' }, // a pin does not count
+    ]);
+    expect(r).toEqual({ fresh: [found[1]], already: 1 });
   });
 });

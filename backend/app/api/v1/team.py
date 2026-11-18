@@ -11,13 +11,25 @@ from sqlalchemy.sql import Select
 
 from app.api.deps import CurrentUser, DbSession
 from app.api.limiter import limiter
+from app.api.v1.markers import out as marker_out
 from app.core.config import get_settings
 from app.core.logging import audit
 from app.core.security import new_token, token_digest
 from app.db.base import utcnow
-from app.db.models import ActiveCharacter, Fog, Invitation, Mark, Team, TeamMember, User
-from app.db.queries import leave_team, unshare_fog
+from app.db.models import (
+    ActiveCharacter,
+    CustomMarker,
+    Fog,
+    Invitation,
+    Mark,
+    Team,
+    TeamMember,
+    User,
+)
+from app.db.queries import leave_team, unshare_all
 from app.schemas.auth import InvitationOut
+from app.schemas.markers import MemberMarkers
+from app.schemas.markers import TeamMarkers as TeamMarkersOut
 from app.schemas.team import (
     Member,
     MemberIn,
@@ -105,7 +117,7 @@ def rename_team(body: NameIn, user: CurrentUser, db: DbSession) -> TeamOut:
 def dissolve_team(user: CurrentUser, db: DbSession) -> dict[str, str]:
     team = _own_team(db, user)
     for member_id in db.scalars(select(TeamMember.user_id).where(TeamMember.team_id == team.id)):
-        unshare_fog(db, member_id)  # nobody keeps showing their area to a team that is gone
+        unshare_all(db, member_id)  # nobody keeps showing their area to a team that is gone
     db.delete(team)  # members and invitations go with it
     db.commit()
     return {}
@@ -132,7 +144,7 @@ def remove_member(user_id: int, user: CurrentUser, db: DbSession) -> dict[str, s
     )
     if removed.rowcount != 1:  # type: ignore[attr-defined]
         raise HTTPException(404, "no_member")
-    unshare_fog(db, user_id)
+    unshare_all(db, user_id)
     db.commit()
     return {}
 
@@ -186,7 +198,7 @@ def add_member(body: MemberIn, user: CurrentUser, db: DbSession) -> TeamOut:
     target = db.get(User, body.user_id)
     if target is None:
         raise HTTPException(404, "no_member")
-    unshare_fog(db, target.id)  # added by someone else: nothing is shown until they choose to
+    unshare_all(db, target.id)  # added by someone else: nothing is shown until they choose to
     db.add(TeamMember(user_id=target.id, team_id=team.id))
     try:
         db.commit()
@@ -305,3 +317,35 @@ def team_fog_of(user_id: int, user: CurrentUser, db: DbSession) -> AreaBits:
     if row is None:
         raise HTTPException(404, "no_fog")  # not in the team, or not sharing: the same answer
     return AreaBits(bits=base64.b64encode(row.bits).decode())
+
+
+@router.get("/markers", response_model=TeamMarkersOut)
+def team_markers(
+    request: Request, response: Response, user: CurrentUser, db: DbSession
+) -> TeamMarkersOut | Response:
+    """The shared custom markers of the other members (the profile each follows now), read-only.
+    ETag of the body: 304 while nothing changed, so the browser does not refetch all of it."""
+    member = _membership(db, user)
+    by_user: dict[int, MemberMarkers] = {}
+    if member:
+        rows = db.execute(
+            select(User.id, User.username, CustomMarker)
+            .join(ActiveCharacter, ActiveCharacter.user_id == User.id)
+            .join(CustomMarker, CustomMarker.character_id == ActiveCharacter.character_id)
+            .join(TeamMember, TeamMember.user_id == User.id)
+            .where(
+                TeamMember.team_id == member.team_id,
+                User.id != user.id,
+                CustomMarker.shared.is_(True),
+            )
+            .order_by(User.username, CustomMarker.id)
+        )
+        for uid, name, m in rows:
+            entry = by_user.setdefault(uid, MemberMarkers(user_id=uid, username=name, markers=[]))
+            entry.markers.append(marker_out(m))
+    body = TeamMarkersOut(members=list(by_user.values()))
+    etag = f'"{hashlib.sha256(body.model_dump_json().encode()).hexdigest()[:20]}"'
+    if request.headers.get("if-none-match") == etag:
+        return Response(status_code=304, headers={"ETag": etag})
+    response.headers["ETag"] = etag
+    return body

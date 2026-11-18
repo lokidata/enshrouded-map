@@ -151,7 +151,7 @@ Writes, in `artifacts/map/`:
 | `ui/`            | character screen pictures from the mod's `ui` option (perk icons, equipment slots, rarity, buffs, skill node frames) |
 | `craft.json`     | recipes, Flame Altar levels, building pieces, stations, how each one unlocks, item category / type / food type / rarity / class / level |
 | `biomes.png`     | biome layer                                                                                 |
-| `icons/`         | category icons (game icons and the SVGs written by the script)                              |
+| `icons/`         | category icons (game icons and the SVGs written by the script), `custom_marker_0..9.png` (the game's custom-marker icons) |
 | `items/`         | pictures of the items shown in the popups (64 px)                                           |
 
 It prints counts at the end; compare them with the previous run to spot a

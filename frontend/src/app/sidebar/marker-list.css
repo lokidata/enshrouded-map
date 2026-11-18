@@ -1,0 +1,93 @@
+:host {
+  display: block;
+  margin: 8px 0 4px;
+}
+.markers {
+  border: 1px solid var(--gold-dim);
+  border-radius: 2px;
+  background: linear-gradient(180deg, var(--panel), var(--panel-deep));
+}
+summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 40px;
+  padding: 0 12px;
+  color: var(--gold);
+  font: 400 15px/1.2 var(--display-sc);
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+summary:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: -2px;
+}
+.count {
+  color: var(--muted);
+  font: 13px var(--ui);
+}
+.filter {
+  display: block;
+  width: calc(100% - 16px);
+  margin: 0 8px 6px;
+  padding: 6px 9px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--ink);
+  color: var(--text);
+  font: inherit;
+}
+.filter:focus {
+  border-color: var(--gold);
+}
+.list {
+  max-height: 220px; /* 100 markers must not push the categories out of the menu */
+  margin: 0;
+  padding: 0 8px 6px;
+  overflow-y: auto;
+  list-style: none;
+}
+h3 {
+  margin: 6px 12px 2px;
+  color: var(--muted);
+  font: italic 13px var(--ui);
+}
+button {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 6px;
+  border: 0;
+  border-radius: 2px;
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+  font: 14px var(--ui);
+  text-align: left;
+}
+button:hover {
+  background: var(--gold-faint);
+}
+button:focus-visible {
+  outline: 2px solid var(--gold);
+}
+.name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.meta {
+  flex: none;
+  color: var(--muted);
+  font-size: 12px;
+}
+.empty {
+  margin: 0;
+  padding: 0 12px 10px;
+  color: var(--muted);
+  font-size: 13px;
+  font-style: italic;
+}

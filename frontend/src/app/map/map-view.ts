@@ -4,6 +4,7 @@ import {
   ElementRef,
   ViewEncapsulation,
   afterNextRender,
+  computed,
   effect,
   inject,
   signal,
@@ -20,9 +21,12 @@ import { FogStore } from '../save-import/fog.store';
 import { LootEntry, MapMarker, itemKey, markId } from '../core/map-data.model';
 import { MapDataService } from '../core/map-data.service';
 import { MapFocus } from '../core/map-focus.service';
+import { MarkerStore } from '../core/marker.store';
 import { ProgressStore } from '../core/progress.store';
 import { Halo, TeamStore } from '../core/team.store';
 import { isExplored } from '../save-import/fog';
+import { MarkerLayer } from './marker-layer';
+import { MeasureTool } from './measure-tool';
 import { ProgressLegend } from './progress-legend';
 
 // Icon size per zoom level, and the zoom from which each label kind shows.
@@ -43,7 +47,15 @@ const LABEL_MIN_ZOOM: Record<string, number> = { region: -5, areaName: -2.5 };
 const dotRadius = (zoom: number): number => (zoom <= -4 ? 4 : zoom <= -2 ? 5 : zoom <= -1 ? 7 : 9);
 const DOT_ICON_MIN_RADIUS = 7;
 // Loot items found in the same chest sit about a metre apart: one click lists them all.
-const STACKED_CATS = new Set(['unique', 'cosmetic', 'palette', 'hairstyle', 'haircolor', 'eyecolor', 'collectible']);
+const STACKED_CATS = new Set([
+  'unique',
+  'cosmetic',
+  'palette',
+  'hairstyle',
+  'haircolor',
+  'eyecolor',
+  'collectible',
+]);
 const STACK_RADIUS = 3;
 // Halo of a POI: blue = only I marked it, violet = me and some others, orange = others did and I did not, green = everyone did.
 // The colours are the `--halo-*` tokens of styles.css (the canvas needs them as strings): read once, on first use.
@@ -169,9 +181,21 @@ export class MapView {
   private readonly focus = inject(MapFocus);
   private readonly enemies = inject(EnemiesService);
   private readonly fog = inject(FogStore);
+  private readonly markers = inject(MarkerStore);
+  private markerLayer?: MarkerLayer;
+  private measureTool?: MeasureTool;
   private readonly host = viewChild.required<ElementRef<HTMLElement>>('host');
 
   protected readonly coords = signal('');
+  /** What the next click on the map does, said in words while it is waiting (adding or moving a marker). */
+  protected readonly hint = computed(() => {
+    this.lang.index(); // said again in the new language
+    const moving = this.markers.moving();
+    if (this.markers.moveFailed()) return this.lang.t('markerMoveFailed');
+    if (moving) return this.lang.t('markerMoving', { name: moving.name });
+    if (this.markers.measuring()) return this.lang.t('measureHint');
+    return this.markers.placing() ? this.lang.t('markerPlacing') : '';
+  });
 
   private readonly ready = signal(false);
   private readonly zoom = signal(0);
@@ -215,6 +239,35 @@ export class MapView {
       this.applyFogAreas(this.fog.areas());
     });
     effect(() => this.syncFogView(this.fog.view()));
+    effect(() => {
+      if (!this.ready()) return;
+      this.lang.index(); // the layers are named again when the language changes
+      this.markers.mine();
+      this.markers.team();
+      this.team.team();
+      this.markerLayer?.render();
+    });
+    effect(() => {
+      if (!this.ready()) return;
+      this.lang.index();
+      this.markers.placing();
+      this.markers.moving();
+      this.markerLayer?.syncButton();
+    });
+    effect(() => {
+      if (!this.ready()) return;
+      this.lang.index();
+      this.markers.measuring();
+      this.measureTool?.sync();
+    });
+    effect(() => {
+      const target = this.markers.reveal();
+      if (!target || !this.ready()) return;
+      untracked(() => {
+        this.markers.reveal.set(null);
+        this.markerLayer?.reveal(target.key, target.id);
+      });
+    });
     effect(() => {
       this.auth.user();
       this.progress.done();
@@ -274,6 +327,17 @@ export class MapView {
     this.layersControl = L.control
       .layers(undefined, undefined, { position: 'topright' })
       .addTo(this.map);
+    this.markerLayer = new MarkerLayer(
+      this.map,
+      this.layersControl,
+      this.size,
+      this.markers,
+      this.team,
+      this.lang,
+      this.mapData.data.categories,
+      this.mapData.data.markers,
+    );
+    this.measureTool = new MeasureTool(this.map, this.markers, this.size, this.lang);
     this.zoom.set(this.map.getZoom());
 
     this.map.on('overlayadd overlayremove', (e: L.LeafletEvent) => {
