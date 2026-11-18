@@ -23,7 +23,7 @@ A private companion site for the game Enshrouded, for a small group of players o
 | Personnage / Character | `build`, `equipment`, `skills` | `gear.json` exists (else the entry opens `skills`) | `gear.json`, `gems.json`, `skills.json` |
 | Partie / Game | `game` | always | `settings-presets.json` (optional) |
 
-The top bar also holds the layout and language choices and the profile menu (`AccountBar`): invite, team, my characters, my progress, import a save, password, passkeys, delete account, administration (administrator only), logout. With several character profiles, a select in the top bar switches the profile followed.
+The top bar holds the account menu (`AccountBar`): invite, team, my characters, my progress, import a save, Profile, game server (add-on only), administration (administrator only), logout. "Profile" opens the profile popup (`AuthService.profileOpen`). With several character profiles, a select in the top bar switches the profile followed.
 
 The map stays mounted (hidden) when another screen is shown; the others load on demand (`@defer`). A server that lacks an optional data file simply has no such screen: never an error.
 
@@ -64,13 +64,17 @@ The map stays mounted (hidden) when another screen is shown; the others load on 
 
 ### Passkeys (WebAuthn)
 - Optional: on only when `WEBAUTHN_RP_ID` and `WEBAUTHN_ORIGIN` are set (https, one host name); `/auth/me` returns `passkeys_enabled`.
-- An alternative to the password: managed in profile > Passkeys, "Use a passkey" on the login screen. Challenges are kept in memory (single worker).
+- An alternative to the password: managed in Profile > Passkeys, "Use a passkey" on the login screen. Challenges are kept in memory (single worker).
 
 ### Optional server add-on
 - Off by default. Only when `ADDON_URL` is set (origin of a separate add-on container, e.g. `http://addon:8000`, on the api and web containers) the add-on is reachable. The auth answers always have the same shape, with or without `ADDON_URL`: for a logged-in user, `GET /auth/me`, login, setup, invitation accept, password change/reset accept and passkey login all send `id` and `created_at` (the add-on identifies an account as `id:created_at`, since ids can be reused) and `addon` (true only when `ADDON_URL` is set; built by `logged_in_user` in `schemas/auth.py`); logged out, `id` and `created_at` are absent and `addon` is false. `GET /auth/users` always has `created_at`. The web container proxies `/addon/` to the add-on (`40-addon.sh` writes the nginx block at start; invalid URL = the container stops; the name is resolved lazily through Docker's DNS, so the site starts even if the add-on is down and `/addon/` answers 502 until it is up) and the profile menu shows "Game server" (`/addon/`) when `addon` is true. Without `ADDON_URL`: no menu entry, no route, no nginx block; the extra fields above are still sent.
 
+### Profile popup (account menu > Profile)
+- One dialog, tabs along the top: **Account** (user name, read-only; language; change password), **Passkeys** (only when passkeys are available), **Customization** (menu layout `auto|left|top`, kept per device), **Danger zone** (delete my account). Each setting applies at once, except the password which has its own Save button; there is no global save button. The top bar has no language switch: the language is chosen when creating the account and then here.
+- The first-account and invitation dialogs have a language select, saved with the account at its first login. The client sends `lang` only when this tab changed it (or the account has none), and `PUT /settings` keeps the stored `lang` when the body has none, so a stale tab cannot erase it. A test checks that the front and back lists agree, and another that the map data holds the same languages. The language list comes from `LANGUAGES` (`core/lang.ts`); the backend keeps the same list (`schemas/settings.py`, `PUT /settings` answers 422 for an unknown `lang`). The language is kept in the account settings (`lang` beside `filters`): at login the account's language wins, and an account without one takes the browser's saved choice (then saves it). The top bar switch stays and changes the same value.
+
 ### Deleting an account
-- A player deletes their own account (`POST /auth/delete-account`, password required): progress, builds, profiles and sessions are erased.
+- A player deletes their own account (profile > Danger zone, `POST /auth/delete-account`, password required): progress, builds, profiles and sessions are erased.
 - The administrator deletes another account (profile > Administration, `DELETE /auth/users/{id}`): same cascade plus leaving the team (an owner hands it over). Never itself, never the first account. The Administration dialog also holds the reset links.
 
 ---
@@ -88,6 +92,7 @@ The map stays mounted (hidden) when another screen is shown; the others load on 
 
 ## 3. Teams
 
+- The team popup has the same tabs look as Profile: **Team** (name: create or rename), **Members** (list, add, invitation link, hand over) and **Danger zone** (leave, disband); the last two only once there is a team.
 - At most one team per player. The creator is the **owner**: only the owner renames, disbands or hands the team over (`POST /team/owner`; the former owner stays a member).
 - Any member: adds an existing player who has no team (immediate, `POST /team/members`), removes another member (not the owner, not themself), creates an invitation link whose new account joins the team.
 - Leaving is always possible. If the owner leaves, the longest-standing member becomes owner; the last one to leave closes the team. Marks stay personal in every case.
@@ -272,7 +277,7 @@ Our own rule, not the game's, and never an equipment suggestion. For each armour
 
 ## 12. Languages, layout, accessibility
 
-- FR / EN (Transloco), chosen in the top bar and remembered per device. With the user, talk in French.
+- FR / EN (Transloco), chosen when creating the account or in Profile > Account, kept by the account (`/settings`) and cached per device (`localStorage` `lang`, used before login). With the user, talk in French.
 - The left menu's position is per device. `.tabs` of the workshop and lore keep a fixed height, and a test measures the layout shift.
 - Every screen must pass AXE and WCAG AA; AXE runs in the e2e suite on each workshop tab.
 - Visual identity "Codex of the Shroud": tokens only, enforced by `npm run lint` (rules in `frontend/CLAUDE.md`).
@@ -302,7 +307,7 @@ Our own rule, not the game's, and never an equipment suggestion. For each armour
 | State | Server | Browser (`localStorage`) |
 | --- | --- | --- |
 | Marks | `marks` (per profile) | — |
-| Map filters | `/settings` (per player) | — |
+| Map filters, language | `/settings` (per player: `filters`, `lang`) | `lang` (cache, used before login) |
 | Character sheet | `character_sheets` (per profile) | cache `skillDraft:<id>`, `itemLevels:<id>`, `activeWeapon:<id>` |
 | Saved builds | `builds` (per profile) | — |
 | Explored area | `fogs` (per profile) | cache `fog:<id>`, `fogShare:<id>`; ticked layers `fogView`; `onlyExplored` |
@@ -310,7 +315,7 @@ Our own rule, not the game's, and never an equipment suggestion. For each armour
 | Last import | — | `lastImport:<id>` |
 | Game configuration | `game_configs` (per team, else per player) | unsaved draft `gameSettings` |
 | Calculator project | — | `project` |
-| Language, menu layout, menu hidden, legend folded | — | `lang`, `layout`, `menu`, `legend` |
+| Menu layout, menu hidden, legend folded | — | `layout`, `menu`, `legend` |
 
 Everything personal in the browser is wiped at logout. The first version's single keys (`skillDraft`, `itemLevels`, `activeWeapon`, `fog`...) go to the first profile that asks.
 

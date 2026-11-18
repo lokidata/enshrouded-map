@@ -16,6 +16,8 @@ import { GameSettingsStore } from './game-settings.store';
 import { GemsService } from './gems.service';
 import { SkillsService } from './skills.service';
 import { FilterStore } from './filter.store';
+import { LangService } from './lang.service';
+import { chooseLang, supportedLang } from './lang';
 import { takeHashToken } from './links';
 import { MapDataService } from './map-data.service';
 import { ProgressStore } from './progress.store';
@@ -31,6 +33,7 @@ export class SessionService {
   private readonly auth = inject(AuthService);
   private readonly progress = inject(ProgressStore);
   private readonly filters = inject(FilterStore);
+  private readonly lang = inject(LangService);
   private readonly team = inject(TeamStore);
   private readonly views = inject(ViewStore);
   private readonly mapData = inject(MapDataService);
@@ -46,6 +49,8 @@ export class SessionService {
   private readonly fog = inject(FogStore);
   private readonly characters = inject(CharacterStore);
 
+  /** The language the account holds, as far as this tab knows. */
+  private accountLang: string | null = null;
   private saved: string | null = null;
   private pending: string | null = null;
   private timer: ReturnType<typeof setTimeout> | undefined;
@@ -62,7 +67,7 @@ export class SessionService {
       }
     });
     effect(() => {
-      const json = JSON.stringify({ filters: this.filters.overrides() });
+      const json = this.json();
       if (!this.auth.user() || json === this.saved) return;
       this.pending = json;
       clearTimeout(this.timer);
@@ -147,7 +152,7 @@ export class SessionService {
     this.characters.clear();
     this.views.set('map');
     this.filters.reset();
-    this.saved = this.pending = null;
+    this.saved = this.pending = this.accountLang = null;
     this.configFor = '';
     this.auth.dialog.set('login');
   }
@@ -164,7 +169,7 @@ export class SessionService {
       this.presets.load(), // and settings-presets.json
       firstValueFrom(this.http.get<{ marks: string[] }>('api/v1/progress')),
       firstValueFrom(
-        this.http.get<{ settings: { filters?: Record<string, boolean> } | null }>(
+        this.http.get<{ settings: { filters?: Record<string, boolean>; lang?: string } | null }>(
           'api/v1/settings',
         ),
       ),
@@ -174,7 +179,11 @@ export class SessionService {
     this.progress.set(marks.marks);
     // A new profile has no saved filters: it keeps the ones chosen so far, and they get saved.
     if (settings.settings) this.filters.restore(settings.settings);
-    this.saved = settings.settings ? JSON.stringify({ filters: this.filters.overrides() }) : null;
+    // The account's language wins, else this browser's one (then saved with the next push).
+    this.accountLang = supportedLang(settings.settings?.lang);
+    const wanted = chooseLang(settings.settings?.lang, this.lang.lang());
+    if (wanted !== this.lang.lang()) await this.lang.set(wanted);
+    this.saved = this.accountLang ? this.json() : null;
     this.auth.isAdmin.set(info.is_admin);
     this.auth.addonEnabled.set(!!info.addon);
     this.auth.user.set(info.username);
@@ -218,6 +227,16 @@ export class SessionService {
     await this.team.load();
   }
 
+  /** What is saved with the account's settings. The language goes only when this tab changed it (or the
+   *  account has none): a stale tab then cannot overwrite a newer choice, and the server keeps a missing one. */
+  private json(): string {
+    const lang = this.lang.lang();
+    return JSON.stringify({
+      filters: this.filters.overrides(),
+      ...(lang !== this.accountLang && { lang }),
+    });
+  }
+
   private teamKey(): string {
     const t = this.team.team();
     return t ? `${t.id}:${t.is_owner}` : '';
@@ -229,6 +248,8 @@ export class SessionService {
     try {
       await firstValueFrom(this.http.put('api/v1/settings', { settings: JSON.parse(json) }));
       this.saved = json;
+      const sent = (JSON.parse(json) as { lang?: string }).lang;
+      if (sent) this.accountLang = sent;
       if (this.pending === json) this.pending = null;
     } catch {
       // stays pending: sent again with the next change

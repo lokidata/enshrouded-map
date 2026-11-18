@@ -2,6 +2,8 @@ import { Component, ElementRef, effect, inject, signal, viewChild } from '@angul
 import { FormField, form, maxLength, pattern, required, submit } from '@angular/forms/signals';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { AuthService, errorCode } from '../core/auth.service';
+import { LANGUAGES } from '../core/lang';
+import { LangService } from '../core/lang.service';
 import { SessionService } from '../core/session.service';
 
 @Component({
@@ -13,6 +15,8 @@ import { SessionService } from '../core/session.service';
 export class AuthDialog {
   protected readonly auth = inject(AuthService);
   private readonly session = inject(SessionService);
+  protected readonly lang = inject(LangService);
+  protected readonly languages = LANGUAGES;
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
 
   protected readonly model = signal({ username: '', password: '', again: '', setupToken: '' });

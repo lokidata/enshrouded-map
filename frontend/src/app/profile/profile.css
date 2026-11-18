@@ -1,0 +1,80 @@
+h3.gap {
+  margin-top: 20px;
+}
+h3 {
+  margin: 0 0 4px;
+  font: 400 17px/1.2 var(--display);
+  color: var(--gold);
+}
+label {
+  display: block;
+  margin-top: 12px;
+  font: 400 15px/1.2 var(--display-sc);
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+input,
+select {
+  width: 100%;
+  margin-top: 4px;
+  padding: 8px 10px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  background: var(--ink);
+  color: var(--text);
+  font: 15px var(--ui);
+}
+input:focus {
+  border-color: var(--gold);
+}
+.pw {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+}
+.pw label {
+  flex: 1;
+}
+.error {
+  min-height: 18px;
+  margin-top: 10px;
+  color: var(--bad);
+  font-size: 14px;
+}
+.ok {
+  margin-top: 6px;
+  color: var(--ok);
+  font-size: 14px;
+}
+.hint {
+  margin: 6px 0 0;
+  font-size: 14px;
+  font-style: italic;
+  color: var(--muted);
+}
+.warn {
+  margin: 0;
+  font-size: 15px;
+  color: var(--bad);
+}
+ul {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  font-size: 14px;
+}
+li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 5px 0;
+}
+button.danger {
+  border-color: var(--danger);
+  background: var(--danger);
+  color: #fff;
+}
+button.danger:hover {
+  background: var(--danger-hover);
+}

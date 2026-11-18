@@ -37,6 +37,15 @@ async function menu(page: Page, item: string): Promise<void> {
   await page.getByRole('menuitem', { name: item }).click();
 }
 
+/** Menu layout, chosen in Profile > Personnalisation. */
+async function layoutChoice(page: Page, label: string): Promise<void> {
+  await menu(page, 'Profil');
+  const dialog = page.getByRole('dialog');
+  await dialog.getByRole('tab', { name: 'Personnalisation' }).click();
+  await dialog.getByLabel('Disposition du menu').selectOption({ label });
+  await page.keyboard.press('Escape');
+}
+
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 /** The server keeps the sheet of every earlier test: start a Character test from an empty one (logged in). */
 async function blankSheet(page: Page): Promise<void> {
@@ -61,6 +70,32 @@ async function blankSheet(page: Page): Promise<void> {
 
 test.describe.configure({ mode: 'serial' }); // the second test needs the account of the first
 
+// The account keeps its language: whatever a test did (even failing half way), the next ones find French.
+test.afterEach(async ({ page }) => {
+  try {
+    if (
+      !(await page.locator('.who').count()) ||
+      (await page.locator('html').getAttribute('lang')) === 'fr'
+    )
+      return;
+    await page.keyboard.press('Escape');
+    await menu(page, 'Profil'); // also matches "Profile"
+    await page
+      .getByRole('dialog')
+      .getByLabel(/Langue|Language/)
+      .selectOption('fr');
+    await expect(page.locator('html')).toHaveAttribute('lang', 'fr');
+    // wait for the debounced save: the next test signs in again and reads the account's language
+    await expect
+      .poll(() =>
+        page.evaluate(async () => (await (await fetch('api/v1/settings')).json()).settings?.lang),
+      )
+      .toBe('fr');
+  } catch {
+    // the page is gone or logged out: nothing to restore from here
+  }
+});
+
 const user = `e2e${Date.now()}`;
 const password = 'correct horse battery';
 const setupToken = process.env['SETUP_TOKEN']!; // set by the Playwright config or by `make e2e-stack`
@@ -82,6 +117,10 @@ test('register, mark an element, and find everything again after a reload @cross
   await page.keyboard.press('Escape');
   await expect(dialog).toBeVisible();
   await expect(dialog.getByRole('button', { name: 'Annuler' })).toHaveCount(0);
+  // the language is chosen while creating the account
+  await dialog.getByLabel('Langue').selectOption('en');
+  await expect(dialog.getByRole('heading')).toHaveText('Create the first account');
+  await dialog.getByLabel('Language').selectOption('fr');
   await dialog.getByLabel("Nom d'utilisateur").fill(user);
   await dialog.getByLabel('Mot de passe', { exact: true }).fill(password);
   await dialog.getByLabel('Confirmation').fill(password);
@@ -96,7 +135,9 @@ test('register, mark an element, and find everything again after a reload @cross
   await expect(page.locator('.leaflet-tile-loaded').first()).toBeVisible();
 
   // language switch
-  await page.getByRole('button', { name: 'EN', exact: true }).click();
+  await menu(page, 'Profil');
+  await page.getByRole('dialog').getByLabel('Langue').selectOption('en');
+  await page.keyboard.press('Escape');
   await expect(page.locator('h1')).toHaveText('Enshrouded map');
 
   // only bosses on the map (saved in the profile)
@@ -122,8 +163,8 @@ test('register, mark an element, and find everything again after a reload @cross
       ),
     )
     // only the fast-travel markers differ from the defaults: the bosses are shown by default, so showing them
-    // again drops their override
-    .toBe('{"filters":{"fastTravel|*":false}}');
+    // again drops their override; the language chosen above is kept with them
+    .toBe('{"filters":{"fastTravel|*":false},"lang":"en"}');
   await page.reload();
   await expect(page.locator('.who')).toContainText(`${user} · 1`);
   await expect(
@@ -133,6 +174,15 @@ test('register, mark an element, and find everything again after a reload @cross
     page.locator('app-category-card', { hasText: 'Chest' }).first().locator('.toggle'),
   ).toHaveAttribute('aria-pressed', 'false');
   await expect(page.locator('h1')).toHaveText('Enshrouded map'); // language remembered
+  // the account keeps it: back to French so the next tests (same account) find their texts
+  await menu(page, 'Profile');
+  await page.getByRole('dialog').getByLabel('Language').selectOption('fr');
+  await page.keyboard.press('Escape');
+  await expect
+    .poll(async () =>
+      page.evaluate(async () => (await (await fetch('api/v1/settings')).json()).settings?.lang),
+    )
+    .toBe('fr');
 
   // the colour legend can be folded, and stays folded after a reload
   const legend = page.getByRole('button', { name: /Légende|Legend/ });
@@ -152,8 +202,8 @@ test('register, mark an element, and find everything again after a reload @cross
   );
 
   // log out: back to the defaults
-  await menu(page, 'Log out');
-  await expect(page.getByRole('dialog').getByRole('heading')).toHaveText('Log in');
+  await menu(page, 'Déconnexion');
+  await expect(page.getByRole('dialog').getByRole('heading')).toHaveText('Se connecter');
 });
 
 test('an account can only be created from a single-use invitation link @cross', async ({
@@ -166,12 +216,12 @@ test('an account can only be created from a single-use invitation link @cross', 
   await page.getByRole('dialog').getByRole('button', { name: 'Se connecter' }).click();
   await expect(page.locator('.who')).toContainText(user);
   // the menu goes on top of the map, or back to the left
-  await page.getByRole('button', { name: 'Menu en haut' }).click();
+  await layoutChoice(page, 'Menu en haut');
   await expect(page.locator('.body')).toHaveClass(/top/);
   await expect
     .poll(async () => (await page.locator('aside').boundingBox())!.width)
     .toBe(page.viewportSize()!.width);
-  await page.getByRole('button', { name: 'Menu à gauche' }).click();
+  await layoutChoice(page, 'Menu à gauche');
   await expect(page.locator('.body')).not.toHaveClass(/top/);
   // the left menu can be hidden (the map takes its room) and shown again
   await page.getByRole('button', { name: 'Masquer le menu' }).click();
@@ -223,8 +273,8 @@ test('change my password, show it while typing, and reset someone else’s with 
   await expect(page.locator('.who')).toContainText(user);
 
   // change my own password: the current one is checked
-  await menu(page, 'Mot de passe');
-  const account = page.getByRole('dialog');
+  await menu(page, 'Profil');
+  const account = page.locator('app-profile');
   await account.getByLabel('Mot de passe actuel').fill('not my password');
   await account.getByLabel('Nouveau mot de passe').fill(newPassword);
   await account.getByLabel('Confirmation').fill('something else');
@@ -237,8 +287,8 @@ test('change my password, show it while typing, and reset someone else’s with 
   await account.getByRole('button', { name: 'Enregistrer' }).click();
   await expect(account.getByRole('status')).toContainText('Mot de passe modifié');
 
+  await page.keyboard.press('Escape');
   // the first account generates a reset link for "guest" (created by the previous test)
-  await account.getByRole('button', { name: 'Fermer' }).last().click();
   await menu(page, 'Administration');
   const tools = page.getByRole('dialog');
   await tools.getByRole('button', { name: 'Générer le lien' }).click();
@@ -281,6 +331,7 @@ test('team: create, add a player, invite a new one, see who marked what', async 
   await dialog.getByRole('button', { name: "Créer l'équipe" }).click();
 
   // an existing player is added directly
+  await dialog.getByRole('tab', { name: 'Membres' }).click();
   await dialog.getByLabel('Ajouter un joueur existant').selectOption({ label: 'guest' });
   await dialog.getByRole('button', { name: 'Ajouter', exact: true }).click();
   await expect(dialog.getByRole('listitem')).toHaveCount(2);
@@ -296,7 +347,9 @@ test('team: create, add a player, invite a new one, see who marked what', async 
   await carl.getByRole('dialog').getByRole('button', { name: 'Créer le compte' }).click();
   await expect(carl.locator('.who')).toContainText('carl');
   await menu(carl, 'Équipe');
+  await carl.getByRole('dialog').getByRole('tab', { name: 'Membres' }).click();
   await expect(carl.getByRole('dialog').getByRole('listitem')).toHaveCount(3);
+  await carl.getByRole('dialog').getByRole('tab', { name: 'Zone dangereuse' }).click();
   await expect(carl.getByRole('button', { name: "Quitter l'équipe" })).toHaveCSS(
     'background-color',
     'rgb(184, 69, 59)',
@@ -304,22 +357,23 @@ test('team: create, add a player, invite a new one, see who marked what', async 
   // leaving asks for a confirmation: refusing changes nothing
   carl.once('dialog', (d) => void d.dismiss());
   await carl.getByRole('button', { name: "Quitter l'équipe" }).click();
-  await expect(carl.getByRole('dialog').getByRole('listitem')).toHaveCount(3);
+  await expect(carl.getByRole('button', { name: "Quitter l'équipe" })).toBeVisible();
   carl.once('dialog', (d) => void d.accept());
   await carl.getByRole('button', { name: "Quitter l'équipe" }).click();
   await expect(carl.getByRole('dialog').getByLabel("Nom de l'équipe")).toHaveValue('');
 
   // carl erases his own account: the warning is shown, the password is asked, the login is gone
   await carl.getByRole('button', { name: 'Fermer' }).first().click(); // the ✕ in the corner
-  await menu(carl, 'Supprimer mon compte');
-  const del = carl.getByRole('dialog');
-  await expect(del).toContainText('toute votre progression');
-  await del.getByLabel('Mot de passe actuel').fill('wrong password');
-  await del.getByRole('button', { name: 'Supprimer définitivement' }).click();
-  await expect(del.getByRole('alert')).toContainText('Mot de passe actuel incorrect');
-  await del.getByLabel('Mot de passe actuel').fill(password);
-  await del.getByRole('button', { name: 'Supprimer définitivement' }).click();
-  await expect(carl.getByRole('dialog').getByRole('heading')).toHaveText('Se connecter');
+  await menu(carl, 'Profil');
+  const profile = carl.locator('app-profile');
+  await profile.getByRole('tab', { name: 'Zone dangereuse' }).click();
+  await expect(profile).toContainText('toute votre progression');
+  await profile.getByLabel('Mot de passe actuel').fill('wrong password');
+  await profile.getByRole('button', { name: 'Supprimer définitivement' }).click();
+  await expect(profile.getByRole('alert')).toContainText('Mot de passe actuel incorrect');
+  await profile.getByLabel('Mot de passe actuel').fill(password);
+  await profile.getByRole('button', { name: 'Supprimer définitivement' }).click();
+  await expect(carl.getByRole('dialog', { name: 'Se connecter' })).toBeVisible();
   await carl.getByLabel("Nom d'utilisateur").fill('carl');
   await carl.getByLabel('Mot de passe', { exact: true }).fill(password);
   await carl.getByRole('dialog').getByRole('button', { name: 'Se connecter' }).click();
@@ -353,20 +407,30 @@ test('team: create, add a player, invite a new one, see who marked what', async 
   // the owner hands the team to guest (after a confirmation), who can now rename it; guest hands it back
   await menu(page, 'Équipe');
   const mine = page.getByRole('dialog');
+  await mine.getByRole('tab', { name: 'Membres' }).click();
   page.once('dialog', (d) => void d.dismiss());
   await mine.getByRole('button', { name: 'Transférer le rôle de créateur à guest' }).click();
-  await expect(mine.getByRole('button', { name: 'Renommer' })).toBeVisible(); // refused: still owner
+  await expect(
+    mine.getByRole('button', { name: 'Transférer le rôle de créateur à guest' }),
+  ).toBeVisible(); // refused: still owner
   page.once('dialog', (d) => void d.accept());
   await mine.getByRole('button', { name: 'Transférer le rôle de créateur à guest' }).click();
+  await expect(
+    mine.getByRole('button', { name: 'Transférer le rôle de créateur à guest' }),
+  ).toHaveCount(0);
+  await mine.getByRole('tab', { name: 'Équipe', exact: true }).click();
   await expect(mine.getByRole('button', { name: 'Renommer' })).toHaveCount(0);
+  await mine.getByRole('tab', { name: 'Zone dangereuse' }).click();
   await expect(mine.getByRole('button', { name: "Dissoudre l'équipe" })).toHaveCount(0);
 
   await guest.reload();
   await menu(guest, 'Équipe');
   const theirs = guest.getByRole('dialog');
   await expect(theirs.getByRole('button', { name: 'Renommer' })).toBeVisible();
+  await theirs.getByRole('tab', { name: 'Membres' }).click();
   guest.once('dialog', (d) => void d.accept());
   await theirs.getByRole('button', { name: `Transférer le rôle de créateur à ${user}` }).click();
+  await theirs.getByRole('tab', { name: 'Équipe', exact: true }).click();
   await expect(theirs.getByRole('button', { name: 'Renommer' })).toHaveCount(0);
 });
 
@@ -443,25 +507,81 @@ test('passkeys: add one from the profile menu, sign in with it, delete it', asyn
   const me = await page.evaluate(async () => (await fetch('api/v1/auth/me')).json());
   test.skip(!me.passkeys_enabled, 'the server has no WEBAUTHN_RP_ID');
 
-  await menu(page, 'Passkeys');
-  const dialog = page.getByRole('dialog');
+  await menu(page, 'Profil');
+  await page.getByRole('tab', { name: 'Passkeys' }).click();
+  const dialog = page.locator('app-profile');
   await expect(dialog).toContainText('Aucune passkey enregistrée.');
   await dialog.getByLabel('Nom de la passkey').fill('Mon test');
   await dialog.getByRole('button', { name: 'Ajouter une passkey' }).click();
   await expect(dialog.getByRole('status')).toHaveText('Passkey ajoutée.');
   await expect(dialog.getByRole('listitem')).toContainText('Mon test');
-  await dialog.getByRole('button', { name: 'Fermer' }).first().click();
 
+  await page.keyboard.press('Escape');
   // signed out, the login screen offers the passkey: no user name or password to type
   await menu(page, 'Déconnexion');
   await page.getByRole('button', { name: /Utiliser une passkey/ }).click();
   await expect(page.locator('.who')).toContainText(user);
 
   // delete it (the browser asks first), the password still works
-  await menu(page, 'Passkeys');
+  await menu(page, 'Profil');
+  await page.getByRole('tab', { name: 'Passkeys' }).click();
   page.once('dialog', (d) => void d.accept());
-  await page.getByRole('dialog').getByRole('button', { name: 'Supprimer' }).click();
-  await expect(page.getByRole('dialog')).toContainText('Aucune passkey enregistrée.');
+  await page.locator('app-profile').getByRole('button', { name: 'Supprimer' }).click();
+  await expect(page.locator('app-profile')).toContainText('Aucune passkey enregistrée.');
+});
+
+test('profile: the language is kept by the account, passkeys tab only when available', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByLabel("Nom d'utilisateur").fill(user);
+  await page
+    .getByRole('dialog')
+    .getByLabel('Mot de passe', { exact: true })
+    .fill('a brand new passphrase');
+  await page.getByRole('dialog').getByRole('button', { name: 'Se connecter' }).click();
+  await expect(page.locator('.who')).toContainText(user);
+  const me = await page.evaluate(async () => (await fetch('api/v1/auth/me')).json());
+
+  await menu(page, 'Profil');
+  const profile = page.locator('app-profile');
+  const passkeys = profile.getByRole('tab', { name: 'Passkeys' });
+  if (me.passkeys_enabled) await expect(passkeys).toBeVisible();
+  else await expect(passkeys).toHaveCount(0);
+
+  await profile.getByLabel('Langue').selectOption('en');
+  await expect(profile.getByRole('tab', { name: 'Danger zone' })).toBeVisible();
+  // the tabs follow the WAI-ARIA pattern: an arrow key moves to the next one
+  await profile.getByRole('tab', { name: 'Account' }).focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(profile.getByRole('tab', { name: 'Account' })).toHaveAttribute(
+    'aria-selected',
+    'false',
+  );
+  await expect(profile.getByRole('tabpanel')).toBeVisible();
+  // the account got it (sent a moment later), not only this browser
+  await expect
+    .poll(async () =>
+      page.evaluate(async () => (await (await fetch('api/v1/settings')).json()).settings?.lang),
+    )
+    .toBe('en');
+  // another browser (no saved language) signs in: the account's language wins
+  await page.evaluate(() => localStorage.removeItem('lang'));
+  await page.reload();
+  await expect(page.locator('.who')).toContainText(user);
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+
+  // back to French (the next tests use the same account)
+  await menu(page, 'Profile');
+  await page.locator('app-profile').getByLabel('Language').selectOption('fr');
+  await expect(
+    page.locator('app-profile').getByRole('tab', { name: 'Zone dangereuse' }),
+  ).toBeVisible();
+  await expect
+    .poll(async () =>
+      page.evaluate(async () => (await (await fetch('api/v1/settings')).json()).settings?.lang),
+    )
+    .toBe('fr');
 });
 
 test('landmarks (fast travel, start) are bigger and stay bright when marked', async ({ page }) => {

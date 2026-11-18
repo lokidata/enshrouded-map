@@ -19,6 +19,19 @@
         ) | transloco
       }}
     </h2>
+    @if (auth.dialog() === 'setup' || auth.dialog() === 'invite') {
+      <!-- the account keeps this choice (saved at the first login) -->
+      <label>
+        {{ 'language' | transloco }}
+        <select (change)="lang.set($any($event.target).value)">
+          @for (code of languages; track code) {
+            <option [value]="code" [selected]="lang.lang() === code">
+              {{ 'language_' + code | transloco }}
+            </option>
+          }
+        </select>
+      </label>
+    }
     @if (auth.dialog() === 'setup') {
       <p class="hint">{{ 'setupHint' | transloco }}</p>
     }
