@@ -10,16 +10,17 @@ import { TranslocoService, provideTransloco } from '@jsverse/transloco';
 import { firstValueFrom } from 'rxjs';
 import { authInterceptor } from './core/auth.interceptor';
 import { SessionService } from './core/session.service';
+import { DEFAULT_LANG, LANGUAGES, supportedLang } from './core/lang';
 import { TranslocoHttpLoader } from './core/transloco-loader';
 
 const storedLang = (): string => {
   try {
-    const lang = localStorage.getItem('lang');
-    if (lang === 'fr' || lang === 'en') return lang;
+    const lang = supportedLang(localStorage.getItem('lang'));
+    if (lang) return lang;
   } catch {
     // storage blocked
   }
-  return 'fr';
+  return DEFAULT_LANG;
 };
 
 export const appConfig: ApplicationConfig = {
@@ -29,7 +30,7 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(withInterceptors([authInterceptor])),
     provideTransloco({
       config: {
-        availableLangs: ['fr', 'en'],
+        availableLangs: [...LANGUAGES],
         defaultLang: storedLang(),
         reRenderOnLangChange: true,
         prodMode: !isDevMode(),

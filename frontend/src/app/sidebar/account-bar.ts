@@ -54,14 +54,9 @@ import { TeamStore } from '../core/team.store';
             <button type="button" role="menuitem" (click)="pick(openSaveImport)">
               {{ 'saveImport' | transloco }}
             </button>
-            <button type="button" role="menuitem" (click)="pick(openPassword)">
-              {{ 'passwordMenu' | transloco }}
+            <button type="button" role="menuitem" (click)="pick(openProfile)">
+              {{ 'profile' | transloco }}
             </button>
-            @if (auth.passkeysAvailable()) {
-              <button type="button" role="menuitem" (click)="pick(openPasskeys)">
-                {{ 'passkeys' | transloco }}
-              </button>
-            }
             @if (auth.addonEnabled()) {
               <a role="menuitem" href="/addon/">{{ 'addonMenu' | transloco }}</a>
             }
@@ -70,9 +65,6 @@ import { TeamStore } from '../core/team.store';
                 {{ 'adminMenu' | transloco }}
               </button>
             }
-            <button type="button" role="menuitem" class="danger" (click)="pick(openDelete)">
-              {{ 'deleteAccount' | transloco }}
-            </button>
             <button type="button" role="menuitem" (click)="pick(logout)">
               {{ 'logout' | transloco }}
             </button>
@@ -156,9 +148,6 @@ import { TeamStore } from '../core/team.store';
     .menu button:focus-visible {
       background: var(--bg);
     }
-    .menu button.danger {
-      color: var(--bad);
-    }
     button {
       padding: 4px 9px;
       border: 1px solid var(--border);
@@ -222,13 +211,11 @@ export class AccountBar {
 
   protected readonly invite = (): Promise<void> => this.createInvite();
   protected readonly openTeam = (): void => this.team.dialogOpen.set(true);
-  protected readonly openPassword = (): void => this.auth.accountOpen.set(true);
+  protected readonly openProfile = (): void => this.auth.profileOpen.set(true);
   protected readonly openCharacters = (): void => this.characters.dialogOpen.set(true);
   protected readonly openProgress = (): void => this.auth.progressOpen.set(true);
   protected readonly openSaveImport = (): void => this.auth.saveImportOpen.set(true);
-  protected readonly openPasskeys = (): void => this.auth.passkeysOpen.set(true);
   protected readonly openAdmin = (): void => this.auth.adminOpen.set(true);
-  protected readonly openDelete = (): void => this.auth.deleteOpen.set(true);
   protected readonly logout = (): Promise<void> => this.session.logout();
 
   protected switchTo(id: number): void {

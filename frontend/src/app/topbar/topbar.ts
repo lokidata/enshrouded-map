@@ -2,12 +2,9 @@ import { Component, computed, inject } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { CraftService } from '../core/craft.service';
 import { EnemiesService } from '../core/enemies.service';
-import { LAYOUTS, LayoutService } from '../core/layout.service';
 import { LoreService } from '../core/lore.service';
 import { GearService } from '../core/gear.service';
 import { SkillsService } from '../core/skills.service';
-import { LangService } from '../core/lang.service';
-import { MapDataService } from '../core/map-data.service';
 import { ViewStore } from '../core/view.store';
 import { AccountBar } from '../sidebar/account-bar';
 
@@ -76,34 +73,6 @@ import { AccountBar } from '../sidebar/account-bar';
       </button>
     </nav>
     <span class="spacer"></span>
-    @if (views.view() === 'map') {
-      <div class="group" role="group" [attr.aria-label]="'layout' | transloco">
-        @for (l of layouts; track l) {
-          <button
-            type="button"
-            [class.active]="layout.pref() === l"
-            [attr.aria-pressed]="layout.pref() === l"
-            [attr.aria-label]="'layout_' + l | transloco"
-            [title]="'layout_' + l | transloco"
-            (click)="layout.set(l)"
-          >
-            {{ layoutIcon[l] }}
-          </button>
-        }
-      </div>
-    }
-    <div class="group" role="group" [attr.aria-label]="'language' | transloco">
-      @for (code of languages; track code) {
-        <button
-          type="button"
-          [class.active]="lang.lang() === code"
-          [attr.aria-pressed]="lang.lang() === code"
-          (click)="lang.set(code)"
-        >
-          {{ code.toUpperCase() }}
-        </button>
-      }
-    </div>
     <app-account-bar />
   `,
   host: { class: 'topbar' },
@@ -171,29 +140,6 @@ import { AccountBar } from '../sidebar/account-bar';
     .spacer {
       flex: 1;
     }
-    .group {
-      display: flex;
-      border: 1px solid var(--gold-dim);
-      border-radius: 3px;
-      overflow: hidden;
-    }
-    .group button {
-      padding: 3px 9px;
-      border: 0;
-      background: transparent;
-      color: var(--muted);
-      cursor: pointer;
-      font: inherit;
-      font-size: 14px;
-    }
-    .group button:hover {
-      color: var(--text);
-    }
-    .group button.active {
-      background: var(--accent);
-      color: var(--accent-ink);
-      font-weight: 700;
-    }
     button:focus-visible {
       outline: 2px solid var(--accent);
       outline-offset: -2px;
@@ -231,12 +177,7 @@ export class TopBar {
   protected readonly skills = inject(SkillsService);
   protected readonly gear = inject(GearService);
   protected readonly views = inject(ViewStore);
-  protected readonly layout = inject(LayoutService);
-  protected readonly lang = inject(LangService);
-  protected readonly layouts = LAYOUTS;
-  protected readonly layoutIcon = { auto: 'A', left: '◧', top: '⬒' };
   protected readonly inBuild = computed(() =>
     ['build', 'equipment', 'skills'].includes(this.views.view()),
   );
-  protected readonly languages = inject(MapDataService).data.languages;
 }

@@ -1,7 +1,8 @@
-import { Component, ElementRef, effect, inject, signal, viewChild } from '@angular/core';
+import { Component, ElementRef, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { FormField, form, maxLength, required, submit } from '@angular/forms/signals';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { AuthService, errorCode } from '../core/auth.service';
+import { tabAfterKey } from '../core/tabs';
 import { copyText, hashLink, timeOf } from '../core/links';
 import { Player, TeamStore } from '../core/team.store';
 
@@ -23,6 +24,15 @@ export class TeamDialog {
     required(path.name);
     maxLength(path.name, 40);
   });
+  protected readonly tab = signal<'general' | 'members' | 'danger'>('general');
+  /** Members and the way out exist only once there is a team. */
+  protected readonly tabs = computed<('general' | 'members' | 'danger')[]>(() =>
+    this.store.team() ? ['general', 'members', 'danger'] : ['general'],
+  );
+  /** The open tab; the first one when it has gone (after leaving the team). */
+  protected readonly active = computed(() =>
+    this.tabs().includes(this.tab()) ? this.tab() : 'general',
+  );
   protected readonly error = signal('');
   protected readonly players = signal<Player[]>([]); // in no team: the owner can add them
   protected readonly picked = signal(0);
@@ -35,6 +45,7 @@ export class TeamDialog {
       const el = this.dialog().nativeElement;
       if (open && !el.open) {
         el.showModal();
+        this.tab.set('general');
         this.error.set('');
         this.link.set(null);
         this.model.set({ name: this.store.team()?.name ?? '' });
@@ -42,6 +53,14 @@ export class TeamDialog {
       }
       if (!open && el.open) el.close();
     });
+  }
+
+  protected keys(event: KeyboardEvent): void {
+    const next = tabAfterKey(this.tabs(), this.active(), event.key);
+    if (!next) return;
+    event.preventDefault();
+    this.tab.set(next);
+    setTimeout(() => document.getElementById('team-tab-' + next)?.focus());
   }
 
   protected close(): void {
@@ -127,6 +146,7 @@ export class TeamDialog {
 
   private async afterExit(done: Promise<void>): Promise<void> {
     await done;
+    this.tab.set('general');
     this.players.set([]);
     this.link.set(null);
     this.model.set({ name: '' });
