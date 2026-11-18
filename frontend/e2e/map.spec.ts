@@ -1340,11 +1340,18 @@ test('a marker done on the map shows everywhere, and the other way round', async
   await linked.getByLabel('Débloquée').check();
   await expect(who).toContainText(`${base + 1} faits`);
 
-  // it is saved: still so after a reload
-  await expect(async () => {
-    await page.reload();
-    await expect(who).toContainText(`${base + 1} faits`, { timeout: 1000 });
-  }).toPass();
+  // it is saved: wait until the server holds it (a reload before that drops the queued save, and no
+  // retry can bring the mark back), then still so after a reload
+  await expect
+    .poll(async () =>
+      page.evaluate(async () => {
+        const { marks } = (await (await fetch('api/v1/progress')).json()) as { marks: string[] };
+        return marks.filter((m) => !/^(recipe|lore|quest):/.test(m)).length; // as the counter
+      }),
+    )
+    .toBe(base + 1);
+  await page.reload();
+  await expect(who).toContainText(`${base + 1} faits`);
 });
 
 test('enemies: filters, facts, show on the map, AXE', async ({ page }) => {
