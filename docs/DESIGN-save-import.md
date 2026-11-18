@@ -64,6 +64,17 @@ Decode `fogofwar` into a canvas, show it as a toggleable overlay (Leaflet image 
 
 Match the `scene_entity` x/z to our markers (wells, towers, discovered places) and propose them in the same preview. Not before checking the match on real data.
 
+### `base00..05` (server `world0.ksd`): Flame Altar spots and levels
+
+Checked on one world save (2026-11-17), the user confirmed in game: 1 altar of level 4 and 4 of level 1, positions correct.
+
+Each `base` section starts with `[16 bytes GUID][min x,y,z: 3 x u32][max x,y,z: 3 x u32][...]`, then a large block of voxel data (not decoded; the `6` after the boxes is not understood). The unit is half a metre: **metres = value / 2**. y is the height, as in `map-data.json`.
+
+- Centre (m) = (min + max) / 4 on x and z; height = (min y + max y) / 4.
+- Side of the build area (m) = (max - min) / 2: 40, 80, 120, 160 m = altar level 1, 2, 3, 4. Only levels 1 and 4 were seen: 2 and 3 follow from the sizes the user gave, not from a save.
+- The altar object itself was not found (the entity section is not decoded), so whether the box is exactly centred on it is unknown.
+- 5 of the 6 slots were used in this save; the section is in the server file only, so it is out of the client import's scope (a place for a future "import altars from a world save").
+
 ## How to verify (not possible yet)
 
 Nothing was tested in the game. Before trusting phase 1, with a save and the game side by side:
