@@ -1,0 +1,54 @@
+<details class="markers">
+  <summary>
+    {{ 'markerListTitle' | transloco }}
+    <span class="count">{{ total() }} / {{ max }}</span>
+  </summary>
+  @if (total() || members().length || query()) {
+    <input
+      type="search"
+      class="filter"
+      [placeholder]="'markerSearch' | transloco"
+      [attr.aria-label]="'markerSearch' | transloco"
+      [value]="query()"
+      (input)="query.set($any($event.target).value)"
+    />
+  }
+  @if (!total() && !members().length && !query()) {
+    <p class="empty">{{ 'markerEmpty' | transloco }}</p>
+  } @else {
+    <ul class="list" [attr.aria-label]="'markerMine' | transloco">
+      @for (m of mine(); track m.id) {
+        <li>
+          <button type="button" (click)="show('me', m)">
+            <span class="name">{{ m.name }}</span>
+            <span class="meta">{{
+              m.kind === 'altar'
+                ? ('markerAltarLevel' | transloco: { n: m.level })
+                : ('markerPin' | transloco)
+            }}</span>
+          </button>
+        </li>
+      }
+    </ul>
+    @for (member of members(); track member.user_id) {
+      <h3>{{ 'markerSharedBy' | transloco: { name: member.username } }}</h3>
+      <ul class="list" [attr.aria-label]="'markerSharedBy' | transloco: { name: member.username }">
+        @for (m of member.markers; track m.id) {
+          <li>
+            <button type="button" (click)="show('u' + member.user_id, m)">
+              <span class="name">{{ m.name }}</span>
+              <span class="meta">{{
+                m.kind === 'altar'
+                  ? ('markerAltarLevel' | transloco: { n: m.level })
+                  : ('markerPin' | transloco)
+              }}</span>
+            </button>
+          </li>
+        }
+      </ul>
+    }
+    @if (query() && !mine().length && !members().length) {
+      <p class="empty">{{ 'markerNoMatch' | transloco }}</p>
+    }
+  }
+</details>

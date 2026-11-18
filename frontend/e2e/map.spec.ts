@@ -772,6 +772,7 @@ test('workshop: recipes, unlock tick, show on the map, altar, calculator @cross'
   await page.getByRole('tab', { name: 'Autel' }).click();
   const altar = page.locator('article', { hasText: 'Autel de test niveau 2' });
   await expect(altar).toContainText('Ouvre le niveau 2');
+  await expect(altar).toContainText('Zone de construction : 80 × 80 m'); // the build area follows the altar level
   await altar.getByText('1 recette(s) ouvertes').click();
   await expect(altar).toContainText('Hache de test');
 
@@ -2240,6 +2241,340 @@ test('team: the explored area is shared at any time, and each player chooses wha
   await expect(page.locator('.leaflet-control-layers')).toContainText('Ma zone explorée');
   await expect(page.locator('img.leaflet-image-layer[src^="data:image"]')).toHaveCount(1);
   expect(await sharing(guest)).toEqual([]); // and the team still sees nothing
+});
+
+test('custom markers: a pin and an altar zone, shared with the team, read-only for the others', async ({
+  page,
+  browser,
+}) => {
+  await page.goto('/');
+  await page.getByLabel("Nom d'utilisateur").fill(user);
+  await page
+    .getByRole('dialog')
+    .getByLabel('Mot de passe', { exact: true })
+    .fill('a brand new passphrase');
+  await page.getByRole('dialog').getByRole('button', { name: 'Se connecter' }).click();
+  await expect(page.locator('.who')).toContainText(user);
+  const host = page.locator('.map-host');
+  const icons = page.locator('.cm-icon');
+  await expect(icons).toHaveCount(0);
+
+  // zoom in so that a 80 m square is wide enough to measure
+  for (let i = 0; i < 6; i++) {
+    const zoomIn = page.locator('.leaflet-control-zoom-in');
+    if ((await zoomIn.getAttribute('aria-disabled')) === 'true') break; // the closest zoom is reached
+    await zoomIn.click();
+  }
+  const coords = page.locator('.coords');
+  const at = async (x: number, y: number): Promise<number> => {
+    await host.hover({ position: { x, y } });
+    return Number((await coords.textContent())!.match(/X (\d+)/)![1]);
+  };
+  const metresPerPixel = ((await at(500, 300)) - (await at(300, 300))) / 200;
+
+  const place = async (x: number, y: number, name: string, altarLevel?: string): Promise<void> => {
+    await page.getByRole('button', { name: 'Ajouter un repère' }).click();
+    await host.click({ position: { x, y } });
+    const form = page.locator('.cm-form');
+    await expect(form.getByLabel('Nom')).toBeFocused();
+    await form.getByLabel('Nom').fill(name);
+    await form.getByLabel('Note').fill('<b>texte</b>');
+    if (altarLevel) {
+      await form.getByLabel('Autel de flamme').check();
+      await form.getByLabel(altarLevel, { exact: true }).check();
+    }
+    await form.getByRole('button', { name: 'Enregistrer' }).click();
+    await expect(form).toHaveCount(0);
+  };
+  await place(300, 200, 'Mon repère');
+  await place(700, 400, 'Mon autel', '2');
+  await expect(icons).toHaveCount(2);
+
+  // the altar zone is a square of 80 m (level 2) at the map's scale; the note is text, not markup
+  const square = await page.locator('.leaflet-overlay-pane path').first().boundingBox();
+  expect(square!.width * metresPerPixel).toBeGreaterThan(76);
+  expect(square!.width * metresPerPixel).toBeLessThan(84);
+  expect(Math.abs(square!.width - square!.height)).toBeLessThan(1.5);
+  await icons.nth(0).click();
+  await expect(page.locator('.cm-form textarea')).toHaveValue('<b>texte</b>');
+  await expect(page.locator('.cm-form b')).toHaveCount(0);
+  // nothing of the form is cut: it is no wider than the popup's content, and the content does not scroll sideways
+  const fits = (form: Locator) =>
+    form.evaluate((f) => {
+      const box = f.closest('.leaflet-popup-content') as HTMLElement;
+      return box.scrollWidth <= box.clientWidth && f.scrollWidth <= box.clientWidth;
+    });
+  expect(await fits(page.locator('.cm-form').last())).toBe(true);
+  const axe = await new AxeBuilder({ page })
+    .include('.leaflet-popup')
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+    .analyze();
+  expect(axe.violations.map((v) => v.id)).toEqual([]);
+  await page.keyboard.press('Escape');
+
+  // the list in the menu: count out of the limit, search, a click shows the marker and opens its popup
+  const list = page.locator('app-marker-list');
+  const altarForm = () => page.locator('.cm-form').last(); // the newest popup: the one before it is still fading out
+  await list.locator('summary').click();
+  await expect(list.locator('summary')).toContainText('2 / 100');
+  const find = list.getByLabel('Chercher dans mes repères');
+  await find.fill('autel');
+  await expect(list.locator('.list button')).toHaveCount(1);
+  await list.locator('.list button').click();
+  await expect(altarForm().locator('input[name=name]')).toHaveValue('Mon autel');
+  await find.fill('');
+  await expect(list.locator('.list button')).toHaveCount(2);
+
+  // moving: the hint says what the next click does, Escape cancels, a click moves (the square follows)
+  const stored = (): Promise<{ name: string; x: number; z: number }[]> =>
+    page.evaluate(async () => (await fetch('api/v1/markers')).json());
+  const altarAt = async () => (await stored()).find((m) => m.name === 'Mon autel')!;
+  const hint = page.locator('.cm-hint');
+  const startMove = async (): Promise<void> => {
+    await list.locator('.list button', { hasText: 'Mon autel' }).click();
+    await expect(altarForm().locator('input[name=name]')).toHaveValue('Mon autel');
+    await altarForm().getByRole('button', { name: 'Déplacer' }).click();
+  };
+  const first = await altarAt();
+  await startMove();
+  await expect(hint).toContainText('Cliquez sur la carte pour déplacer « Mon autel »');
+  await page.keyboard.press('Escape');
+  await expect(hint).toHaveCount(0);
+  await host.click({ position: { x: 200, y: 150 } }); // nothing is moving now: a plain click
+  expect(await altarAt()).toEqual(first);
+  await startMove();
+  await host.click({ position: { x: 200, y: 150 } });
+  await expect.poll(async () => (await altarAt()).x).not.toBe(first.x);
+  // the square follows: it is centred on the altar's icon
+  const zone = await page.locator('.leaflet-overlay-pane path').first().boundingBox();
+  const pin = await icons.nth(1).boundingBox();
+  expect(Math.abs(zone!.x + zone!.width / 2 - (pin!.x + pin!.width / 2))).toBeLessThan(8);
+  expect(Math.abs(zone!.y + zone!.height / 2 - (pin!.y + pin!.height / 2))).toBeLessThan(8);
+  const second = await altarAt();
+  // from the keyboard (no pointer): the marker goes to the centre of the view
+  await icons.nth(1).click(); // not from the list, which centres the map on the marker: the view's centre is elsewhere
+  await expect(altarForm().locator('input[name=name]')).toHaveValue('Mon autel');
+  await altarForm().getByRole('button', { name: 'Déplacer' }).focus();
+  await page.keyboard.press('Enter');
+  await expect.poll(async () => (await altarAt()).x).not.toBe(second.x);
+  expect((await stored()).map((m) => m.name).sort()).toEqual(['Mon autel', 'Mon repère']);
+  await page.keyboard.press('Escape');
+
+  // private until ticked: guest sees nothing, then only the shared altar, read-only
+  const guest = await browser.newPage(origin(page));
+  await guest.goto('/');
+  await guest.getByLabel("Nom d'utilisateur").fill('guest');
+  await guest.getByLabel('Mot de passe', { exact: true }).fill('guest new passphrase');
+  await guest.getByRole('dialog').getByRole('button', { name: 'Se connecter' }).click();
+  await expect(guest.locator('.who')).toContainText('guest');
+  await expect(guest.locator('.cm-icon')).toHaveCount(0);
+  await icons.nth(1).click();
+  await expect(page.locator('.cm-form')).toHaveCount(1); // the first popup is gone (it fades out)
+  // an altar being edited shows its level, not the colours and icons of a simple marker, and fits its popup
+  await expect(page.locator('.cm-form').getByRole('group', { name: /Niveau/ })).toBeVisible();
+  await expect(page.locator('.cm-form .cm-colors')).toBeHidden();
+  await expect(page.locator('.cm-form .cm-icons')).toBeHidden();
+  expect(await fits(page.locator('.cm-form'))).toBe(true);
+  await page.locator('.cm-form').getByLabel('Partager avec mon équipe').check();
+  await page.locator('.cm-form').getByRole('button', { name: 'Enregistrer' }).click();
+  await guest.reload();
+  await expect(guest.locator('.cm-icon')).toHaveCount(1);
+  await guest.locator('.leaflet-control-layers').hover();
+  await expect(guest.locator('.leaflet-control-layers')).toContainText(`Repères de ${user}`);
+  await guest.locator('.cm-icon').click();
+  await expect(guest.locator('.leaflet-popup')).toContainText('Mon autel');
+  await expect(guest.locator('.leaflet-popup')).toContainText('80 m');
+  await expect(guest.locator('.cm-form')).toHaveCount(0); // read-only
+
+  // the list shows the shared one under its owner, and a click opens it
+  await guest.locator('app-marker-list summary').click();
+  await expect(guest.locator('app-marker-list h3')).toContainText(`Partagés par ${user}`);
+  await guest.locator('app-marker-list .list button', { hasText: 'Mon autel' }).click();
+  await expect(guest.locator('.leaflet-popup')).toContainText('Mon autel');
+
+  // the ticked layers are kept by the browser: unticked, it stays so after a reload
+  await guest.locator('.leaflet-control-layers').hover();
+  const theirs = guest.locator('.leaflet-control-layers').getByLabel(`Repères de ${user}`);
+  await theirs.uncheck();
+  await expect(guest.locator('.cm-icon')).toHaveCount(0);
+  await guest.reload();
+  await guest.locator('.leaflet-control-layers').hover();
+  await expect(theirs).not.toBeChecked();
+  await expect(guest.locator('.cm-icon')).toHaveCount(0);
+  await theirs.check();
+  await expect(guest.locator('.cm-icon')).toHaveCount(1);
+
+  // leaving the team switches the sharing off: it is gone for guest, and the tick is off again
+  await page.evaluate(async () => {
+    const token = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]*)/)?.[1] ?? '';
+    await fetch('api/v1/team/leave', {
+      method: 'POST',
+      headers: { 'X-XSRF-TOKEN': decodeURIComponent(token) },
+    });
+  });
+  await guest.reload();
+  await expect(guest.locator('.cm-icon')).toHaveCount(0);
+  const shared = await page.evaluate(async () =>
+    ((await (await fetch('api/v1/markers')).json()) as { shared: boolean }[]).map((m) => m.shared),
+  );
+  expect(shared).toEqual([false, false]);
+});
+
+/** A `base` section of a world save: GUID, then the corners of the build box in half metres, then some voxel bytes. */
+function baseBox(cx: number, cz: number, level: number): Buffer {
+  const half = level * 40;
+  const b = Buffer.alloc(16 + 24 + 10);
+  [2 * cx - half, 1700, 2 * cz - half, 2 * cx + half, 1760, 2 * cz + half].forEach((n, i) =>
+    b.writeUInt32LE(n, 16 + 4 * i),
+  );
+  return b;
+}
+
+test('custom markers: the altars of a world save are added once, privately, with what lies in their zone', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByLabel("Nom d'utilisateur").fill(user);
+  await page
+    .getByRole('dialog')
+    .getByLabel('Mot de passe', { exact: true })
+    .fill('a brand new passphrase');
+  await page.getByRole('dialog').getByRole('button', { name: 'Se connecter' }).click();
+  await expect(page.locator('.who')).toContainText(user);
+
+  const world = {
+    name: 'world0.ksd',
+    mimeType: 'application/octet-stream',
+    buffer: fakeKsd({
+      world_metadata: Buffer.alloc(8),
+      base00: baseBox(500, 800, 1), // 40 m: holds the unique item and the cosmetic of the fixture map
+      base01: baseBox(700, 600, 2), // 80 m: holds a boss
+      base02: Buffer.alloc(20), // not a clean altar: ignored and counted
+    }),
+  };
+  await menu(page, 'Importer une sauvegarde');
+  const dialog = page.getByRole('dialog', { name: 'Importer une sauvegarde' });
+  await dialog.getByLabel('Fichier de sauvegarde').setInputFiles(world);
+  await expect(dialog).toContainText('2 autel(s) de flamme trouvé(s)');
+  await expect(dialog).toContainText('1 section(s) du fichier ne sont pas un autel exploitable');
+  await expect(dialog).toContainText('Autel 1 : niveau 1, X 500 · Z 800');
+  await expect(dialog).toContainText('Autel 2 : niveau 2, X 700 · Z 600');
+  expect(
+    (
+      await new AxeBuilder({ page })
+        .include('app-save-import-dialog')
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+        .analyze()
+    ).violations.map((v) => v.id),
+  ).toEqual([]);
+  await dialog.getByRole('button', { name: 'Importer', exact: true }).click();
+  await expect(dialog).toContainText("2 repère(s) d'autel ajouté(s).");
+  const altars = (): Promise<{ x: number; z: number; level: number; shared: boolean }[]> =>
+    page.evaluate(async () =>
+      (
+        (await (await fetch('api/v1/markers')).json()) as {
+          x: number;
+          z: number;
+          kind: string;
+          level: number;
+          shared: boolean;
+        }[]
+      ).filter((m) => m.kind === 'altar' && [500, 700].includes(m.x)),
+    );
+  expect(await altars()).toEqual([
+    expect.objectContaining({ x: 500, z: 800, level: 1, shared: false }),
+    expect.objectContaining({ x: 700, z: 600, level: 2, shared: false }),
+  ]);
+
+  // the same file again adds nothing: both are flagged as already there
+  await dialog.getByRole('button', { name: 'Fermer', exact: true }).last().click();
+  await menu(page, 'Importer une sauvegarde');
+  await dialog.getByLabel('Fichier de sauvegarde').setInputFiles(world);
+  await expect(dialog.getByText('déjà un repère')).toHaveCount(2);
+  await expect(dialog.getByRole('button', { name: 'Importer', exact: true })).toBeDisabled();
+  expect(await altars()).toHaveLength(2);
+
+  // a file that is neither a character nor a world save is refused with a clear message
+  await dialog.getByLabel('Fichier de sauvegarde').setInputFiles({
+    name: 'other.ksd',
+    mimeType: 'application/octet-stream',
+    buffer: fakeKsd({ miscellaneous: Buffer.alloc(20) }),
+  });
+  await expect(dialog.getByRole('alert')).toContainText('ni une sauvegarde de personnage');
+  await dialog.getByRole('button', { name: 'Fermer', exact: true }).last().click();
+
+  // what lies in the altar's zone: the popup counts the map elements inside the square (the border included)
+  const list = page.locator('app-marker-list');
+  await list.locator('summary').click();
+  await list.locator('.list button', { hasText: 'niveau 1' }).first().click();
+  const zone = page.locator('.cm-zone').last();
+  await expect(zone).toContainText('Dans la zone de construction : 2 élément(s)');
+  await expect(zone.locator('li')).toHaveCount(2);
+  expect(
+    (
+      await new AxeBuilder({ page })
+        .include('.leaflet-popup')
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+        .analyze()
+    ).violations.map((v) => v.id),
+  ).toEqual([]);
+  expect(
+    (
+      await new AxeBuilder({ page })
+        .include('app-marker-list')
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+        .analyze()
+    ).violations.map((v) => v.id),
+  ).toEqual([]);
+});
+
+test('map: the ruler measures two points, and is one map mode among the others', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByLabel("Nom d'utilisateur").fill(user);
+  await page
+    .getByRole('dialog')
+    .getByLabel('Mot de passe', { exact: true })
+    .fill('a brand new passphrase');
+  await page.getByRole('dialog').getByRole('button', { name: 'Se connecter' }).click();
+  await expect(page.locator('.who')).toContainText(user);
+  const host = page.locator('.map-host');
+  const measure = page.getByRole('button', { name: 'Mesurer' });
+  const add = page.getByRole('button', { name: 'Ajouter un repère' });
+  const label = page.locator('.cm-measure-label');
+  await measure.click();
+  await expect(measure).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.cm-hint')).toContainText('Cliquez deux points');
+  await host.click({ position: { x: 250, y: 420 } });
+  await expect(label).toHaveCount(0); // one point is not a measure yet
+  await host.click({ position: { x: 450, y: 420 } });
+  await expect(label).toHaveCount(1);
+  const text = (await label.textContent())!;
+  const [, distance, dx, dz] = text.match(/^(\d+) m · ΔX (\d+) · ΔZ (\d+)$/)!;
+  expect(Number(distance)).toBeGreaterThan(0);
+  expect(dx).toBe(distance); // a horizontal line: all of the distance is on x
+  expect(dz).toBe('0');
+  await host.click({ position: { x: 300, y: 380 } }); // a further click starts a new measure
+  await expect(label).toHaveCount(0);
+
+  // one mode at a time: adding a marker turns the ruler off, and Escape ends the active mode
+  await add.click();
+  await expect(measure).toHaveAttribute('aria-pressed', 'false');
+  await expect(add).toHaveAttribute('aria-pressed', 'true');
+  await measure.click();
+  await expect(add).toHaveAttribute('aria-pressed', 'false');
+  await page.keyboard.press('Escape');
+  await expect(measure).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('.cm-hint')).toHaveCount(0);
+
+  // from the keyboard the button places a point at the centre of the view: twice there is a 0 m measure
+  await measure.focus();
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Enter');
+  await expect(label).toHaveText('0 m · ΔX 0 · ΔZ 0');
+  await page.keyboard.press('Escape');
+  await expect(label).toHaveCount(0);
 });
 
 test('save import: the character sheet (level, worn equipment, skills) goes into the profile', async ({

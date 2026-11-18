@@ -551,6 +551,12 @@ def main(src, export, out):
             "visible": cat not in HIDDEN_BY_DEFAULT,
         }
 
+    # The icons of the game's own custom markers (the 10 pictures of its "create a marker" dialog, in its order): the
+    # site offers them for the markers a player places (icons/custom_marker_<n>.png, names in markers.logic.ts).
+    custom = [v for v in registry["mapMarkers"]["values"] if v.get("isCustomMarkerType")]
+    for n, reg in enumerate(custom):
+        shutil.copyfile(f"{export}/icons/{reg['icon']['image']}.png", f"{out}/icons/custom_marker_{n}.png")
+
     # Region labels are generated from the biome map (region_labels).
     categories["region"] = {"label": languages.row(CATEGORY_LABELS["region"]), "kind": "label", "icon": None, "visible": True}
 

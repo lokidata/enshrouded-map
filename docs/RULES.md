@@ -97,7 +97,7 @@ The map stays mounted (hidden) when another screen is shown; the others load on 
 - Any member: adds an existing player who has no team (immediate, `POST /team/members`), removes another member (not the owner, not themself), creates an invitation link whose new account joins the team.
 - Leaving is always possible. If the owner leaves, the longest-standing member becomes owner; the last one to leave closes the team. Marks stay personal in every case.
 - The team shares only **who marked what on the map** (the popup lists the players). The others' marks are refetched every 60 s and when the tab comes back, with `If-None-Match`: `GET /team/marks` sends an ETag (hash of who follows which profile, the count and the newest `created_at` of the shared marks) and answers 304 while nothing changed (an added or removed mark, or a changed profile, changes it); the front keeps what it shows on a 304 and asks in full when the server sends no ETag. Recipe, lore and quest ticks are never shared.
-- The game configuration of a team belongs to its owner (section 9). The explored areas are shared only on request (section 4).
+- The game configuration of a team belongs to its owner (section 9). The explored areas and the custom markers are shared only on request (section 4): both switch off when a player leaves a team, is removed, sees the team dissolved or is added by someone else (`unshare_all`).
 
 ---
 
@@ -106,7 +106,7 @@ The map stays mounted (hidden) when another screen is shown; the others load on 
 ### Layout
 - Left menu: filters per category with counts (done / total), grouped in sections; the Loot section holds unique items, cosmetics, colour palettes, hairstyles, hair and eye colours, collectibles and chests. It can be hidden and placed left, on top, or automatically (portrait = top), remembered per device.
 - The filters chosen are saved per player on the server (`/settings`); a new player keeps the defaults.
-- No biome layer (removed on request; `biomes.png` is still produced and `map-data.json` still lists the biomes). The layers control (top right) lists only the explored-area layers.
+- No biome layer (removed on request; `biomes.png` is still produced and `map-data.json` still lists the biomes). The layers control (top right) lists the explored-area layers and the custom-marker layers.
 - Look: mist vignette, popups as plates (see the design rules in `frontend/CLAUDE.md`).
 
 ### Categories (counts of 2026-11-13)
@@ -141,6 +141,18 @@ The map stays mounted (hidden) when another screen is shown; the others load on 
 - **Layers**: each area is its own layer in the layers control: "My explored area" and one "Explored area of <name>" per member who shares (`GET /team/fog` lists them with a stamp, `GET /team/fog/{user id}` gives one; only new or changed ones are fetched). Ticking is the player's choice, kept in the browser; new members start shown. The map draws **one veil** over everything outside the union of the ticked layers; nothing ticked, no veil. Leaving the team, deleting the profile or unsharing removes the layer for the others.
 - **Only the explored area** (side menu checkbox, enabled once an area exists): hides the markers whose cell is not explored, by the same union. Names of places and regions stay; chest, plant and ore dots are not filtered.
 
+### Custom markers
+- A player places their own markers on the map: a **simple marker** (pin) or a **Flame Altar** (level 1-4) with a name (1-40 characters) and a plain-text note (up to 500). Button "Add a marker" at the top left of the map: a mouse click turns placing on (crosshair; Esc or a second click cancels) and the next click on the map opens the form there; from the keyboard the button opens it at the centre of the view. The form (name, note, type, level, "Share with my team" only in a team, save, delete, cancel) opens on the name; a click on a marker of mine opens it again to edit or delete. **Move**: the popup of one of my markers has a "Move" button; the next click on the map is its new point (name, note, type, level, icon, colour and sharing stay; an altar's square follows). Same mode as adding, said in a plate at the top of the map (`role=status`: "Click the map to move <name>"); Escape cancels either; from the keyboard the button moves it to the centre of the view at once. A refused move says so in the same plate and the marker stays where it was. It is `PATCH /markers/{id}` with the new `x` and `z` (ownership and ranges checked as for any change). A simple marker wears an **icon of the game's map** chosen in the form (the 10 pictures of the game's own "create a custom marker" dialog, in its order: flag, chest, creature, bag, feather, beast, drop, fish, crystal, sword; default flag; the pipeline writes them as `icons/custom_marker_<n>.png`, names in `core/markers.logic.ts`; stored as that key in `icon`, an unknown key shows the flag). An altar always wears the Flame Altar icon and a **fixed orange**, the ochre of the game's palette (`--marker-altar`) for its disc and its square: `icon` and `color` stay null (422 otherwise) and the form hides both pickers, leaving the level. A simple marker has one of the game's **8 colours** (white, green, pink, lavender, ochre, purple, teal, grey; default white; tokens `--marker-*`, read approximately from a screenshot of the game's dialog; stored by name in `color`, 16 lowercase letters): the disc behind its icon wears it. Form: name, note, type, then the level (altar) or the colour and the icon (simple marker), then share; the colours and the icons are each on one line.
+- **Altar zone**: an altar draws a **square centred on its point, 40 m per level** (level 1 = 40 m, 2 = 80, 3 = 120, 4 = 160; sizes given by the user, checked against one real world save, not extracted from the game; the square is drawn flat, the map is 2D). Pure rule in `core/markers.logic.ts`.
+- **Not map elements**: not counted in the progress, not under the category filters, not in the table `marks`, not in the explored-area filter. Stored in `custom_markers` per character profile (integer metres like the mark ids, 0-10,240), 100 per profile (409 `too_many_markers` beyond).
+- **Private by default.** `shared` is per marker, set with the form; a marker is visible to teammates only while `shared` is true **and** its owner is in the team, through the profile the owner follows now. Sharing without a team is refused (409 `no_team`). Leaving a team, being removed, a dissolved team or being added by someone else switch `shared` off for every marker of every profile of the player (`unshare_all`, shared with the explored area); the player ticks it again for each team. Never share without the explicit tick.
+- **Layers**: "My markers" and one "Markers of <name>" per teammate who shares (read-only popup with the owner's name, the note and, for an altar, its area; each marker keeps its own colour; the owner is told by the layer and the popup). The ticked layers are kept per browser (`markerView`, the list of **unticked** layer keys `me` / `u<user id>`: a new member starts shown; anything unreadable counts as everything shown; wiped at logout; storage errors are ignored). Ticking does not redraw the layers. `GET /team/markers` has an ETag (hash of the answer) and answers 304 while nothing changed; the others' markers are refetched with the team (every 60 s, when the tab comes back, when the profile or the team changes).
+- **List in the left menu**: a foldable block "My markers" above the categories, with the count out of the limit (`n / 100`), a search box (name and note, accents and case ignored), my markers sorted by name, then one block "Shared by <name>" per teammate (read-only, only the ones that match). A click centres the map on the marker (zoom -2 at least), shows its layer again if it was unticked and opens its popup. Empty state: a hint on how to add one. The list is a separate view of the same stores: searching does not touch the map layers. Pure rules in `core/markers.list.ts`.
+- **What is in an altar's zone**: the popup of an altar (mine and teammates') lists the map elements of `map-data.json` inside its square (`|dx|` and `|dz|` <= side / 2, the border included), per category with the category icon and name in the current language, most first (ties by key), the first 8 and "+ n in other categories", and the total. Label categories (regions, place names) are left out; chests, plants and ores (dots, `resources.json`) are not counted. Computed when the popup opens (and again when the level or type changes in my form), not while drawing. Pure rule in `core/markers.zone.ts`. "Show on the map" was not done.
+- **Ruler** ("Measure" button under "Add a marker"): click two points, a dashed line with a label "<d> m · ΔX <dx> · ΔZ <dz>" (straight line on x and z, whole metres, height not used); a further click starts a new measure. Escape or the button ends it and removes the line; nothing is kept or sent. From the keyboard the button places a point at the centre of the view (twice for a measure). **One map mode at a time** (adding, moving, measuring): turning one on turns the others off; the active one is shown on its button (`aria-pressed`) and in the plate at the top of the map. Pure rule in `core/measure.ts`.
+- **Popup layout** (form, teammate's popup, zone list): 340 px wide and never wider than the screen minus 56 px; it never scrolls sideways (the colour and icon rows are one line each and shrink to fit); it scrolls vertically only when the map is too short, the buttons staying in view (sticky). The map is panned (past its usual bounds while the popup is open) so that the whole popup is inside it. On a screen under 700 px the map's buttons, legend and coordinates are hidden while a marker popup is open. The e2e checks that the form is no wider than the popup content.
+- Names and notes are plain text: stored as typed, shown with text bindings only (the form, the popup, the tooltip), and escaped in the layer labels, which Leaflet writes as HTML.
+
 ---
 
 ## 5. Workshop (`craft.json`)
@@ -148,7 +160,7 @@ The map stays mounted (hidden) when another screen is shown; the others load on 
 Data of 2026-11-13: 1198 recipes, 1324 building pieces, 14 altar levels, 2774 items, 79 armour sets.
 
 ### Tabs
-Recipes, Items, Building, Stations, Altar (with a cost planner between two levels), Calculator. Every item chip is a button that opens the item's page. Recipe and building lists have a grid or a table view.
+Recipes, Items, Building, Stations, Altar (with a cost planner between two levels), Calculator. The Altar tab's upgrades of the Flame Altar (craft.json `altar` entries of kind `altar`: Claim, then Level 2, 3, 4) show their **build area** (40 / 80 / 120 / 160 m, `core/markers.logic.ts` `altarAreaOfEntry`: the altar level reached = entry level + 1, checked against the names of the real data in 3 languages); the Flame levels (kind `flame`) show none, the area does not depend on them. Every item chip is a button that opens the item's page. Recipe and building lists have a grid or a table view.
 
 ### Filters
 - From the fields `cat` / `type` / `food` / `rarity` / `cls` / `lvl` written per item by `build_craft.py` (same categories and types as enshrouded.tools; `type` and `food` come from developer names, so they are heuristics). No "New in 1.0" filter: the game data has no such field.
@@ -252,7 +264,7 @@ Our own rule, not the game's, and never an equipment suggestion. For each armour
 
 ## 10. Save import (profile menu > Import a save)
 
-- The player picks a local `character*.ksd`. It is **read in the browser and never sent**. Limits: 50 MB file, 64 sections, 64 MB per section and 256 MB for all of them once decompressed, every offset checked. Never commit a real save.
+- The player picks a local `character*.ksd` (or a dedicated server's `world0.ksd`, see "World save: Flame Altars" below). It is **read in the browser and never sent**. Limits: 50 MB file, 64 sections, 64 MB per section and 256 MB for all of them once decompressed, every offset checked. Never commit a real save.
 - A preview shows, per kind, what is new; each kind has its checkbox. Applying only ticks, never unticks (`PUT /progress`).
 - **Kinds**:
   - Known recipes and building pieces (`recipe:<guid>`): the id in the save is the FNV-1a 32 of the GUID bytes; flag not 0.
@@ -265,6 +277,13 @@ Our own rule, not the game's, and never an equipment suggestion. For each armour
   - The **character sheet** (section `player_character`): level, the 8 worn slots (head, chest, hands, legs, feet, 2 rings, shield) and the 3 weapons of slots 1-3 of the first action bar, the equipped bow (the quiver entry that has a level), upgrades, gems (clamped to the gem's range), skill levels. Item level = base + upgrades, the base clamped to the item's range; unknown items are dropped; Flame is kept. It goes into the sheet of the profile followed. The layout is reverse-engineered from two saves: the preview shows the decoded values so that the player can check.
 - **Into which profile**: the profile followed or a new one. Default: the same file as last time, or an empty profile, goes to the profile followed; another character's save becomes a new profile named "Personnage N". The dialog remembers the last import per profile (file name, date, counts) and names the character slot of `character<N>.ksd`.
 - Checked on real saves (968 recipes, 88 quests, 166 pages, 199 places, 83 items on the test save); the meaning of a recipe's flag is not confirmed in game.
+
+---
+
+### World save: Flame Altars (`world0.ksd`)
+- The dialog tells the two kinds apart by their sections: `player_knowledge` = a character save; no `player_knowledge` but at least one `base<nn>` = a world save; anything else shows "neither a character save nor a world save". Same limits and the same rule: read in the browser, never sent, nothing kept but the markers created.
+- Parser `save-import/altars.ts`: sections `base00`..`base05`, each `[16 bytes GUID][min x,y,z u32 LE][max x,y,z u32 LE]...`, **half metres**; centre = (min + max) / 4 rounded to the metre, height = (min y + max y) / 4, side (m) = (max - min) / 2 = 40 m x level. **Refused / skipped and counted, never guessed**: a section shorter than 40 bytes, a box that is not a square on x and z, a side that is not 80, 160, 240 or 320 half metres (levels 1-4), a box past 10,240 m, an upside-down height, a `base` section outside `base00`..`base05`. A file with **more than 6** `base` sections is refused as unreadable. The altar object itself is not decoded: the box is taken as centred on it (matched the game on one real save: 1 altar of level 4 and 4 of level 1).
+- Preview: how many altars, each with level and X / Z; the ones already a marker of mine (an altar within 1 m on x and z) are flagged and cannot be ticked, so importing the same file again adds nothing; the count of ignored sections; how many more markers fit (limit 100: the first that fit are ticked, no more can be ticked). Apply creates private altar markers (shared off, name "Altar <n>") in the profile followed, one request each, through `POST /markers`; a failure leaves the ones added and shows the server's reason.
 
 ---
 
@@ -297,6 +316,8 @@ Our own rule, not the game's, and never an equipment suggestion. For each armour
 | `lore:<note id>:<page>` | one page collected | no | no |
 | `quest:<quest id>` | a quest finished | no | no |
 
+Custom markers (section 4) are **not** mark ids: they live in `custom_markers`, not in `marks`.
+
 ### Links (URL fragment)
 | Fragment | Effect |
 | --- | --- |
@@ -312,6 +333,7 @@ Our own rule, not the game's, and never an equipment suggestion. For each armour
 | Map filters, language | `/settings` (per player: `filters`, `lang`) | `lang` (cache, used before login) |
 | Character sheet | `character_sheets` (per profile) | cache `skillDraft:<id>`, `itemLevels:<id>`, `activeWeapon:<id>` |
 | Saved builds | `builds` (per profile) | — |
+| Custom markers | `custom_markers` (per profile) | unticked layers `markerView` |
 | Explored area | `fogs` (per profile) | cache `fog:<id>`, `fogShare:<id>`; ticked layers `fogView`; `onlyExplored` |
 | Hide what I marked | — | `hideDone` |
 | Last import | — | `lastImport:<id>` |
@@ -330,7 +352,8 @@ Everything personal in the browser is wiped at logout. The first version's singl
 | `/progress` | `GET`, `PUT` |
 | `/builds` | `GET`, `POST`, `PUT {id}`, `DELETE {id}` |
 | `/fog` | `GET`, `PUT`, `PATCH`, `DELETE` |
-| `/team` | `GET`, `POST`, `PATCH`, `DELETE`, `POST leave`, `POST members`, `DELETE members/{id}`, `POST owner`, `POST invitations`, `GET available`, `GET marks`, `GET fog`, `GET fog/{user id}` |
+| `/markers` | `GET` (mine), `POST`, `PATCH {id}` (replaces every field), `DELETE {id}` |
+| `/team` | `GET`, `POST`, `PATCH`, `DELETE`, `POST leave`, `POST members`, `DELETE members/{id}`, `POST owner`, `POST invitations`, `GET available`, `GET marks`, `GET fog`, `GET fog/{user id}`, `GET markers` |
 | `/game-config` | `GET`, `PUT` |
 | `/settings` | `GET`, `PUT` |
 | — | `GET health` |
@@ -350,6 +373,7 @@ Everything personal in the browser is wiped at logout. The first version's singl
 | Character profiles per player | 10 |
 | Saved builds per profile | 50 (name 1-60, 400 nodes, level 1-3) |
 | Marks | 200,000; 50,000 per request |
+| Custom markers per profile | 100 (name 1-40, note 500, x and z 0-10,240, altar level 1-4) |
 | Sheet, filters, game configuration | 256,000 bytes each |
 | Request body | 4,000,000 bytes |
 | Invitation and reset links | 20 minutes, single use |

@@ -2,6 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { CraftService } from '../core/craft.service';
 import { AltarEntry } from '../core/craft.model';
+import { altarAreaOfEntry } from '../core/markers.logic';
 import { ItemChip } from './item-chip';
 
 /** What each Flame Altar upgrade and each Flame level costs, and which recipes it opens. */
@@ -55,6 +56,9 @@ import { ItemChip } from './item-chip';
                   <div class="head">
                     <h3>{{ craft.text(e.name) }}</h3>
                     <p class="meta">{{ 'wsOpensAt' | transloco: { n: e.level + 1 } }}</p>
+                    @if (section.kind === 'altar' && area(e); as side) {
+                      <p class="meta">{{ 'wsBuildArea' | transloco: { n: side } }}</p>
+                    }
                   </div>
                 </header>
                 <ul class="inputs">
@@ -109,6 +113,11 @@ export class AltarTab {
       };
     });
   });
+
+  /** The build area (side in metres) the upgrade gives: for the Flame Altar's own levels, not for the Flame levels. */
+  protected area(e: AltarEntry): number | null {
+    return altarAreaOfEntry(e.level);
+  }
 
   protected setRange(kind: string, key: 'from' | 'to', level: number): void {
     this.range.update((r) => ({ ...r, [kind]: { ...r[kind], [key]: level } }));

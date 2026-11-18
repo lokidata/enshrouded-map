@@ -1,3 +1,6 @@
 <div #host class="map-host"></div>
+@if (hint(); as text) {
+  <div class="cm-hint" role="status">{{ text }}</div>
+}
 <div class="coords" aria-hidden="true">{{ coords() }}</div>
 <app-progress-legend />

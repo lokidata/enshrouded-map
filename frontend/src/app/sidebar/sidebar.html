@@ -30,6 +30,7 @@
   </div>
 </header>
 <div class="cats">
+  <app-marker-list />
   @for (section of sections(); track section.label.en) {
     <h2 class="section-title" [style.--c]="section.color">{{ sectionLabel(section, lang.lang()) }}</h2>
     <div class="cards">

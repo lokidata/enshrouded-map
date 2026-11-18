@@ -102,6 +102,16 @@
   --halo-others: #ffa53a;
   --halo-all: #6fe06f;
   --halo-travel: #7cc4ff;
+  /* the 8 colours of the game's custom markers (read from a screenshot of its dialog: approximate) */
+  --marker-white: #d9d9de;
+  --marker-green: #7fb07a;
+  --marker-pink: #e8b0b4;
+  --marker-lavender: #b4b4ec;
+  --marker-ochre: #c08a1e;
+  --marker-purple: #7b3f9e;
+  --marker-teal: #2f8f8a;
+  --marker-grey: #55555c;
+  --marker-altar: var(--marker-ochre); /* every Flame Altar zone: the orange of the game's own palette */
   --ping: #ffb454;
   --label: #f6ecd2;
   --label-region: #fff4d6;

@@ -9,10 +9,11 @@ import { LangService } from '../core/lang.service';
 import { MapDataService } from '../core/map-data.service';
 import { SECTIONS, sectionLabel } from '../core/sections';
 import { CategoryCard } from './category-card';
+import { MarkerList } from './marker-list';
 
 @Component({
   selector: 'app-sidebar',
-  imports: [TranslocoPipe, CategoryCard],
+  imports: [TranslocoPipe, CategoryCard, MarkerList],
   templateUrl: './sidebar.html',
   styleUrl: './sidebar.css',
 })

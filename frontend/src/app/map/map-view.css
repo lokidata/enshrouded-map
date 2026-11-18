@@ -261,7 +261,6 @@ app-map {
   color: var(--muted);
   font: 400 15px/1.2 var(--display-sc);
   letter-spacing: 0.05em;
-  margin-bottom: 2px;
 }
 .popup-loot-row {
   display: flex;
@@ -321,5 +320,312 @@ app-map {
 @media (prefers-reduced-motion: reduce) {
   .ping::after {
     animation: none;
+  }
+}
+
+/* custom markers (pins and altar zones): the button, the pins and the form popup */
+.cm-control {
+  border: 1px solid var(--accent);
+  border-radius: 3px;
+}
+.cm-add {
+  padding: 6px 12px;
+  border: 0;
+  background: var(--accent); /* the same ember as the Save buttons */
+  color: var(--accent-ink);
+  cursor: pointer;
+  font: 700 14px var(--ui);
+}
+.cm-add:hover {
+  filter: brightness(1.1);
+}
+.cm-add[aria-pressed='true'] {
+  /* placing: the button turns hollow, the next click on the map places the marker */
+  background: var(--panel-deep);
+  color: var(--accent);
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+.cm-placing {
+  cursor: crosshair;
+}
+.cm-icon {
+  background: none;
+  border: 0;
+}
+.cm-pin {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  box-sizing: border-box;
+  border: 2px solid var(--panel-deep);
+  box-shadow: 0 0 0 1px var(--text);
+  border-radius: 50%; /* the disc's colour is the marker's, set from the code */
+}
+.cm-pin img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+.cm-popup .leaflet-popup-content {
+  /* not the flex of the other popups: a flex item wider than its box overflows on BOTH sides, which cut the left of the form */
+  display: block;
+  box-sizing: border-box;
+  height: auto;
+  max-width: calc(100vw - 56px); /* never wider than a phone screen */
+  max-height: min(440px, calc(100vh - 150px));
+  padding-right: 8px; /* the scrollbar does not lie on the content */
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--gold-dim) transparent;
+  text-align: left;
+  font-family: var(--ui); /* the labels, radios and notes: the site font, not the browser's */
+}
+.cm-form {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.cm-form > * {
+  min-width: 0;
+}
+.cm-field {
+  display: grid;
+  gap: 2px;
+  color: var(--muted);
+  font-size: 14px;
+}
+.cm-field input,
+.cm-field textarea {
+  padding: 4px 6px;
+  border: 1px solid var(--gold-dim);
+  border-radius: 3px;
+  background: var(--bg);
+  color: var(--text);
+  font: 15px var(--ui);
+}
+.cm-radios {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  color: var(--text);
+  font-size: 14px;
+}
+.cm-radios legend {
+  margin-right: 12px;
+  padding: 0;
+  color: var(--muted);
+}
+.cm-radios[hidden] {
+  display: none;
+}
+.cm-share {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 14px;
+}
+.cm-actions {
+  /* the buttons stay in view while the form scrolls */
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px 0 2px;
+  background: var(--panel-deep);
+}
+.cm-actions button {
+  padding: 4px 9px;
+  border: 1px solid var(--gold-dim);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font: 14px var(--ui);
+}
+.cm-actions button:hover {
+  border-color: var(--gold);
+  background: var(--gold-faint);
+}
+.cm-actions button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 700;
+}
+.cm-error {
+  margin: 0;
+  color: var(--bad);
+  font-size: 14px;
+}
+.cm-error:empty {
+  display: none;
+}
+.cm-note {
+  margin: 6px 0 0;
+  white-space: pre-wrap; /* the note is plain text: its line breaks stay */
+  overflow-wrap: anywhere;
+}
+.cm-icons,
+.cm-colors {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: flex;
+  flex-wrap: nowrap; /* one line */
+  gap: 2px;
+}
+.cm-colors {
+  gap: 6px;
+}
+.cm-colors legend,
+.cm-icons legend {
+  width: 100%;
+  padding: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+.cm-icons[hidden],
+.cm-colors[hidden] {
+  display: none;
+}
+.cm-icons label,
+.cm-colors label {
+  position: relative;
+  display: block;
+  flex: 1 1 0;
+  min-width: 0;
+  cursor: pointer;
+}
+.cm-icons input,
+.cm-colors input {
+  position: absolute;
+  opacity: 0; /* the picture is the control: its outline shows the choice and the focus */
+  inset: 0;
+  margin: 0;
+}
+.cm-icons img {
+  display: block;
+  width: 100%;
+  max-width: 30px;
+  aspect-ratio: 1;
+  margin: 0 auto;
+  object-fit: contain;
+  border: 1px solid transparent;
+  border-radius: 3px;
+}
+.cm-icons label:has(input:checked) img {
+  border-color: var(--accent);
+  background: var(--gold-faint);
+}
+.cm-icons label:has(input:focus-visible) img {
+  outline: 2px solid var(--gold);
+}
+.cm-swatch {
+  display: block;
+  width: 100%;
+  max-width: 26px;
+  aspect-ratio: 1;
+  margin: 0 auto;
+  border: 2px solid var(--panel-deep);
+  border-radius: 50%;
+}
+.cm-colors label:has(input:checked) .cm-swatch {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.cm-colors label:has(input:focus-visible) .cm-swatch {
+  outline: 2px solid var(--gold);
+  outline-offset: 3px;
+}
+.cm-hint {
+  /* what the next click does: over the map, centred at the top, like the plates of the site */
+  position: absolute;
+  z-index: 1000;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: min(90%, 520px);
+  padding: 6px 14px;
+  border: 1px solid var(--accent);
+  border-radius: 3px;
+  background: linear-gradient(180deg, var(--panel), var(--panel-deep));
+  color: var(--text);
+  font: 15px var(--ui);
+  text-align: center;
+  pointer-events: none; /* the click it talks about must reach the map */
+}
+.cm-zone {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid var(--gold-dim);
+  font-size: 14px;
+}
+.cm-zone-title {
+  color: var(--muted);
+}
+.cm-zone ul {
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.cm-zone li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 1px 0;
+}
+.cm-zone li span {
+  flex: 1;
+}
+.cm-zone img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+.cm-zone .cm-zone-others {
+  color: var(--muted);
+  font-style: italic;
+}
+.cm-control-ruler {
+  margin-top: 6px;
+}
+.cm-measure {
+  padding: 6px 12px;
+  border: 0;
+  background: var(--panel-deep);
+  color: var(--text);
+  cursor: pointer;
+  font: 14px var(--ui);
+}
+.cm-measure:hover {
+  background: var(--gold-faint);
+}
+.cm-measure[aria-pressed='true'] {
+  background: var(--panel-deep);
+  color: var(--accent);
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+.cm-measuring {
+  cursor: crosshair;
+}
+.leaflet-tooltip.cm-measure-label {
+  border: 1px solid var(--gold-dim);
+  background: var(--panel-deep);
+  color: var(--text);
+  font: 14px var(--ui);
+}
+@media (max-width: 700px) {
+  /* a phone: the form needs the whole width, so the map's buttons give way while it is open */
+  .leaflet-container:has(.cm-popup) .leaflet-control-container {
+    visibility: hidden;
+  }
+  app-map:has(.cm-popup) app-progress-legend,
+  app-map:has(.cm-popup) .coords {
+    visibility: hidden;
   }
 }

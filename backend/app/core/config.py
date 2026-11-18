@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     lockout_threshold: int = 5  # failed logins before an account is locked progressively
 
     max_marks: int = 200_000
+    max_markers: int = 100  # custom markers per character profile
     max_settings_bytes: int = 256_000
     max_builds: int = 50  # saved skill builds per character profile
     max_characters: int = 10  # character profiles per player
