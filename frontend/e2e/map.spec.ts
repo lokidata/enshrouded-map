@@ -82,7 +82,7 @@ test.afterEach(async ({ page }) => {
     await menu(page, 'Profil'); // also matches "Profile"
     await page
       .getByRole('dialog')
-      .getByLabel(/Langue|Language/)
+      .getByLabel(/Langue|Language|Sprache/)
       .selectOption('fr');
     await expect(page.locator('html')).toHaveAttribute('lang', 'fr');
     // wait for the debounced save: the next test signs in again and reads the account's language
@@ -577,6 +577,34 @@ test('profile: the language is kept by the account, passkeys tab only when avail
   await expect(
     page.locator('app-profile').getByRole('tab', { name: 'Zone dangereuse' }),
   ).toBeVisible();
+  await expect
+    .poll(async () =>
+      page.evaluate(async () => (await (await fetch('api/v1/settings')).json()).settings?.lang),
+    )
+    .toBe('fr');
+});
+
+test('german: the interface switches to German, the data falls back to the English names', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByLabel("Nom d'utilisateur").fill(user);
+  await page
+    .getByRole('dialog')
+    .getByLabel('Mot de passe', { exact: true })
+    .fill('a brand new passphrase');
+  await page.getByRole('dialog').getByRole('button', { name: 'Se connecter' }).click();
+  await expect(page.locator('.who')).toContainText(user);
+
+  await menu(page, 'Profil');
+  const profile = page.locator('app-profile');
+  await profile.getByLabel('Langue').selectOption('de');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'de');
+  await expect(profile.getByLabel('Sprache')).toHaveValue('de');
+  await expect(profile.getByRole('tab', { name: 'Gefahrenzone' })).toBeVisible();
+  // back to French (the next tests use the same account)
+  await profile.getByLabel('Sprache').selectOption('fr');
+  await expect(profile.getByRole('tab', { name: 'Zone dangereuse' })).toBeVisible();
   await expect
     .poll(async () =>
       page.evaluate(async () => (await (await fetch('api/v1/settings')).json()).settings?.lang),

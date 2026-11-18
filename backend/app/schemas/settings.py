@@ -5,7 +5,7 @@ from pydantic import BaseModel, field_validator
 from app.schemas.common import StrictModel
 
 # The site's languages: keep in step with LANGUAGES in frontend/src/app/core/lang.ts.
-LANGUAGES = ("fr", "en")
+LANGUAGES = ("fr", "en", "de")
 
 
 class SettingsIn(StrictModel):

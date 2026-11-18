@@ -1,52 +1,34 @@
 {
   "worldSize": 1024,
-  "languages": [
-    "fr",
-    "en"
-  ],
+  "languages": ["fr", "en", "de"],
   "biomes": {},
   "categories": {
     "boss": {
-      "label": [
-        "Boss",
-        "Boss"
-      ],
+      "label": ["Boss", "Boss", "Boss"],
       "kind": "icon",
       "icon": "icons/boss.svg",
       "visible": true
     },
     "unique": {
-      "label": [
-        "Objet unique",
-        "Unique item"
-      ],
+      "label": ["Objet unique", "Unique item", "Unique item"],
       "kind": "icon",
       "icon": "icons/unique.svg",
       "visible": false
     },
     "cosmetic": {
-      "label": [
-        "Cosmétique",
-        "Cosmetic"
-      ],
+      "label": ["Cosmétique", "Cosmetic", "Cosmetic"],
       "kind": "icon",
       "icon": "icons/cosmetic.svg",
       "visible": false
     },
     "fastTravel": {
-      "label": [
-        "Point de voyage rapide",
-        "Fast travel point"
-      ],
+      "label": ["Point de voyage rapide", "Fast travel point", "Fast travel point"],
       "kind": "icon",
       "icon": "icons/tower.svg",
       "visible": true
     },
     "chest": {
-      "label": [
-        "Coffre",
-        "Chest"
-      ],
+      "label": ["Coffre", "Chest", "Chest"],
       "kind": "dots",
       "icon": null,
       "visible": false
@@ -54,10 +36,7 @@
   },
   "markers": [
     {
-      "name": [
-        "Gardien de test",
-        "Test guardian"
-      ],
+      "name": ["Gardien de test", "Test guardian", "Test guardian"],
       "raw": "fixture_boss_1",
       "cat": "boss",
       "x": 300,
@@ -66,10 +45,7 @@
       "fastTravel": false
     },
     {
-      "name": [
-        "Seigneur de test",
-        "Test lord"
-      ],
+      "name": ["Seigneur de test", "Test lord", "Test lord"],
       "raw": "fixture_boss_2",
       "cat": "boss",
       "x": 700,
@@ -78,10 +54,7 @@
       "fastTravel": false
     },
     {
-      "name": [
-        "Épée de test",
-        "Test sword"
-      ],
+      "name": ["Épée de test", "Test sword", "Test sword"],
       "raw": "Weapon_fixture",
       "cat": "unique",
       "x": 500,
@@ -91,10 +64,7 @@
       "item": "a0000000-0000-4000-8000-00000000000a"
     },
     {
-      "name": [
-        "Chapeau de test",
-        "Test hat"
-      ],
+      "name": ["Chapeau de test", "Test hat", "Test hat"],
       "raw": "Vanity_fixture",
       "cat": "cosmetic",
       "x": 501,
@@ -103,27 +73,19 @@
       "fastTravel": false
     },
     {
-      "name": [
-        "Tour de test",
-        "Test tower"
-      ],
+      "name": ["Tour de test", "Test tower", "Test tower"],
       "raw": "fixture_tower",
       "cat": "fastTravel",
       "x": 200,
       "y": 10,
       "z": 700,
       "fastTravel": true,
-      "kids": [
-        777
-      ]
+      "kids": [777]
     }
   ],
   "items": {
     "a0000000-0000-4000-8000-00000000000a": {
-      "name": [
-        "Carte au trésor",
-        "Treasure map"
-      ],
+      "name": ["Carte au trésor", "Treasure map", "Treasure map"],
       "icon": null
     }
   }

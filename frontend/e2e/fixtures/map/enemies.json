@@ -1,16 +1,16 @@
 {
   "fixture_enemies": true,
   "factions": {
-    "Fogger": ["Déchus", "The Fell"],
-    "Skeleton": ["Creux", "The Hollow"]
+    "Fogger": ["Déchus", "The Fell", "The Fell"],
+    "Skeleton": ["Creux", "The Hollow", "The Hollow"]
   },
   "regions": {
-    "Grassland": ["Hautes pâtures", "Springlands"]
+    "Grassland": ["Hautes pâtures", "Springlands", "Springlands"]
   },
   "enemies": [
     {
       "id": "test-cyclops",
-      "name": ["Cyclope de test", "Test cyclops"],
+      "name": ["Cyclope de test", "Test cyclops", "Test cyclops"],
       "boss": true,
       "faction": "Fogger",
       "xp": 8.0,
@@ -21,12 +21,12 @@
         "markers": ["unique:500:800"]
       },
       "image": "enemies/test-cyclops.png",
-      "places": [["Pic Hurlant", "Howling Peak"]],
-      "trophy": ["Tête de cyclope de test", "Test cyclops head"]
+      "places": [["Pic Hurlant", "Howling Peak", "Howling Peak"]],
+      "trophy": ["Tête de cyclope de test", "Test cyclops head", "Test cyclops head"]
     },
     {
       "id": "test-skeleton",
-      "name": ["Squelette de test", "Test skeleton"],
+      "name": ["Squelette de test", "Test skeleton", "Test skeleton"],
       "boss": false,
       "faction": "Skeleton",
       "xp": 2.0,

@@ -7,7 +7,7 @@ import { Catalog } from '../core/catalog.service';
 import { FilterStore } from '../core/filter.store';
 import { LangService } from '../core/lang.service';
 import { MapDataService } from '../core/map-data.service';
-import { SECTIONS } from '../core/sections';
+import { SECTIONS, sectionLabel } from '../core/sections';
 import { CategoryCard } from './category-card';
 
 @Component({
@@ -25,6 +25,7 @@ export class Sidebar {
   protected readonly mapData = inject(MapDataService);
   private readonly catalog = inject(Catalog);
 
+  protected readonly sectionLabel = sectionLabel;
   protected readonly sections = computed(() => {
     const items = this.catalog.items();
     const placed = new Set(SECTIONS.flatMap((s) => s.cats));

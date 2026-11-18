@@ -21,13 +21,21 @@ import math
 import os
 import re
 
+import languages
+
 # ecs Faction.faction as the game writes it
 FACTIONS = {
-    "Fogger": ("Déchus", "The Fell"), "Skeleton": ("Creux", "The Hollow"),
-    "Scavenger": ("Maraudeurs", "Scavengers"), "Vukah": ("Vukah", "Vukah"), "Drak": ("Drak", "Drak"),
-    "Wildlife": ("Faune", "Wildlife"), "Golem": ("Constructions anciennes", "Ancient Constructs"),
-    "Ancient": ("Constructions anciennes", "Ancient Constructs"), "Ancients": ("Anciens", "Ancients"),
-    "Cyclops": ("Cyclopes", "Cyclopes"), "WildBeast": ("Bêtes sauvages", "Wild beasts"),
+    "Fogger": dict(fr="Déchus", en="The Fell", de="Die Brut"),
+    "Skeleton": dict(fr="Creux", en="The Hollow", de="Die Erloschenen"),
+    "Scavenger": dict(fr="Maraudeurs", en="Scavengers", de="Plünderer"),
+    "Vukah": dict(fr="Vukah", en="Vukah", de="Vukah"),
+    "Drak": dict(fr="Drak", en="Drak", de="Drak"),
+    "Wildlife": dict(fr="Faune", en="Wildlife", de="Wildtiere"),
+    "Golem": dict(fr="Constructions anciennes", en="Ancient Constructs", de="Antike Konstrukte"),
+    "Ancient": dict(fr="Constructions anciennes", en="Ancient Constructs", de="Antike Konstrukte"),
+    "Ancients": dict(fr="Anciens", en="Ancients", de="Erbauer"),
+    "Cyclops": dict(fr="Cyclopes", en="Cyclopes", de="Zyklopen"),
+    "WildBeast": dict(fr="Bêtes sauvages", en="Wild beasts", de="Wilde Bestien"),
 }
 FACTION = re.compile(r'"keen::ecs::Faction",\s*"\$value": \{\s*"faction": "(\w+)"')
 XP = re.compile(r'"keen::ecs::ExperienceSource".{0,200}?"xpMod": ([\d.]+)', re.S)
@@ -52,9 +60,9 @@ ALIASES = {"Vorgoth": "Vorgoth's Eye"}
 def head_pictures(src, locas):
     """Enemy name -> guid of the item picture that illustrates it (head, else trophy, else any trophy)."""
     from build_data import fnv_guid
-    english = locas[1]
+    english = locas[languages.EN]
     found = {}  # name -> {"head": guid, "plain": guid, "tier": guid}
-    titles = {}  # guid -> [fr, en]
+    titles = {}  # guid -> name in every language
     for path in glob.glob(f"{src}/ItemInfo/*.json"):
         with open(path, encoding="utf-8") as f:
             info = json.load(f)
@@ -98,12 +106,12 @@ def write_illustration(export, out, guid, key):
 
 
 def build_enemies(texts, bosses, elites, markers, region_of, region_names, src, export, out, locas):
-    templates = {}  # (fr, en) -> [(raw, boss, text)]
+    templates = {}  # names in every language -> [(raw, boss, text)]
     for found, boss in ((bosses, True), (elites, False)):
         for guid, info in found.items():
             templates.setdefault(tuple(info["names"]), []).append((info["raw"], boss, texts[guid]))
 
-    spots = {}  # (fr, en) -> markers of boss or elite spawns
+    spots = {}  # names in every language -> markers of boss or elite spawns
     for m in markers:
         if m.get("cat") in ("boss", "elite") and tuple(m["name"]) in templates:
             spots.setdefault(tuple(m["name"]), []).append(m)
@@ -123,8 +131,8 @@ def build_enemies(texts, bosses, elites, markers, region_of, region_names, src, 
         used_regions.update(regions)
         if faction:
             used_factions.add(faction)
-        key = re.sub(r"[^a-z0-9]+", "-", names[1].lower()).strip("-")
-        guid = illustration(names[1], pictures)
+        key = re.sub(r"[^a-z0-9]+", "-", names[languages.EN].lower()).strip("-")
+        guid = illustration(names[languages.EN], pictures)
         near = []
         for m in where:
             closest = min(areas, key=lambda a: math.hypot(a["x"] - m["x"], a["z"] - m["z"]), default=None)
@@ -138,16 +146,19 @@ def build_enemies(texts, bosses, elites, markers, region_of, region_names, src, 
             **({"sources": {"markers": sorted({f"{m['cat']}:{math.floor(m['x'] + 0.5)}:{math.floor(m['z'] + 0.5)}"
                                               for m in where})}} if where else {}),
         })
-    # the game's French text is the same for some different enemies (Fell Monstrosity and Fell Thunderbrute)
-    for lang in (0, 1):
+    # the game's text is the same for some different enemies (Fell Monstrosity and Fell Thunderbrute in French):
+    # the other of English / French tells them apart
+    original = {id(e): list(e["name"]) for e in enemies}
+    for lang in range(len(languages.BUILD)):
+        other = languages.FR if lang == languages.EN else languages.EN
         count = {}
         for e in enemies:
-            count[e["name"][lang]] = count.get(e["name"][lang], 0) + 1
+            count[original[id(e)][lang]] = count.get(original[id(e)][lang], 0) + 1
         for e in enemies:
-            if count[e["name"][lang]] > 1:
-                e["name"][lang] = f"{e['name'][lang]} ({e['name'][1 - lang]})"
-    enemies.sort(key=lambda e: (not e["boss"], e["name"][0]))
-    factions = {k: list(FACTIONS.get(k, (k, k))) for k in sorted(used_factions)}
+            if count[original[id(e)][lang]] > 1:
+                e["name"][lang] = f"{original[id(e)][lang]} ({original[id(e)][other]})"
+    enemies.sort(key=lambda e: (not e["boss"], e["name"][languages.FR]))
+    factions = {k: languages.row(FACTIONS[k]) if k in FACTIONS else [k] * len(languages.BUILD) for k in sorted(used_factions)}
     print(f"enemies: {sum(e['boss'] for e in enemies)} bosses, {sum(not e['boss'] for e in enemies)} elites, "
           f"{sum(1 for e in enemies if e['spots'])} placed on the map, factions {sorted(used_factions)}, "
           f"{sum(1 for e in enemies if e['image'])} with a picture, without experience/scaling: {sum(1 for e in enemies if e['xp'] is None)}/"

@@ -57,6 +57,8 @@ import glob
 import json
 import re
 
+import languages
+
 from build_gear import attribute_names, impact_programs, load, program_constants
 
 
@@ -77,30 +79,31 @@ GEM_FILL = {
     "Gem of Armoring": [0], "Gem of Cleansing": [0], "Gem of Destiny": [None, 0, 1, 2, 3],
     "Gem of Hyperspecialization": [0, 1],
 }
-# Labels of the time configs that GEM_FILL uses: gem -> [(fr, en)] per K (the loca has none for them).
+# Labels of the time configs that GEM_FILL uses: gem -> [{code: label}] per K (the loca has none for them).
 TIME_LABELS = {
-    "Gem of Storm's Eye": [("Durée de la marque", "Mark Duration"), ("Temps de récupération", "Cooldown Duration")],
-    "Gem of Corruption": [("Délai avant l'explosion", "Explosion Delay")],
+    "Gem of Storm's Eye": [dict(fr="Durée de la marque", en="Mark Duration", de="Markierungsdauer"),
+                           dict(fr="Temps de récupération", en="Cooldown Duration", de="Abklingdauer")],
+    "Gem of Corruption": [dict(fr="Délai avant l'explosion", en="Explosion Delay", de="Explosionsverzögerung")],
 }
 
 
 # (names, enemies.json id or None, DefaultInventoryResource guids [first 8 chars]); see the docstring
 GEM_DROPS = [
-    (("Maraudeurs au corps à corps", "Scavenger melee fighters"), None, ["9453a728"]),
-    (("Maraudeurs à distance (arbalète, canon, lance-flammes)", "Scavenger ranged fighters (crossbow, cannon, flamethrower)"),
+    (dict(fr="Maraudeurs au corps à corps", en="Scavenger melee fighters", de="Plünderer im Nahkampf"), None, ["9453a728"]),
+    (dict(fr="Maraudeurs à distance (arbalète, canon, lance-flammes)", en="Scavenger ranged fighters (crossbow, cannon, flamethrower)", de="Plünderer mit Fernwaffen (Armbrust, Kanone, Flammenwerfer)"),
      None, ["fa4f3d61", "42d872f6"]),
-    (("Chiens des maraudeurs et loups", "Scavenger hounds and wolves"), None, ["70a65d18"]),
-    (("Vukah d'élite au corps à corps", "Vukah elite melee"), None, ["aa7e9284"]),
-    (("Chamans vukah", "Vukah shamans"), None, ["c1ab0724", "31db827d"]),
-    (("Archers vukah, Tyran de ruche", "Vukah rangers, Hive Tyrant"), "vukah-hive-tyrant", ["d29c5e01"]),
-    (("Traqueur du Voile", "Shroud Stalker"), "shroud-stalker", ["700d18b1"]),
-    (("Drak d'élite au corps à corps", "Drak elite melee"), None, ["48413d5e"]),
-    (("Chevalier noir déchu", "Fell Black Knight"), None, ["2f1a7de8"]),
-    (("Soldat d'élite déchu avec bouclier", "Fell elite soldier with shield"), None, ["86313f1d"]),
-    (("Banshees déchues", "Fell Banshees"), None, ["3a5650a5", "7791abfd"]),
-    (("Squelettes d'élite creux", "Hollow elite skeletons"), None, ["00645e44", "eb6993fb"]),
-    (("Nécromanciens creux", "Hollow necromancers"), None, ["fd01ff50", "6730b2db"]),
-    (("Sentinelle d'élite (archer)", "Elite Sentinel ranger"), None, ["aecd4d0f"]),
+    (dict(fr="Chiens des maraudeurs et loups", en="Scavenger hounds and wolves", de="Hunde der Plünderer und Wölfe"), None, ["70a65d18"]),
+    (dict(fr="Vukah d'élite au corps à corps", en="Vukah elite melee", de="Vukah-Elite im Nahkampf"), None, ["aa7e9284"]),
+    (dict(fr="Chamans vukah", en="Vukah shamans", de="Vukah-Schamanen"), None, ["c1ab0724", "31db827d"]),
+    (dict(fr="Archers vukah, Tyran de ruche", en="Vukah rangers, Hive Tyrant", de="Vukah-Waldläufer, Bienenstocktyrann"), "vukah-hive-tyrant", ["d29c5e01"]),
+    (dict(fr="Traqueur du Voile", en="Shroud Stalker", de="Miasma-Pirscher"), "shroud-stalker", ["700d18b1"]),
+    (dict(fr="Drak d'élite au corps à corps", en="Drak elite melee", de="Drak-Elite im Nahkampf"), None, ["48413d5e"]),
+    (dict(fr="Chevalier noir déchu", en="Fell Black Knight", de="Brut-Dunkelritter"), None, ["2f1a7de8"]),
+    (dict(fr="Soldat d'élite déchu avec bouclier", en="Fell elite soldier with shield", de="Brut-Elitesoldat mit Schild"), None, ["86313f1d"]),
+    (dict(fr="Banshees déchues", en="Fell Banshees", de="Brut-Banshees"), None, ["3a5650a5", "7791abfd"]),
+    (dict(fr="Squelettes d'élite creux", en="Hollow elite skeletons", de="Erloschene Elite-Skelette"), None, ["00645e44", "eb6993fb"]),
+    (dict(fr="Nécromanciens creux", en="Hollow necromancers", de="Erloschene Nekromanten"), None, ["fd01ff50", "6730b2db"]),
+    (dict(fr="Sentinelle d'élite (archer)", en="Elite Sentinel ranger", de="Elite-Wächter (Bogenschütze)"), None, ["aecd4d0f"]),
 ]
 
 
@@ -117,13 +120,13 @@ def inventory_items(src, short):
 
 
 def gem_sources(src, gem_ids):
-    """gem guid -> [{"name": [fr, en], "enemy"?}] from GEM_DROPS."""
+    """gem guid -> [{"name": names in every language, "enemy"?}] from GEM_DROPS."""
     out = {g: [] for g in gem_ids}
     for names, enemy, shorts in GEM_DROPS:
         items = set().union(*(inventory_items(src, s) for s in shorts))
         for g in gem_ids:
             if g in items:
-                out[g].append({"name": list(names), **({"enemy": enemy} if enemy else {})})
+                out[g].append({"name": languages.row(names), **({"enemy": enemy} if enemy else {})})
     return out
 
 
@@ -156,11 +159,11 @@ def build_gems(src, locas, export=None, out=None):
                         for u in d["uiValues"] if loca(u["locaId"]["value"])]
         gem["timesNs"] = [c["$value"]["value"]["value"] for c in d["impactValues"]["simple"]
                           if c["$type"] == "keen::impact::TimeImpactConfig"]
-        fill = GEM_FILL.get(gem["name"][1])
+        fill = GEM_FILL.get(gem["name"][languages.EN])
         if fill and "desc" in gem:
             used = {int(f[1:]) for f in fill if isinstance(f, str)}
             for k in sorted(used):  # a time the text needs and the stats do not list
-                gem["stats"].append({"name": list(TIME_LABELS[gem["name"][1]][k]), "value": gem["timesNs"][k] // 10**6,
+                gem["stats"].append({"name": languages.row(TIME_LABELS[gem["name"][languages.EN]][k]), "value": gem["timesNs"][k] // 10**6,
                                      "format": "Duration"})
             gem["fill"] = [len(gem["stats"]) - len(used) + sorted(used).index(int(f[1:])) if isinstance(f, str) else f
                            for f in fill]
@@ -176,7 +179,7 @@ def build_gems(src, locas, export=None, out=None):
     for d in infos:
         for u in d["uiValues"]:
             n = loca(u["locaId"]["value"])
-            if n and n[1].startswith("Comfort - "):
+            if n and n[languages.EN].startswith("Comfort - "):
                 labels[u["locaId"]["value"]] = n
     furniture = []
     for d in sorted(infos, key=lambda d: d["debugName"]):

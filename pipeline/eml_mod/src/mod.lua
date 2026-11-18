@@ -7,7 +7,8 @@
 --   ui/<guid>.png        character screen pictures (perk icons, slot pictures, rarity, buffs), plus ui/index.tsv
 
 local MAP_GUID = "01bcbd07-bdbf-41c0-9999-5d58fb1a3aa1"
-local LANGUAGES = { "Fr_Fr", "En_Us" }
+-- the game's 15 text languages (pipeline/languages.py GAME_NAMES): a run writes them all, the pipeline reads those it builds
+local LANGUAGES = { "De_De", "En_Us", "Es_Es", "Fr_Fr", "It_It", "Ja_Jp", "Ko_Kr", "Pl_Pl", "Pt_Br", "Ru_Ru", "Th_Th", "Tr_Tr", "Uk_Ua", "Zh_Cn", "Zh_Tw" }
 
 local function escape(text)
 	return (text:gsub("\\", "\\\\"):gsub("\t", "\\t"):gsub("\r", "\\r"):gsub("\n", "\\n"))

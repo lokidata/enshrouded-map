@@ -40,9 +40,9 @@ import build_places  # noqa: E402  (knowledge ids of the places, for the save im
 import build_gear  # noqa: E402  (equipment stats, character constants)
 import build_gems  # noqa: E402  (weapon gems, comfort)
 import build_presets  # noqa: E402  (server difficulty presets)
+import languages  # noqa: E402  (the languages of the data files)
 
 MAIN_SCENE = "509feadb-4c60-425f-9c7c-deeefd9b6920"
-LANGUAGES = ("Fr_Fr", "En_Us")
 
 # Marker type GUID -> (category id, kind). "icon" markers use the game's icon
 # from the marker registry, "label" markers are map texts (place names).
@@ -90,42 +90,42 @@ REGION_SOURCES = {
 }
 
 CATEGORY_LABELS = {
-    "enemyCamp": ("Camp ennemi", "Enemy camp"),
-    "landmark": ("Lieu notable", "Landmark"),
-    "camp": ("Camp de survivants", "Survivor camp"),
-    "elixirWell": ("Puits d'élixir", "Elixir well"),
-    "farm": ("Ferme", "Farm"),
-    "dungeon": ("Donjons et temples", "Dungeons and temples"),
-    "dungeonEntrance": ("Cryptes des Anciens et tombeaux", "Ancient crypts and tombs"),
-    "flameShrine": ("Sanctuaire de la Flamme", "Flame shrine"),
-    "mine": ("Mine", "Mine"),
-    "shroudRoot": ("Racine du Voile", "Shroud root"),
-    "gemForge": ("Forge à gemmes", "Gem forge"),
-    "obelisk": ("Obélisque ancien", "Ancient obelisk"),
-    "cave": ("Grotte", "Cave"),
-    "fastTravel": ("Point de voyage rapide", "Fast travel point"),
-    "nightTemple": ("Sanctuaire nocturne", "Night shrine"),
-    "balefire": ("Garnison du Feu de joie", "Balefire garrison"),
-    "bigDungeon": ("Salles creuses", "Hollow Halls"),
-    "hiddenGrave": ("Tombe cachée", "Hidden grave"),
-    "flameAltar": ("Autel de la Flamme", "Flame altar"),
-    "poi": ("Lieu d'intérêt", "Point of interest"),
-    "areaName": ("Nom de lieu", "Place name"),
-    "region": ("Région", "Region"),
-    "boss": ("Boss", "Boss"),
-    "elite": ("Élite", "Elite"),
-    "summon": ("Pierre d'invocation", "Summoning stone"),
-    "chest": ("Coffre", "Chest"),
-    "unique": ("Objet unique", "Unique item"),
-    "cosmetic": ("Cosmétique", "Cosmetic"),
-    "palette": ("Palette de couleurs", "Color palette"),
-    "hairstyle": ("Coiffure", "Hairstyle"),
-    "haircolor": ("Couleur de cheveux", "Hair colour"),
-    "eyecolor": ("Couleur des yeux", "Eye colour"),
-    "collectible": ("Objet de collection", "Collectible"),
-    "plant": ("Plante", "Plant"),
-    "ore": ("Minerai", "Ore"),
-    "start": ("Point de départ", "Starting point"),
+    "enemyCamp": dict(fr="Camp ennemi", en="Enemy camp", de="Feindlager"),
+    "landmark": dict(fr="Lieu notable", en="Landmark", de="Wahrzeichen"),
+    "camp": dict(fr="Camp de survivants", en="Survivor camp", de="Überlebendenlager"),
+    "elixirWell": dict(fr="Puits d'élixir", en="Elixir well", de="Elixierbrunnen"),
+    "farm": dict(fr="Ferme", en="Farm", de="Farm"),
+    "dungeon": dict(fr="Donjons et temples", en="Dungeons and temples", de="Verliese und Tempel"),
+    "dungeonEntrance": dict(fr="Cryptes des Anciens et tombeaux", en="Ancient crypts and tombs", de="Krypten der Erbauer und Gräber"),
+    "flameShrine": dict(fr="Sanctuaire de la Flamme", en="Flame shrine", de="Schrein der Flamme"),
+    "mine": dict(fr="Mine", en="Mine", de="Mine"),
+    "shroudRoot": dict(fr="Racine du Voile", en="Shroud root", de="Miasmawurzel"),
+    "gemForge": dict(fr="Forge à gemmes", en="Gem forge", de="Veredelungsschmiede"),
+    "obelisk": dict(fr="Obélisque ancien", en="Ancient obelisk", de="Obelisk der Erbauer"),
+    "cave": dict(fr="Grotte", en="Cave", de="Höhle"),
+    "fastTravel": dict(fr="Point de voyage rapide", en="Fast travel point", de="Schnellreisepunkt"),
+    "nightTemple": dict(fr="Sanctuaire nocturne", en="Night shrine", de="Nachtschrein"),
+    "balefire": dict(fr="Garnison du Feu de joie", en="Balefire garrison", de="Garnison des Freudenfeuers"),
+    "bigDungeon": dict(fr="Salles creuses", en="Hollow Halls", de="Hallen der Erloschenen"),
+    "hiddenGrave": dict(fr="Tombe cachée", en="Hidden grave", de="Verstecktes Grab"),
+    "flameAltar": dict(fr="Autel de la Flamme", en="Flame altar", de="Flammenaltar"),
+    "poi": dict(fr="Lieu d'intérêt", en="Point of interest", de="Sehenswürdigkeit"),
+    "areaName": dict(fr="Nom de lieu", en="Place name", de="Ortsname"),
+    "region": dict(fr="Région", en="Region", de="Region"),
+    "boss": dict(fr="Boss", en="Boss", de="Boss"),
+    "elite": dict(fr="Élite", en="Elite", de="Elite"),
+    "summon": dict(fr="Pierre d'invocation", en="Summoning stone", de="Beschwörungsstein"),
+    "chest": dict(fr="Coffre", en="Chest", de="Truhe"),
+    "unique": dict(fr="Objet unique", en="Unique item", de="Einzigartiger Gegenstand"),
+    "cosmetic": dict(fr="Cosmétique", en="Cosmetic", de="Prestige-Kleidung"),
+    "palette": dict(fr="Palette de couleurs", en="Color palette", de="Farbpalette"),
+    "hairstyle": dict(fr="Coiffure", en="Hairstyle", de="Frisur"),
+    "haircolor": dict(fr="Couleur de cheveux", en="Hair colour", de="Haarfarbe"),
+    "eyecolor": dict(fr="Couleur des yeux", en="Eye colour", de="Augenfarbe"),
+    "collectible": dict(fr="Objet de collection", en="Collectible", de="Sammlerstück"),
+    "plant": dict(fr="Plante", en="Plant", de="Pflanze"),
+    "ore": dict(fr="Minerai", en="Ore", de="Erz"),
+    "start": dict(fr="Point de départ", en="Starting point", de="Startpunkt"),
 }
 # Resource category -> game icon (debug name) shown in the menu; the map draws dots.
 RESOURCE_CATEGORIES = {"chest": "icon_chest", "plant": "icon_plants", "ore": "icon_ore"}
@@ -157,14 +157,14 @@ ELITE_NAMES = {
     "foggerbansheehover": 1518244296,   # Fell Banshee (summoning stones)
 }
 # Big enemies placed at fixed spots without the Boss component: template ->
-# loca id, or (fr, en) when the game has no name for them.
+# loca id, or {code: name} when the game has no name for them.
 EXTRA_ELITES = {
     "Enemy_Fog_CritterQueen_T2_NO_SPECIAL_CRITTERS": 907771151,   # Fell Critter Queen
     "Enemy_Fog_CritterQueen_T3_FlyingCritters": 907771151,
     "Enemy_Fog_CritterQueen_T4_ExplosiveCritters": 274119482,     # Fell Crimson Critter Queen
     "Enemy_Fog_Predator": 1102902815,                             # Shroud Stalker
-    "Enemy_Wildbeast_Fog_Mushroom_Heavy_Big": ("Champignon géant du Voile", "Giant Shroud Mushroom"),
-    "Enemy_Vukah_Ranger_Elite_Hive_Tyrant": ("Tyran de ruche vukah", "Vukah Hive Tyrant"),
+    "Enemy_Wildbeast_Fog_Mushroom_Heavy_Big": dict(fr="Champignon géant du Voile", en="Giant Shroud Mushroom", de="Riesiger Miasmapilz"),
+    "Enemy_Vukah_Ranger_Elite_Hive_Tyrant": dict(fr="Tyran de ruche vukah", en="Vukah Hive Tyrant", de="Vukah-Bienenstocktyrann"),
 }
 SUMMON_STONE = re.compile(r"^Prop_Enemy_SummonStone_T\d(?!.*(?i:test))")
 START_SPAWN_TEMPLATE = "Base_Spawnpoints_Player"
@@ -263,10 +263,10 @@ BIOME_COLORS = {
     "AncientLand": (150, 120, 160),
 }
 BIOME_LABELS = {
-    "Grassland": ("Prairies", "Grassland"), "Deepforest": ("Forêt profonde", "Deep forest"),
-    "TallTrees": ("Grands arbres", "Tall trees"), "Steppes": ("Steppes", "Steppes"),
-    "Wetland": ("Marais", "Wetlands"), "ColdHeights": ("Hauteurs gelées", "Cold heights"),
-    "Desert": ("Désert", "Desert"), "AncientLand": ("Terres anciennes", "Ancient lands"),
+    "Grassland": dict(fr="Prairies", en="Grassland", de="Grasland"), "Deepforest": dict(fr="Forêt profonde", en="Deep forest", de="Tiefer Wald"),
+    "TallTrees": dict(fr="Grands arbres", en="Tall trees", de="Hohe Bäume"), "Steppes": dict(fr="Steppes", en="Steppes", de="Steppen"),
+    "Wetland": dict(fr="Marais", en="Wetlands", de="Sumpfland"), "ColdHeights": dict(fr="Hauteurs gelées", en="Cold heights", de="Kalte Höhen"),
+    "Desert": dict(fr="Désert", en="Desert", de="Wüste"), "AncientLand": dict(fr="Terres anciennes", en="Ancient lands", de="Uralte Lande"),
 }
 
 TAG_RE = re.compile(r"<[^>]*>")
@@ -358,8 +358,8 @@ def classify_enemies(texts, locas):
     def enemy_names(raw):
         """In-game names of an enemy template, from its variants or the tables."""
         extra = EXTRA_ELITES.get(raw)
-        if isinstance(extra, tuple):
-            return list(extra)
+        if isinstance(extra, dict):
+            return languages.row(extra)
         loca_id = extra if extra else ELITE_NAMES.get(enemy_key(raw))
         if loca_id:
             return [loca.get(loca_id) for loca in locas]
@@ -429,9 +429,9 @@ def boss_templates(src, locas, all_texts):
 
 
 def region_names(src, locas):
-    """Biome -> [fr, en] region name."""
+    """Biome -> region name in every language."""
     bundle = open(glob.glob(f"{src}/FbUiBundle/*.json")[0], encoding="utf-8").read()
-    en = locas[LANGUAGES.index("En_Us")]
+    en = locas[languages.EN]
     names = {}
     for biome, source in REGION_SOURCES.items():
         if source.startswith("="):
@@ -528,7 +528,7 @@ def item_table_for_map(markers, resources, item_names, export, out):
 
 def main(src, export, out):
     os.makedirs(f"{out}/icons", exist_ok=True)
-    locas = [load_loca(f"{export}/loca/{lang}.tsv") for lang in LANGUAGES]
+    locas = languages.load_all(export, load_loca)
     icon_names = dict(line.rstrip("\n").split("\t") for line in open(f"{export}/icons/index.tsv", encoding="utf-8"))
 
     registry = load(glob.glob(f"{src}/MapMarkerRegistryResource/*.json")[0])
@@ -545,14 +545,14 @@ def main(src, export, out):
             icon = f"icons/{icon_names[reg['icon']['image']]}.png"
             shutil.copyfile(f"{export}/icons/{reg['icon']['image']}.png", f"{out}/{icon}")
         categories[cat] = {
-            "label": CATEGORY_LABELS[cat],
+            "label": languages.row(CATEGORY_LABELS[cat]),
             "kind": kind,
             "icon": icon,
             "visible": cat not in HIDDEN_BY_DEFAULT,
         }
 
     # Region labels are generated from the biome map (region_labels).
-    categories["region"] = {"label": CATEGORY_LABELS["region"], "kind": "label", "icon": None, "visible": True}
+    categories["region"] = {"label": languages.row(CATEGORY_LABELS["region"]), "kind": "label", "icon": None, "visible": True}
 
     marker_templates = {}
     for p in glob.glob(f"{src}/TemplateResource/*.json"):
@@ -591,7 +591,7 @@ def main(src, export, out):
     for cat, icon in RESOURCE_CATEGORIES.items():
         guid = next(g for g, n in icon_names.items() if n == icon)
         shutil.copyfile(f"{export}/icons/{guid}.png", f"{out}/icons/{icon}.png")
-        categories[cat] = {"label": CATEGORY_LABELS[cat], "kind": "dots", "icon": f"icons/{icon}.png",
+        categories[cat] = {"label": languages.row(CATEGORY_LABELS[cat]), "kind": "dots", "icon": f"icons/{icon}.png",
                            "visible": cat not in HIDDEN_BY_DEFAULT}
     for cat, icon in EXTRA_CATEGORIES.items():
         if icon.endswith(".svg"):
@@ -601,7 +601,7 @@ def main(src, export, out):
             guid = next(g for g, n in icon_names.items() if n == icon)
             shutil.copyfile(f"{export}/icons/{guid}.png", f"{out}/icons/{icon}.png")
             icon += ".png"
-        categories[cat] = {"label": CATEGORY_LABELS[cat], "kind": "icon", "icon": f"icons/{icon}",
+        categories[cat] = {"label": languages.row(CATEGORY_LABELS[cat]), "kind": "icon", "icon": f"icons/{icon}",
                            "visible": cat not in HIDDEN_BY_DEFAULT}
 
     placed = []           # (template guid, x, height, z)
@@ -651,16 +651,16 @@ def main(src, export, out):
         # Same element placed twice (scene + chunk): keep one. The phases of a
         # boss (Vorgoth...) have their own names but share the spot: one marker,
         # named after the first phase (template names end with Phase1, Phase2...).
-        same = "phases" if t["cat"] == "boss" else tuple(t["names"]) if t["names"][0] else guid
+        same = "phases" if t["cat"] == "boss" else tuple(t["names"]) if t["names"][languages.FR] else guid
         key = (t["cat"], same, round(x / 4), round(z / 4))
         # Untranslated markers are mostly generic ones (elixir wells...), for
         # which the category name is the in-game name.
-        fallback = CATEGORY_LABELS[t["cat"]]
+        fallback = languages.row(CATEGORY_LABELS[t["cat"]])
         marker = {
             "name": [n or fb for n, fb in zip(t["names"], fallback)],
             "raw": t["raw"],
             # the Bard's crypt is a point of interest marker in the game
-            "cat": "dungeonEntrance" if CRYPT_NAME.match(t["names"][0] or "") else t["cat"],
+            "cat": "dungeonEntrance" if CRYPT_NAME.match(t["names"][languages.FR] or "") else t["cat"],
             "x": round(x, 1), "y": round(y, 1), "z": round(z, 1),
             "fastTravel": t["fastTravel"],
         }
@@ -672,7 +672,7 @@ def main(src, export, out):
                 kept.update(name=marker["name"], raw=marker["raw"])
             continue
         seen[key] = len(markers)
-        if not t["names"][0]:
+        if not t["names"][languages.FR]:
             unnamed += 1
         markers.append(marker)
     lost = {t["raw"] for t in appearance.values()} - {m["raw"] for m in markers if m["cat"] in APPEARANCE_CATEGORIES}
@@ -759,8 +759,8 @@ def main(src, export, out):
     present = set(cells)
     data = {
         "worldSize": w * biome["mapScale"],
-        "languages": ["fr", "en"],
-        "biomes": {k: {"color": "#%02x%02x%02x" % v, "label": BIOME_LABELS[k]}
+        "languages": list(languages.BUILD),
+        "biomes": {k: {"color": "#%02x%02x%02x" % v, "label": languages.row(BIOME_LABELS[k])}
                    for k, v in BIOME_COLORS.items() if k in present},
         "categories": categories,
         "items": items,
@@ -773,6 +773,7 @@ def main(src, export, out):
                       ("settings-presets", build_presets.build_presets(src))):
         with open(f"{out}/{name}.json", "w", encoding="utf-8") as f:
             json.dump(obj, f, ensure_ascii=False, separators=(",", ":"))
+    languages.report()
 
 
 if __name__ == "__main__":

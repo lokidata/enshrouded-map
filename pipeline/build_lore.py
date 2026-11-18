@@ -15,23 +15,24 @@ import glob
 import json
 import re
 
-LANGUAGES = ("Fr_Fr", "En_Us")
+import languages
+
 TAGS = re.compile(r"<[^>]*>")
 
 # Quest.source as the game names it: a character, or the region of a world quest
 GIVERS = {
-    "Flame": (("La Flamme", "The Flame"), False), "Alchemist": (("Alchimiste", "Alchemist"), False),
-    "Blacksmith": (("Forgeron", "Blacksmith"), False), "Huntress": (("Chasseresse", "Huntress"), False),
-    "Farmer": (("Fermier", "Farmer"), False), "Carpenter": (("Charpentier", "Carpenter"), False),
-    "CryptKeeper": (("Fossoyeur", "Crypt Keeper"), False), "Barber": (("Barbier", "Barber"), False),
-    "Bard": (("Barde", "Bard"), False), "Fisher": (("Pêcheur", "Fisher"), False),
-    "AncientResearcher": (("Chercheur des Anciens", "Ancient Researcher"), False),
-    "ChineseNewYearTrader": (("Marchand du Nouvel An lunaire", "Lunar New Year Trader"), False),
-    "Grassland": (("Hautes pâtures", "Springlands"), True), "Deepforest": (("Bois envoûtés", "Revelwood"), True),
-    "Steppes": (("Plateaux nomades", "Nomad Highlands"), True), "Desert": (("Regs exaltés", "Kindlewastes"), True),
-    "ColdHeights": (("Sommets de l'Albaneve", "Albaneve Summits"), True),
-    "Wetlands": (("Bassin des eaux voilées", "Veilwater Basin"), True),
-    "AncientLands": (("Berceau des cendres", "Cinder's Cradle"), True),
+    "Flame": (dict(fr="La Flamme", en="The Flame", de="Die Flamme"), False), "Alchemist": (dict(fr="Alchimiste", en="Alchemist", de="Alchemist"), False),
+    "Blacksmith": (dict(fr="Forgeron", en="Blacksmith", de="Schmied"), False), "Huntress": (dict(fr="Chasseresse", en="Huntress", de="Jägerin"), False),
+    "Farmer": (dict(fr="Fermier", en="Farmer", de="Bauer"), False), "Carpenter": (dict(fr="Charpentier", en="Carpenter", de="Schreiner"), False),
+    "CryptKeeper": (dict(fr="Fossoyeur", en="Crypt Keeper", de="Gruftwächter"), False), "Barber": (dict(fr="Barbier", en="Barber", de="Barbier"), False),
+    "Bard": (dict(fr="Barde", en="Bard", de="Barde"), False), "Fisher": (dict(fr="Pêcheur", en="Fisher", de="Fischer"), False),
+    "AncientResearcher": (dict(fr="Chercheur des Anciens", en="Ancient Researcher", de="Erbauer-Forscherin"), False),
+    "ChineseNewYearTrader": (dict(fr="Marchand du Nouvel An lunaire", en="Lunar New Year Trader", de="Mondneujahrs-Händlerin"), False),
+    "Grassland": (dict(fr="Hautes pâtures", en="Springlands", de="Hochweiden"), True), "Deepforest": (dict(fr="Bois envoûtés", en="Revelwood", de="Düsterdickicht"), True),
+    "Steppes": (dict(fr="Plateaux nomades", en="Nomad Highlands", de="Nomaden-Anhöhen"), True), "Desert": (dict(fr="Regs exaltés", en="Kindlewastes", de="Ödland"), True),
+    "ColdHeights": (dict(fr="Sommets de l'Albaneve", en="Albaneve Summits", de="Albapracht-Gipfel"), True),
+    "Wetlands": (dict(fr="Bassin des eaux voilées", en="Veilwater Basin", de="Wogschimmer-Grund"), True),
+    "AncientLands": (dict(fr="Berceau des cendres", en="Cinder's Cradle", de="Glimmkessel"), True),
 }
 
 
@@ -49,7 +50,7 @@ def load_texts(path):
 
 def build_lore(src, export, out):
     from build_data import fnv_guid, write_item_picture
-    texts = [load_texts(f"{export}/loca/{lang}.tsv") for lang in LANGUAGES]
+    texts = languages.load_all(export, load_texts)
 
     def loca(value):
         names = [t.get(value) for t in texts]
@@ -80,7 +81,7 @@ def build_lore(src, export, out):
             categories[str(cat)] = loca(cat)
         notes.append({"id": str(c["entryId"]["value"]), "name": name, "cat": str(cat) if cat and loca(cat) else None,
                       "priority": c["priority"], "pages": pages})
-    notes.sort(key=lambda n: (-n["priority"], n["name"][0]))
+    notes.sort(key=lambda n: (-n["priority"], n["name"][languages.FR]))
 
     quests, used, unknown = [], set(), {}
     for q in journal["quests"]:
@@ -97,7 +98,7 @@ def build_lore(src, export, out):
         used.update(rewards)
         quests.append({"id": str(q["entryId"]["value"]), "name": name, "giver": giver,
                        "main": bool(q.get("isMainQuest")), "steps": steps, "rewards": rewards})
-    givers = {k: {"name": list(GIVERS[k][0]), "region": GIVERS[k][1]} for k in GIVERS
+    givers = {k: {"name": languages.row(GIVERS[k][0]), "region": GIVERS[k][1]} for k in GIVERS
               if any(q["giver"] == k for q in quests)}
     items = {g: {"name": item_names[g], "icon": write_item_picture(export, out, g)} for g in sorted(used)}
     print(f"lore: {len(notes)} notes ({sum(len(n['pages']) for n in notes)} pages, {skipped} empty left out), "

@@ -23,6 +23,8 @@ import math
 import os
 import re
 
+import languages
+
 GUID = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
 
 # Items given by plants that are worth a map entry (debug names), in the
@@ -66,17 +68,19 @@ ORE_COLORS = {
     89: "#f2c14e", 90: "#ffd84a",
 }
 MINING_CONTAINER = re.compile(r"^Prop_Ancients_Container_Mining_")
-MINING_CONTAINER_NAME = ("Conteneur minier des Anciens", "Ancients' mining container")
+MINING_CONTAINER_NAME = dict(fr="Conteneur minier des Anciens", en="Ancients' mining container", de="Abbaucontainer der Erbauer")
 OTHER_ORE_COLORS = {"Material_T7_Archaic_Shards": "#c8a2ff", "mining container": "#6fd6c4"}
 
-# Chest templates: (regex, [fr, en]); first match wins. Names of wooden and
+# Chest templates: (regex, {code: name} or loca id); first match wins. Names of wooden and
 # silver chests come from the game texts (loca ids).
 CHEST_TYPES = [
-    (r"(?i)sarcophag", ("Sarcophage", "Sarcophagus"), "#9b6cc8"),
-    (r"(?i)gold", ("Coffre en or", "Golden Chest"), "#f2c14e"),
+    (r"(?i)sarcophag", dict(fr="Sarcophage", en="Sarcophagus", de="Sarkophag"), "#9b6cc8"),
+    (r"(?i)gold", dict(fr="Coffre en or", en="Golden Chest", de="Goldene Truhe"), "#f2c14e"),
     (r"(?i)silver", 4193367922, "#cfd6de"),   # Silver Chest
     (r"(?i)wood", 725466433, "#b07a45"),      # Wooden Chest
 ]
+FOG_CHEST = dict(fr="{} du Voile", en="Shroud {}", de="Miasma-{}")
+LOCKED_CHEST = dict(fr="{} (verrouillé)", en="{} (locked)", de="{} (verschlossen)")
 chest_colors = {}  # chest names -> colour, filled by resource_templates
 CHEST_EXCLUDE = re.compile(r"(?i)test|dummy|debug")
 
@@ -173,36 +177,35 @@ WIG_ITEM = "Prop_NPC_barber_hairstyle_dummy_wigHead_"
 # dark red eyes (a gem to find for the Alchemist's apprentice).
 APPEARANCE_PLACES = {
     "8kMapLabel_deepforest_NPC_barber_hint03_haircolor_01_red_searchmarker_01":
-        ("haircolor", "Couleurs de cheveux : 2 rouges", "Hair colours: 2 reds"),
+        ("haircolor", dict(fr="Couleurs de cheveux : 2 rouges", en="Hair colours: 2 reds", de="Haarfarben: 2 Rottöne")),
     "8kMapLabel_deepforest_NPC_barber_hint04_haircolor_02_blue_searchmarker_01":
-        ("haircolor", "Couleurs de cheveux : 2 bleus, étape 1 (le donjon)", "Hair colours: 2 blues, step 1 (the dungeon)"),
+        ("haircolor", dict(fr="Couleurs de cheveux : 2 bleus, étape 1 (le donjon)", en="Hair colours: 2 blues, step 1 (the dungeon)", de="Haarfarben: 2 Blautöne, Schritt 1 (das Verlies)")),
     "8kMapLabel_deepforest_nightPlant_Berry_field_01":
-        ("haircolor", "Couleurs de cheveux : 2 bleus, étape 2 (baies sombres la nuit, lieu déduit)",
-         "Hair colours: 2 blues, step 2 (dark berries at night, deduced place)"),
+        ("haircolor", dict(fr="Couleurs de cheveux : 2 bleus, étape 2 (baies sombres la nuit, lieu déduit)", en="Hair colours: 2 blues, step 2 (dark berries at night, deduced place)", de="Haarfarben: 2 Blautöne, Schritt 2 (dunkle Beeren bei Nacht, erschlossener Ort)")),
     "8kMapLabel_steppes_nightPlant_field_01":
-        ("haircolor", "Couleur de cheveux : vert (plantes nocturnes, lieu déduit)", "Hair colour: green (night plants, deduced place)"),
+        ("haircolor", dict(fr="Couleur de cheveux : vert (plantes nocturnes, lieu déduit)", en="Hair colour: green (night plants, deduced place)", de="Haarfarbe: Grün (Nachtpflanzen, erschlossener Ort)")),
     "LoreText_Grassland_plains_Ministory_36_eyeColor_reward_purple_01":
-        ("eyecolor", "Couleur des yeux : violet", "Eye colour: purple"),
+        ("eyecolor", dict(fr="Couleur des yeux : violet", en="Eye colour: purple", de="Augenfarbe: Violett")),
     "8kMapLabel_deepforest_foggerProject_eyeColor_reward_brightBlue_searchArea_noUI":
-        ("eyecolor", "Couleur des yeux : bleu vif", "Eye colour: bright blue"),
+        ("eyecolor", dict(fr="Couleur des yeux : bleu vif", en="Eye colour: bright blue", de="Augenfarbe: Hellblau")),
     "LoreText_Deepforest_ministory_36_eyeColor_reward_orange_01":
-        ("eyecolor", "Couleur des yeux : orange", "Eye colour: orange"),
+        ("eyecolor", dict(fr="Couleur des yeux : orange", en="Eye colour: orange", de="Augenfarbe: Orange")),
     "LoreText_steppes_Ministory_41_eyeColor_reward_yellow_01":
-        ("eyecolor", "Couleur des yeux : jaune (indice)", "Eye colour: yellow (hint)"),
+        ("eyecolor", dict(fr="Couleur des yeux : jaune (indice)", en="Eye colour: yellow (hint)", de="Augenfarbe: Gelb (Hinweis)")),
     "LoreText_steppes_Ministory_41_eyeColor_reward_yellow_02":
-        ("eyecolor", "Couleur des yeux : jaune", "Eye colour: yellow"),
+        ("eyecolor", dict(fr="Couleur des yeux : jaune", en="Eye colour: yellow", de="Augenfarbe: Gelb")),
     "LoreText_steppes_Ministory_42_eyeColor_reward_white_01":
-        ("eyecolor", "Couleur des yeux : blanc (indice)", "Eye colour: white (hint)"),
+        ("eyecolor", dict(fr="Couleur des yeux : blanc (indice)", en="Eye colour: white (hint)", de="Augenfarbe: Weiß (Hinweis)")),
     "LoreText_steppes_Ministory_42_eyeColor_reward_white_02":
-        ("eyecolor", "Couleur des yeux : blanc", "Eye colour: white"),
+        ("eyecolor", dict(fr="Couleur des yeux : blanc", en="Eye colour: white", de="Augenfarbe: Weiß")),
     "LoreText_desert_Ministory_31_eyeColor_reward_red_01":
-        ("eyecolor", "Couleur des yeux : rouge", "Eye colour: red"),
+        ("eyecolor", dict(fr="Couleur des yeux : rouge", en="Eye colour: red", de="Augenfarbe: Rot")),
     "LoreText_desert_Ministory_32_eyeColor_reward_turquoise_01":
-        ("eyecolor", "Couleur des yeux : turquoise", "Eye colour: turquoise"),
+        ("eyecolor", dict(fr="Couleur des yeux : turquoise", en="Eye colour: turquoise", de="Augenfarbe: Türkis")),
     "LoreText_coldHeights_Ministory_37_eyeColor_reward_black_01":
-        ("eyecolor", "Couleur des yeux : noir", "Eye colour: black"),
+        ("eyecolor", dict(fr="Couleur des yeux : noir", en="Eye colour: black", de="Augenfarbe: Schwarz")),
     "LoreText_ancientLands_Ancients_Ministory_20_eyeColor_unlock_pink":
-        ("eyecolor", "Couleur des yeux : rose", "Eye colour: pink"),
+        ("eyecolor", dict(fr="Couleur des yeux : rose", en="Eye colour: pink", de="Augenfarbe: Rosa")),
 }
 
 
@@ -240,8 +243,8 @@ def appearance_templates(raws):
     out = {}
     for guid, raw in raws.items():
         if raw in APPEARANCE_PLACES:
-            cat, *names = APPEARANCE_PLACES[raw]
-            out[guid] = {"raw": raw, "names": names, "cat": cat, "fastTravel": False}
+            cat, names = APPEARANCE_PLACES[raw]
+            out[guid] = {"raw": raw, "names": languages.row(names), "cat": cat, "fastTravel": False}
     missing = set(APPEARANCE_PLACES) - {t["raw"] for t in out.values()}
     assert not missing, f"appearance templates not in the game data: {missing}"
     return out
@@ -290,11 +293,12 @@ def resource_templates(src, locas, texts, raws):
                 if re.search(rx, raw):
                     if isinstance(names, int):
                         names = [loca.get(names) for loca in locas]
-                    names = list(names)
+                    else:
+                        names = languages.row(names)
                     if "fog" in raw.lower():
-                        names = [names[0] + " du Voile", "Shroud " + names[1]]
+                        names = [languages.tr(FOG_CHEST, code).format(n) for n, code in zip(names, languages.BUILD)]
                     if "locked" in raw.lower():
-                        names = [names[0] + " (verrouillé)", names[1] + " (locked)"]
+                        names = [languages.tr(LOCKED_CHEST, code).format(n) for n, code in zip(names, languages.BUILD)]
                     result[guid] = ("chest", names, raw)
                     chest_colors[tuple(names)] = color
                     break
@@ -309,7 +313,7 @@ def resource_templates(src, locas, texts, raws):
             elif given:
                 # mixed loot: one entry whatever the order of the drops
                 given.sort(key=lambda n: n[0])
-                names = [f"{MINING_CONTAINER_NAME[i]} : " + ", ".join(n[i] for n in given) for i in range(len(locas))]
+                names = [f"{languages.tr(MINING_CONTAINER_NAME, code)} : " + ", ".join(n[i] for n in given) for i, code in enumerate(languages.BUILD)]
                 result[guid] = ("ore", names, raw)
             continue
         if "PickupItem" not in texts[guid] and "MiningNode" not in texts[guid] and "defaultInventory" not in texts[guid]:
@@ -423,7 +427,7 @@ def build_resources(placed, templates, by_debug, export, locas, dungeon_areas, v
             if cat == "ore":
                 item["color"] = ore_color_by_name.get(tuple(item["name"]))
                 if not item["color"]:
-                    container = item["name"][0].startswith(MINING_CONTAINER_NAME[0])
+                    container = item["name"][languages.FR].startswith(MINING_CONTAINER_NAME["fr"])
                     item["color"] = OTHER_ORE_COLORS["mining container" if container else "Material_T7_Archaic_Shards"]
             elif cat == "chest":
                 item["color"] = chest_colors.get(tuple(item["name"]), "#b07a45")
