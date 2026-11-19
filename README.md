@@ -49,6 +49,10 @@ The top bar switches between the screens, in this order. The complete functional
 
 Optional screens appear only when the server has their data file (see [`pipeline/README.md`](pipeline/README.md)): without `craft.json` there is no Workshop, without `lore.json` no Lore, and so on; without `gear.json` the Character entry opens the skill tree.
 
+## Roadmap
+
+What is done and what is planned is kept in [`docs/TODO.md`](docs/TODO.md): it serves as the roadmap.
+
 ## Security
 
 Argon2id passwords, server-side sessions, CSRF protection, rate limiting, invitation-only registration, hardened containers, signed images, CodeQL / Trivy / gitleaks / dependency review in CI. See [SECURITY.md](SECURITY.md) to report a vulnerability.

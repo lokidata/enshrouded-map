@@ -1,7 +1,7 @@
 import { KsdError } from './ksd';
 
 /**
- * The Flame Altars of a dedicated server's world save (`world0.ksd`): sections `base00`..`base05`, one per altar spot.
+ * The Flame Altars of a dedicated server's world save (`world0.ksd`): sections `base00`..`base15` (a world holds up to 16 altars), one per altar spot.
  * A section starts with `[16 bytes GUID][min x, y, z: 3 x u32 LE][max x, y, z: 3 x u32 LE]`, then voxel data that is
  * not read. The unit is HALF a metre, y is the height. The box is the altar's build area: a square of 40 m per level,
  * centred on the altar (checked on one real save, 1 altar of level 4 and 4 of level 1, confirmed in game; the sizes of
@@ -21,13 +21,13 @@ export interface AltarsRead {
   skipped: number;
 }
 
-export const MAX_BASES = 6;
+export const MAX_BASES = 16;
 const WORLD_HALF_METRES = 2 * 10_240;
 const HEADER = 16 + 6 * 4;
 const HALF_METRES_PER_LEVEL = 80; // 40 m
 
 const BASE = /^base\d+$/;
-const SLOT = /^base0[0-5]$/;
+const SLOT = /^base(0\d|1[0-5])$/; // shortcut: names past base09 assumed decimal (base10..base15), not seen in a real save
 
 /** The altars of the sections of a world save; throws KsdError('bases') when there are more bases than a world holds. */
 export function readAltars(sections: ReadonlyMap<string, Uint8Array>): AltarsRead {
