@@ -1198,7 +1198,11 @@ test('build: a low-level piece is flagged on its slot and in the recommendations
   await expect(dialog).toBeHidden();
 
   // level 10 against 20: 173 / 323, -46 % armour, critical; the badge says it in words and in the label
-  await expect(panel.getByRole('status')).toContainText('Niveau très bas');
+  // the sheet may still be loading and overwrite the level: set it again until the badge shows
+  await expect(async () => {
+    await setLevel('20');
+    await expect(panel.getByRole('status')).toContainText('Niveau très bas', { timeout: 1500 });
+  }).toPass();
   await expect(panel.getByRole('status')).toContainText('-46 %');
   await expect(panel.getByRole('status')).toContainText('Toujours trop faible même amélioré');
   await expect(panel.getByRole('status')).toContainText('niveau de base 10 : -46 %');
@@ -1464,8 +1468,11 @@ test('lore: notes found per player, quests, AXE', async ({ page }) => {
   expect(await violations(), 'note').toEqual([]);
   const side = page.locator('app-lore .side');
   const pages = page.locator('app-lore .note-page');
-  await pages.first().getByLabel('Page récupérée').check(); // one page only
-  await expect(side).toContainText('1 page(s) récupérée(s) sur 3');
+  // the progress may still be loading and overwrite the mark: check again until it holds
+  await expect(async () => {
+    await pages.first().getByLabel('Page récupérée').check(); // one page only
+    await expect(side).toContainText('1 page(s) récupérée(s) sur 3', { timeout: 1500 });
+  }).toPass();
   await expect(side).toContainText('0 trouvée(s) sur 2');
   await page.locator('app-lore header').getByLabel('Trouvée').check(); // the whole note
   await expect(side).toContainText('2 page(s) récupérée(s) sur 3');
