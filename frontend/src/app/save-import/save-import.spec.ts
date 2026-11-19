@@ -311,12 +311,13 @@ describe('altars in a world save', () => {
     expect(readAltars(new Map([['base00', box(10_221, 10_220, 1)]])).altars).toHaveLength(0);
   });
 
-  it('skips a base outside the six slots and refuses a file with more than six', () => {
-    expect(readAltars(new Map([['base06', box(1, 1, 1)]]))).toEqual({ altars: [], skipped: 1 });
-    const seven = new Map(
-      [0, 1, 2, 3, 4, 5, 6].map((i) => [`base0${i}`, box(100 * i + 100, 100, 1)] as const),
-    );
-    expect(() => readAltars(seven)).toThrow(KsdError);
+  it('reads up to 16 bases, skips one outside the slots and refuses a file with more than 16', () => {
+    const name = (i: number): string => `base${String(i).padStart(2, '0')}`;
+    const entries = (n: number) =>
+      Array.from({ length: n }, (_, i) => [name(i), box(100 * i + 100, 100, 1)] as const);
+    expect(readAltars(new Map(entries(16))).altars).toHaveLength(16);
+    expect(readAltars(new Map([['base16', box(1, 1, 1)]]))).toEqual({ altars: [], skipped: 1 });
+    expect(() => readAltars(new Map(entries(17)))).toThrow(KsdError);
   });
 
   it('is empty for a file with no base, and does not read other sections', () => {
