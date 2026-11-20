@@ -48,6 +48,7 @@ Account menu > Profile (popup): tabs Account (language kept by the account, pass
 ## Plugins / add-ons (first version done)
 
 - [x] Done (manifest, tabs, custom elements, see RULES.md > Optional server add-on). Still open: a second add-on in another repo, the add-on reading site data (account, team, map), a weight check of the second Angular runtime on a slow phone.
+- [ ] **Export the game's German texts on the pipeline PC** (`export/loca/De_De.tsv` is missing on tora, so `build_data.py` fails on German today and `item-names.json` was built once with English standing in for the German names of about 1,100 items). Then rerun the pipeline and copy the output.
 - [ ] ~~**Plugin / add-on system**~~ (original idea, kept for the record): let the site host extensions, for example to manage a game server or its mods. Today the server tools live in a separate project (`enshrouded-map-addon`: server status, access, power, backups, chestsort editor) that shares only the look (`design-system/`). To decide: how an add-on registers itself (menu entry, screens, routes), what it may read (account, team, map data) and how it is isolated, with the same security rules as the site (sessions, CSRF, no data sent out).
 
 ## Feedback on 0.3.0 (issue #97)

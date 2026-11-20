@@ -12,6 +12,7 @@ Produces in out_dir:
   lore.json       lore notes and quests of the journal
   enemies.json    bosses and elite enemies
   skills.json     the skill tree (build planner)
+  item-names.json internal item names with FR/EN/DE names (chestsort add-on)
   biomes.png    biome map (optional background layer)
   icons/        map marker icons used by the markers
 """
