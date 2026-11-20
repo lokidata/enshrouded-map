@@ -40,8 +40,23 @@ def test_split_keeps_every_language_and_walks_like_js():
 
 
 
+def test_split_refuses_a_file_that_is_already_split(tmp_path):
+    import json
+    import split_languages as S
+    f = tmp_path / "x"
+    (tmp_path / "x.json").write_text(json.dumps({"name": ["a", "b", "c"]}))
+    S.split_file(str(f), L.BUILD)
+    try:
+        S.split_file(str(f), L.BUILD)
+    except SystemExit:
+        assert json.loads((tmp_path / "x.fr.json").read_text()) == ["a"]  # the texts were not overwritten
+    else:
+        raise AssertionError("split twice should refuse")
+
+
 if __name__ == "__main__":
+    import pathlib, tempfile
     for n, f in list(globals().items()):
         if n.startswith("test_"):
-            f()
+            f(pathlib.Path(tempfile.mkdtemp())) if f.__code__.co_argcount else f()
     print("ok")
