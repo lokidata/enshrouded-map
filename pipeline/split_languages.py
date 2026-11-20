@@ -45,6 +45,8 @@ def split_file(path_without_ext, codes):
         data = json.load(f)
     out = [[] for _ in codes]
     base = split_value(data, "", len(codes), out)
+    if out[0] and not any(t for texts in out for t in texts):
+        raise SystemExit(f"{path_without_ext}.json is already split (its texts are blank): nothing written")
     dump = {"ensure_ascii": False, "separators": (",", ":")}
     with open(path_without_ext + ".json", "w", encoding="utf-8") as f:
         json.dump(base, f, **dump)

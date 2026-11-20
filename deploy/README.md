@@ -56,3 +56,11 @@ SemVer `vMAJOR.MINOR.PATCH`, first release `v0.1.0` (0.x: the data formats and t
 5. Portainer: set `IMAGE_TAG=0.2.0` (instead of `latest`) and redeploy.
 
 Label PRs `enhancement`, `bug`, `documentation` for the notes; `skip-changelog` hides one.
+
+## Updating from 0.4.x or older: the data files changed (0.5.0)
+
+`craft`, `gear`, `lore`, `skills` and `gems` are now split by language: next to `craft.json` the server needs `craft.fr.json`, `craft.en.json` and `craft.de.json` (same for the four others), and the base files themselves change. The new site cannot read the old files (the Workshop, Lore, Character and Skills screens would not load), and the old site cannot read the new ones: **copy the new data files and update the images together**.
+
+- **Run the pipeline again** (`build_data.py`, see `pipeline/README.md`): it writes the split files, then copy the whole output to the artifacts folder.
+- **No game data at hand**: split the files you already have with `python pipeline/split_languages.py <artifacts folder>` (no game install needed; it refuses a file that is already split). Only languages the files were built with exist (fr, en, de from 0.2.0).
+- A new language later needs a pipeline run (its game texts), not only this script.
