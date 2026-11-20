@@ -9,3 +9,6 @@ dist/
 .angular/
 graphify-out/
 docs/samples/
+
+# local dev databases (accounts, sessions)
+backend/data/
