@@ -242,8 +242,9 @@ export class EntriesTab {
     return (this.kind() === 'recipes' ? d?.recipes : d?.blocks) ?? [];
   });
 
-  /** Search text of each entry: its name, what it makes and its ingredients, in both languages. */
+  /** Search text of each entry: its name, what it makes and its ingredients, in the language shown. */
   private readonly haystack = computed(() => {
+    this.lang.index(); // the texts of a language come when it is chosen
     const names = (guid: string) => this.craft.data()?.items[guid]?.name ?? [];
     return new Map(
       this.source().map((e) => {
@@ -366,7 +367,7 @@ export class EntriesTab {
    */
   private cardKey(e: Entry | BlockEntry): string {
     if (this.kind() === 'blocks')
-      return [e.name[0], (e as BlockEntry).group, tierOf(e), e.output?.item ?? ''].join('|');
+      return [this.craft.text(e.name), (e as BlockEntry).group, tierOf(e), e.output?.item ?? ''].join('|');
     const item = e.output && this.craft.data()?.items[e.output.item];
     return item ? `r|${itemVariantKey(item)}` : e.id;
   }

@@ -227,7 +227,7 @@ export class SlotPicker {
       .filter(([, item]) => fits(this.slot(), item))
       .map(([id, item]) => ({ id, item }))
       .sort(
-        (a, b) => b.item.lvl[1] - a.item.lvl[1] || a.item.name[1].localeCompare(b.item.name[1]),
+        (a, b) => b.item.lvl[1] - a.item.lvl[1] || this.gear.text(a.item.name).localeCompare(this.gear.text(b.item.name)),
       ),
   );
   /** The weapon families of the slot, for the class filter. */

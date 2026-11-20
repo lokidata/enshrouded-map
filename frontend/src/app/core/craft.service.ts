@@ -1,6 +1,5 @@
-import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
+import { DataFiles } from './data-files.service';
 import { CalcContext } from './craft.calc';
 import { CraftData, Entry } from './craft.model';
 import { LangService } from './lang.service';
@@ -9,7 +8,7 @@ import { Names } from './map-data.model';
 /** The workshop data (recipes, altar, building pieces), loaded after the login. */
 @Injectable({ providedIn: 'root' })
 export class CraftService {
-  private readonly http = inject(HttpClient);
+  private readonly files = inject(DataFiles);
   private readonly lang = inject(LangService);
 
   /** Null until loaded, and when the server has no craft.json (the workshop is then hidden). */
@@ -17,7 +16,7 @@ export class CraftService {
 
   async load(): Promise<void> {
     try {
-      this.data.set(await firstValueFrom(this.http.get<CraftData>('craft.json')));
+      this.data.set(await this.files.load<CraftData>('craft'));
     } catch {
       this.data.set(null);
     }

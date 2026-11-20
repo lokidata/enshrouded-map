@@ -1297,7 +1297,7 @@ test('a marker done on the map shows everywhere, and the other way round', async
   await page.getByRole('dialog').getByRole('button', { name: 'Se connecter' }).click();
   await expect(page.locator('.who')).toContainText(user);
   const fixture = await page.evaluate(async () =>
-    (await (await fetch('craft.json')).text()).includes('Recette liée'),
+    (await (await fetch('craft.fr.json')).text()).includes('Recette liée'),
   );
   test.skip(!fixture, 'needs the fixture map');
 

@@ -21,6 +21,8 @@ game install ──kfc-parser unpack──▶ unpacked/   (resource descriptors,
                                       biomes.png, icons/, items/
 ```
 
+As its last step `build_data.py` runs `split_languages.py`: `craft`, `gear`, `lore`, `skills` and `gems` are written as `<name>.json` (structure, texts blank) + `<name>.<code>.json` (the texts of one language). All of these files must be copied to the server together (see docs/RULES.md, "Data files split by language").
+
 ## Requirements
 
 - Enshrouded installed (the folder holding `enshrouded.kfc` and the

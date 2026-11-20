@@ -53,7 +53,7 @@ The map stays mounted (hidden) when another screen is shown; the others load on 
 
 ### Session and protection of the files
 - Without a session the page shows only the login dialog (no map, not dismissible).
-- nginx serves the data files only with a valid session (`auth_request` -> `GET /auth/check`): `tiles`, `icons`, `biomes.png`, `overview.jpg`, `map-data.json`, `resources.json`, `craft.json`, `lore.json`, `enemies.json`, `enemies/`, `gear.json`, `gems.json`, `item-names.json`, `skills.json`, `skills/`, `ui/`, `settings-presets.json`. `ng serve` does not protect them. `/auth/check` reads only the session (no user), still sliding its expiry. nginx caches its 204 for 30 s per session cookie (`proxy_cache` in `/tmp/auth-cache`, a tmpfs; never a 401; API down = refusal unless that session is cached): after a logout or an expiry, map files stay readable for up to 30 s (the API itself refuses at once).
+- nginx serves the data files only with a valid session (`auth_request` -> `GET /auth/check`): `tiles`, `icons`, `biomes.png`, `overview.jpg`, `map-data.json`, `resources.json`, `craft.json`, `lore.json`, `enemies.json`, `enemies/`, `gear.json`, `gems.json`, `item-names.json`, `skills.json`, the per-language text files `<name>.<code>.json`, `skills/`, `ui/`, `settings-presets.json`. `ng serve` does not protect them. `/auth/check` reads only the session (no user), still sliding its expiry. nginx caches its 204 for 30 s per session cookie (`proxy_cache` in `/tmp/auth-cache`, a tmpfs; never a 401; API down = refusal unless that session is cached): after a logout or an expiry, map files stay readable for up to 30 s (the API itself refuses at once).
 - Login is rate-limited per client address (10 per 5 minutes; setup and invitations 10 per hour) and an account locks progressively after 5 failed logins. The limit is in memory: a single API worker.
 
 ### Passwords
@@ -414,3 +414,7 @@ After a pipeline run: copy the output to the server's artifacts folder; nothing 
 - The save layout of the character sheet rests on two saves; a recipe's flag meaning is not confirmed in game.
 - The sheet's send to the server is silent on failure; the changes stay marked as unsent and go out at the next visit if no other device wrote meanwhile (else the server's copy wins and they are lost).
 - The migrations after 0012 were run on SQLite; PostgreSQL was not run for 0013.
+
+## Data files split by language (2026-11-20)
+
+`craft`, `gear`, `lore`, `skills` and `gems` are written by `pipeline/split_languages.py` (last step of `build_data.py`) as `<name>.json` (structure; every name/desc/label/text array blank) + `<name>.<code>.json` (the texts of one language, one flat list in walk order). `core/data-files.service.ts` loads the structure and the texts of the active language; `LangService.set` fetches the texts of a new language before the switch; `core/texts.ts` merges them. Not split: `map-data.json` and `resources.json` (names are the keys of the saved filters, `itemKey`). Measured on the real data (3 languages, 5 files): 8.2 MB raw / 1.59 MB gzipped -> one player gets 3.9 MB / 0.78 MB. Search finds text of the language shown only (it used to match all languages). A new language needs no change in the split. Verified: split + merge gives back the original files exactly (3 languages).

@@ -40,6 +40,7 @@ import build_lore  # noqa: E402  (journal: lore notes and quests)
 import build_places  # noqa: E402  (knowledge ids of the places, for the save import)
 import build_gear  # noqa: E402  (equipment stats, character constants)
 import build_gems  # noqa: E402  (weapon gems, comfort)
+import split_languages  # noqa: E402  (one texts file per language)
 import build_item_names  # noqa: E402  (internal item names, item-names.json)
 import build_presets  # noqa: E402  (server difficulty presets)
 import languages  # noqa: E402  (the languages of the data files)
@@ -782,6 +783,7 @@ def main(src, export, out):
                       ("settings-presets", build_presets.build_presets(src))):
         with open(f"{out}/{name}.json", "w", encoding="utf-8") as f:
             json.dump(obj, f, ensure_ascii=False, separators=(",", ":"))
+    split_languages.split_all(out)  # last: it rewrites the files above
     languages.report()
 
 

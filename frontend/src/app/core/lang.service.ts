@@ -2,12 +2,14 @@ import { Injectable, computed, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { TranslocoService } from '@jsverse/transloco';
 import { firstValueFrom } from 'rxjs';
+import { DataFiles } from './data-files.service';
 import { MapDataService } from './map-data.service';
 
 @Injectable({ providedIn: 'root' })
 export class LangService {
   private readonly transloco = inject(TranslocoService);
   private readonly mapData = inject(MapDataService);
+  private readonly dataFiles = inject(DataFiles);
 
   readonly lang = toSignal(this.transloco.langChanges$, {
     initialValue: this.transloco.getActiveLang(),
@@ -17,6 +19,7 @@ export class LangService {
 
   async set(code: string): Promise<void> {
     await firstValueFrom(this.transloco.load(code)); // translations ready before the switch
+    await this.dataFiles.addLanguage(code); // and the texts of the data files
     this.transloco.setActiveLang(code);
     document.documentElement.lang = code;
     try {

@@ -11,6 +11,7 @@ for (const path of [
   'enemies.json',
   'skills.json',
   'gear.json',
+  'gear.fr.json',
   'gems.json',
   'item-names.json',
   'settings-presets.json',

@@ -1,6 +1,5 @@
-import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
+import { DataFiles } from './data-files.service';
 import { GemPart, gemLevel, gemLines, gemParts } from './gems.logic';
 import { Gem, GemPick, GemsData } from './gems.model';
 import { LangService } from './lang.service';
@@ -9,7 +8,7 @@ import { Names } from './map-data.model';
 /** Weapon gems and comfort constants, loaded after the login. */
 @Injectable({ providedIn: 'root' })
 export class GemsService {
-  private readonly http = inject(HttpClient);
+  private readonly files = inject(DataFiles);
   private readonly lang = inject(LangService);
 
   /** Null until loaded, and when the server has no gems.json (no Gems entry then). */
@@ -52,7 +51,7 @@ export class GemsService {
 
   async load(): Promise<void> {
     try {
-      this.data.set(await firstValueFrom(this.http.get<GemsData>('gems.json')));
+      this.data.set(await this.files.load<GemsData>('gems'));
     } catch {
       this.data.set(null);
     }
