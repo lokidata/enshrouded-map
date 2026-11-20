@@ -396,7 +396,7 @@ Everything personal in the browser is wiped at logout. The first version's singl
 | `enemies.json`, `enemies/` | bosses and elites, pictures | no Enemies |
 | `gear.json`, `ui/` | equipment, constants, texts, slot art | Character opens the skills only |
 | `gems.json` | gems, comfort furniture | no gem choice |
-| `item-names.json` | internal item names (`debugName`) with FR/EN/DE names and the picture guid, read by the chestsort add-on only | the add-on's item box has no suggestions |
+| `item-names.json` | internal item names (`debugName`) with FR/EN/DE names and the picture guid, read by the chestsort add-on only | the add-on's chestsort editor shows internal names only, without the picker's pictures and translated names |
 | `skills.json`, `skills/` | skill tree and icons | no skills |
 | `settings-presets.json` | the presets' values | presets show the defaults |
 
