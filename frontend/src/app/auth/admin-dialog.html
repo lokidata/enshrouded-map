@@ -1,63 +1,97 @@
-<dialog #dialog aria-labelledby="admin-title" (close)="auth.adminOpen.set(false)">
+<dialog
+  #dialog
+  aria-labelledby="admin-title"
+  [class.wide]="tabs().length > 1"
+  (close)="auth.adminOpen.set(false)"
+>
   <button type="button" class="x" [attr.aria-label]="'close' | transloco" (click)="close()">
     ✕
   </button>
   <h2 id="admin-title">{{ 'adminMenu' | transloco }}</h2>
-  <section>
-    <h3>{{ 'resetSection' | transloco }}</h3>
-    @if (users().length) {
-      <label>
-        {{ 'pickUser' | transloco }}
-        <select [value]="target()" (change)="pick($event)">
-          @for (u of users(); track u.id) {
-            <option [value]="u.id">{{ u.username }}</option>
-          }
-        </select>
-      </label>
-      <div class="actions">
-        <button type="button" (click)="generate()">{{ 'generateLink' | transloco }}</button>
-      </div>
-      @if (link(); as l) {
-        <label>
-          {{ 'resetLink' | transloco }}
-          <input readonly [value]="l.url" (focus)="$any($event.target).select()" />
-        </label>
-        <div class="actions">
-          <button type="button" (click)="copy(l.url)">
-            {{ (copied() ? 'copied' : 'copy') | transloco }}
-          </button>
-        </div>
-        <p class="hint">{{ 'resetUntil' | transloco: { time: l.until } }}</p>
-      }
-      <div class="error" role="alert">
-        {{ resetError() ? ('errors.' + resetError() | transloco) : '' }}
-      </div>
-    } @else {
-      <p class="hint">{{ 'noOtherUser' | transloco }}</p>
-    }
-  </section>
-  @if (users().length) {
-    <section>
-      <h3>{{ 'adminDeleteSection' | transloco }}</h3>
-      <label>
-        {{ 'pickUser' | transloco }}
-        <select [value]="doomed()" (change)="pickDoomed($event)">
-          @for (u of users(); track u.id) {
-            <option [value]="u.id">{{ u.username }}</option>
-          }
-        </select>
-      </label>
-      <p class="hint">{{ 'adminDeleteHint' | transloco }}</p>
-      <div class="actions start">
-        <button type="button" class="danger" (click)="deleteUser()">
-          {{ 'adminDelete' | transloco }}
+  @if (tabs().length > 1) {
+    <div class="tabs" role="tablist" [attr.aria-label]="'adminMenu' | transloco">
+      @for (t of tabs(); track t) {
+        <button
+          type="button"
+          role="tab"
+          [id]="'admin-tab-' + t"
+          [class.active]="active() === t"
+          [attr.aria-selected]="active() === t"
+          aria-controls="admin-panel"
+          [attr.tabindex]="active() === t ? 0 : -1"
+          (click)="tab.set(t)"
+          (keydown)="keys($event)"
+        >
+          {{ t === 'accounts' ? ('adminTab_accounts' | transloco) : label(t) }}
         </button>
-      </div>
-      <div class="error" role="alert">
-        {{ deleteError() ? ('errors.' + deleteError() | transloco) : '' }}
-      </div>
-    </section>
+      }
+    </div>
   }
+  <div
+    id="admin-panel"
+    [attr.role]="tabs().length > 1 ? 'tabpanel' : null"
+    [attr.aria-labelledby]="tabs().length > 1 ? 'admin-tab-' + active() : null"
+  >
+    @if (active() !== 'accounts') {
+      <app-addon-access [addon]="active()" />
+    } @else {
+      <section>
+        <h3>{{ 'resetSection' | transloco }}</h3>
+        @if (users().length) {
+          <label>
+            {{ 'pickUser' | transloco }}
+            <select [value]="target()" (change)="pick($event)">
+              @for (u of users(); track u.id) {
+                <option [value]="u.id">{{ u.username }}</option>
+              }
+            </select>
+          </label>
+          <div class="actions">
+            <button type="button" (click)="generate()">{{ 'generateLink' | transloco }}</button>
+          </div>
+          @if (link(); as l) {
+            <label>
+              {{ 'resetLink' | transloco }}
+              <input readonly [value]="l.url" (focus)="$any($event.target).select()" />
+            </label>
+            <div class="actions">
+              <button type="button" (click)="copy(l.url)">
+                {{ (copied() ? 'copied' : 'copy') | transloco }}
+              </button>
+            </div>
+            <p class="hint">{{ 'resetUntil' | transloco: { time: l.until } }}</p>
+          }
+          <div class="error" role="alert">
+            {{ resetError() ? ('errors.' + resetError() | transloco) : '' }}
+          </div>
+        } @else {
+          <p class="hint">{{ 'noOtherUser' | transloco }}</p>
+        }
+      </section>
+      @if (users().length) {
+        <section>
+          <h3>{{ 'adminDeleteSection' | transloco }}</h3>
+          <label>
+            {{ 'pickUser' | transloco }}
+            <select [value]="doomed()" (change)="pickDoomed($event)">
+              @for (u of users(); track u.id) {
+                <option [value]="u.id">{{ u.username }}</option>
+              }
+            </select>
+          </label>
+          <p class="hint">{{ 'adminDeleteHint' | transloco }}</p>
+          <div class="actions start">
+            <button type="button" class="danger" (click)="deleteUser()">
+              {{ 'adminDelete' | transloco }}
+            </button>
+          </div>
+          <div class="error" role="alert">
+            {{ deleteError() ? ('errors.' + deleteError() | transloco) : '' }}
+          </div>
+        </section>
+      }
+    }
+  </div>
 
   <div class="actions">
     <button type="button" (click)="close()">{{ 'close' | transloco }}</button>

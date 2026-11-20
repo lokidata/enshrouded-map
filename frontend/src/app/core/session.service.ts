@@ -2,6 +2,7 @@ import { keepalivePut } from './keepalive';
 import { HttpClient } from '@angular/common/http';
 import { Injectable, effect, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
+import { AddonService } from './addon.service';
 import { AuthMode, AuthService, Credentials, UserInfo } from './auth.service';
 import { CharacterStore } from './character.store';
 import { CraftService } from './craft.service';
@@ -32,6 +33,7 @@ const SAVE_DELAY = 700;
 export class SessionService {
   private readonly http = inject(HttpClient);
   private readonly auth = inject(AuthService);
+  private readonly addons = inject(AddonService);
   private readonly progress = inject(ProgressStore);
   private readonly filters = inject(FilterStore);
   private readonly lang = inject(LangService);
@@ -138,6 +140,7 @@ export class SessionService {
     this.auth.user.set(null);
     this.auth.isAdmin.set(false);
     this.auth.addonEnabled.set(false);
+    this.addons.clear();
     this.progress.set([]);
     this.team.clear();
     this.craft.clear();
@@ -189,6 +192,7 @@ export class SessionService {
     this.saved = this.accountLang ? this.json() : null;
     this.auth.isAdmin.set(info.is_admin);
     this.auth.addonEnabled.set(!!info.addon);
+    if (info.addon) void this.addons.load();
     this.auth.user.set(info.username);
     await this.team.load();
     await this.gameSettings.load();

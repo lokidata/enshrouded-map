@@ -37,7 +37,7 @@ The game has 15 text languages (Steam: English, French, Italian, German, Spanish
 
 - [x] **Common refactor, 2 -> N languages** (done 2026-11-18, German added, released in 0.2.0): `LANGUAGES` in `build_data.py`, `build_lore.py`, `build_skills.py`; the `for lang in (0, 1)` loops in `build_craft.py` and `build_enemies.py`; the hand-written two-column tables (`TEXTS`, `CLASS_LABEL`, `APPEARANCE_PLACES`...); the `fr:` / `en:` labels of `game-settings.model.ts`; the language switch of the top bar.
 - [ ] **Data weight** (measured 2026-11-18, same code, `fr,en` vs `fr,en,de`: JSON files 8.23 MB -> 9.59 MB, +1.37 MB raw per language (+17 %), gzipped 1.93 -> 2.35 MB, +0.42 MB; biggest: lore +0.57 MB, gear +0.46, craft +0.22). Single file is fine at 3 languages; split per language (each player downloads one) when a 4th or 5th is added, before the 15: every language adds several MB to the JSON files (9.7 MB for 2 languages today) that all players download; consider one file per language.
-- [x] **One more language first: German** (UI, settings labels and pipeline tables done and tested locally; the interface and settings texts are machine translated and need a German reader; the real data run is in `artifacts/map` only after the user's go). Remaining per language: translate the 687 keys of `frontend/public/i18n/*.json` (human review), run the pipeline on Tora with its `loca` file, translate the hand-written tables, Vitest + Playwright + AXE. About half a day per language after the refactor.
+- [x] **One more language first: German** (UI, settings labels and pipeline tables done and tested locally; the interface and settings texts are machine translated, and a German-speaking player reviewed them on 0.3.0 and found no problem (issue #97, 2026-11-19); the real data run is in `artifacts/map` only after the user's go). Remaining per language: translate the 687 keys of `frontend/public/i18n/*.json` (human review), run the pipeline on Tora with its `loca` file, translate the hand-written tables, Vitest + Playwright + AXE. About half a day per language after the refactor.
 
 ## Profile page (done, PR #82)
 
@@ -45,6 +45,14 @@ Account menu > Profile (popup): tabs Account (language kept by the account, pass
 
 - [ ] **Later, only if asked**: timezone, a global save button, the layout kept by the account (today per device), more languages (add the code to `LANGUAGES` in `frontend/src/app/core/lang.ts` and `backend/app/schemas/settings.py`, plus a `language_<code>` text).
 
-## Plugins / add-ons (idea, not started)
+## Plugins / add-ons (first version done)
 
-- [ ] **Plugin / add-on system**: let the site host extensions, for example to manage a game server or its mods. Today the server tools live in a separate project (`enshrouded-map-addon`: server status, access, power, backups, chestsort editor) that shares only the look (`design-system/`). To decide: how an add-on registers itself (menu entry, screens, routes), what it may read (account, team, map data) and how it is isolated, with the same security rules as the site (sessions, CSRF, no data sent out).
+- [x] Done (manifest, tabs, custom elements, see RULES.md > Optional server add-on). Still open: a second add-on in another repo, the add-on reading site data (account, team, map), a weight check of the second Angular runtime on a slow phone.
+- [ ] ~~**Plugin / add-on system**~~ (original idea, kept for the record): let the site host extensions, for example to manage a game server or its mods. Today the server tools live in a separate project (`enshrouded-map-addon`: server status, access, power, backups, chestsort editor) that shares only the look (`design-system/`). To decide: how an add-on registers itself (menu entry, screens, routes), what it may read (account, team, map data) and how it is isolated, with the same security rules as the site (sessions, CSRF, no data sent out).
+
+## Feedback on 0.3.0 (issue #97)
+
+A player's pipeline changes, shown by screenshots in the issue; their code is not in the repo (a pull request was invited).
+
+- [ ] **Water tiles**: the tile rendering draws a little too much water around the altar areas. The player adjusted the render in their pipeline (`render_map.py`); to look at and reproduce, then fix the water threshold.
+- [ ] **Roads**: highlight the roads and draw the roads that run in caves on the map (the player did both in their pipeline). To decide: roads as a tile layer or as map data, and whether it is wanted by default.

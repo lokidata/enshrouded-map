@@ -1,4 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { type Locator, type Page, expect, test } from '@playwright/test';
 
 /** Context options for a second visitor on the same server (dev server or compose stack). */
@@ -2659,4 +2661,141 @@ test('save import: the character sheet (level, worn equipment, skills) goes into
       return saved.length ? Object.keys(saved[0]).sort() : null;
     })
     .toEqual(['id', 'name', 'nodes', 'updated_at']);
+});
+
+// ---- add-ons: the site lists what /addon/api/manifest allows and mounts the custom elements ----
+const addonFile = (name: string) => readFileSync(join(__dirname, 'fixtures/addon', name), 'utf8');
+
+/** A fake add-on behind `/addon/`: the site's own /auth/me and /auth/login say `addon: true`, the rest is served from fixtures. */
+async function fakeAddon(
+  page: Page,
+  opts: { enabled?: boolean; manifest?: unknown; script?: () => number } = {},
+) {
+  const { enabled = true, manifest = JSON.parse(addonFile('manifest.json')) } = opts;
+  await page.route('**/api/v1/auth/{me,login}', async (route) => {
+    const res = await route.fetch();
+    const body = await res.json();
+    await route.fulfill({ response: res, json: enabled ? { ...body, addon: true } : body });
+  });
+  await page.route('**/addon/api/manifest', (route) => route.fulfill({ json: manifest as object }));
+  await page.route('**/addon/styles.css', (route) =>
+    route.fulfill({ contentType: 'text/css', body: addonFile('elements.css') }),
+  );
+  await page.route('**/addon/main.js', (route) =>
+    (opts.script?.() ?? 200) === 200
+      ? route.fulfill({ contentType: 'text/javascript', body: addonFile('elements.js') })
+      : route.fulfill({ status: 404, body: 'nope' }),
+  );
+}
+
+async function signInAgain(page: Page): Promise<void> {
+  await page.goto('/');
+  await page.getByLabel("Nom d'utilisateur").fill(user);
+  await page
+    .getByRole('dialog')
+    .getByLabel('Mot de passe', { exact: true })
+    .fill('a brand new passphrase');
+  await page.getByRole('dialog').getByRole('button', { name: 'Se connecter' }).click();
+  await expect(page.locator('.who')).toContainText(user);
+}
+
+test('add-ons: no tab unless /auth/me says the add-on exists', async ({ page }) => {
+  let asked = false;
+  await fakeAddon(page, { enabled: false });
+  await page.route('**/addon/api/manifest', (route) => {
+    asked = true; // registered last, so it answers first
+    return route.fulfill({ json: {} });
+  });
+  await signInAgain(page);
+  await expect(page.locator('app-topbar').getByRole('button', { name: 'Serveur' })).toHaveCount(0);
+  expect(asked).toBe(false);
+});
+
+test('add-ons: a hostile manifest shows nothing and injects nothing', async ({ page }) => {
+  const bad = { ...JSON.parse(addonFile('manifest.json')), script: 'https://evil.example/x.js' };
+  await fakeAddon(page, { manifest: bad });
+  await signInAgain(page);
+  await expect(page.locator('app-topbar').getByRole('button', { name: 'Serveur' })).toHaveCount(0);
+  expect(await page.locator('script[src*="evil"]').count()).toBe(0);
+});
+
+test('add-ons: tabs from the manifest, the element gets lang and active, the draft survives, AXE', async ({
+  page,
+}) => {
+  await fakeAddon(page);
+  await signInAgain(page);
+  const bar = page.locator('app-topbar');
+  const h1Color = () => page.locator('app-topbar h1').evaluate((e) => getComputedStyle(e).color);
+  const before = await h1Color();
+  await expect(bar.getByRole('button', { name: 'Serveur' })).toBeVisible();
+  await expect(bar.getByRole('button', { name: 'Coffres' })).toBeVisible();
+
+  await bar.getByRole('button', { name: 'Serveur' }).click();
+  const el = page.locator('[data-addon] addon-server');
+  await expect(el.locator('#state')).toHaveText('lang=fr active=true');
+  await expect(bar.getByRole('button', { name: 'Serveur' })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
+  await el.getByLabel('Draft').fill('my unsaved draft');
+  expect(
+    (await new AxeBuilder({ page }).include('[data-addon]:not([hidden])').analyze()).violations,
+  ).toEqual([]);
+
+  // another screen: the element stays mounted, hidden and inactive, with its draft
+  await bar.getByRole('button', { name: 'Partie', exact: true }).click();
+  await expect(page.locator('[data-addon]').first()).toBeHidden();
+  await expect(el.locator('#state')).toHaveText('lang=fr active=false');
+  await bar.getByRole('button', { name: 'Serveur' }).click();
+  await expect(el.getByLabel('Draft')).toHaveValue('my unsaved draft');
+
+  // a link to #addon/<id> opens the other tab
+  await page.evaluate(() => (location.hash = '#addon/chestsort'));
+  await expect(bar.getByRole('button', { name: 'Coffres' })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
+  await expect(page.locator('[data-addon] addon-chestsort')).toBeVisible();
+  // the add-on's stylesheet changed nothing of the site's own look
+  expect(await h1Color()).toBe(before);
+});
+
+test('add-ons: a script that does not load shows an error, and Retry loads it', async ({
+  page,
+}) => {
+  let status = 404;
+  await fakeAddon(page, { script: () => status });
+  await signInAgain(page);
+  await page.locator('app-topbar').getByRole('button', { name: 'Serveur' }).click();
+  const host = page.locator('app-addon-host');
+  await expect(host.getByRole('alert')).toBeVisible();
+  status = 200;
+  await host.getByRole('button', { name: 'Réessayer' }).click();
+  await expect(page.locator('[data-addon] addon-server #state')).toBeVisible();
+  await expect(host.getByRole('alert')).toHaveCount(0);
+});
+
+test('add-ons: the Administration dialog has one access tab per add-on', async ({ page }) => {
+  await fakeAddon(page);
+  const puts: { url: string; body: unknown; header: string | undefined }[] = [];
+  await page.route('**/addon/api/server/access**', (route) => {
+    const req = route.request();
+    if (req.method() === 'PUT') {
+      puts.push({ url: req.url(), body: req.postDataJSON(), header: req.headers()['x-addon'] });
+      return route.fulfill({ json: {} });
+    }
+    return route.fulfill({ json: [{ user_key: '9:t', username: 'bob', level: 'read' }] });
+  });
+  await signInAgain(page);
+  await menu(page, 'Administration');
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.getByRole('tab')).toHaveText(['Comptes', 'Serveur', 'Coffres']);
+  await expect(dialog.getByRole('button', { name: 'Générer le lien' })).toBeVisible();
+  await dialog.getByRole('tab', { name: 'Serveur' }).click();
+  await expect(dialog.getByLabel('bob')).toHaveValue('read');
+  await dialog.getByLabel('bob').selectOption('action');
+  await expect.poll(() => puts.length).toBe(1);
+  expect(puts[0]).toMatchObject({ body: { level: 'action' }, header: '1' });
+  expect(puts[0].url).toContain('/addon/api/server/access/9%3At');
+  expect((await new AxeBuilder({ page }).include('dialog[open]').analyze()).violations).toEqual([]);
 });

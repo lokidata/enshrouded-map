@@ -18,6 +18,7 @@ export class HistoryStore {
       const n = asNav(e.state);
       if (!n) return;
       this.last = n;
+      this.views.addonId.set(n.addon ?? null);
       this.views.set(n.view);
       this.nav.tab.set(n.tab as Tab);
       this.nav.item.set(n.item);
@@ -43,6 +44,7 @@ export class HistoryStore {
       station: this.nav.station(),
       set: this.nav.set(),
       enemy: this.enemies.open(),
+      addon: this.views.addonId(),
     };
   }
 }

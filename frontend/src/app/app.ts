@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, effect, inject, signal } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { AuthDialog } from './auth/auth-dialog';
 import { AdminDialog } from './auth/admin-dialog';
@@ -12,6 +12,8 @@ import { EnemiesService } from './core/enemies.service';
 import { PlannerStore } from './core/planner.store';
 import { HistoryStore } from './core/history.store';
 import { ViewStore } from './core/view.store';
+import { AddonHost } from './addon/addon-host';
+import { AddonService } from './core/addon.service';
 import { Enemies } from './enemies/enemies';
 import { Game } from './game/game';
 import { Lore } from './lore/lore';
@@ -53,6 +55,7 @@ function read(): string | null {
     Equipment,
     Game,
     Skills,
+    AddonHost,
     Profile,
     TopBar,
     TranslocoPipe,
@@ -94,6 +97,9 @@ function read(): string | null {
         @defer (when views.view() === 'skills') {
           <app-skills [hidden]="views.view() !== 'skills'" />
         }
+        @defer (when views.view() === 'addon') {
+          <app-addon-host [hidden]="views.view() !== 'addon'" />
+        }
         @defer (when views.view() === 'lore') {
           <app-lore [hidden]="views.view() !== 'lore'" />
         }
@@ -126,13 +132,24 @@ export class App {
   private readonly planner = inject(PlannerStore);
   private readonly history = inject(HistoryStore); // starts the Back/Forward handling
   private readonly enemies = inject(EnemiesService);
+  private readonly addons = inject(AddonService);
   protected readonly menuOpen = signal(read() !== 'closed');
+
+  constructor() {
+    // a link to #addon/<id> opened before the manifest arrived
+    effect(() => {
+      this.addons.entries();
+      this.onHash();
+    });
+  }
 
   /** A link pasted in a tab that is already open only changes the fragment: open what it names. */
   protected onHash(): void {
     if (!this.auth.user()) return;
     if (this.planner.openFromHash()) this.views.set('skills');
     if (this.enemies.openFromHash()) this.views.set('enemies');
+    const id = /^#addon\/([a-z0-9-]{1,20})$/.exec(location.hash)?.[1];
+    if (id && this.addons.entries().some((e) => e.id === id)) this.views.openAddon(id);
   }
 
   protected toggleMenu(): void {

@@ -86,7 +86,6 @@
   "teamLink": "Einladungslink (erstellt ein Konto im Team)",
   "teamLeave": "Team verlassen",
   "teamDissolve": "Team auflösen",
-  "addonMenu": "Spielserver",
   "adminMenu": "Verwaltung",
   "teamOwner": "Besitzer",
   "teamTransferShort": "Zum Besitzer machen",
@@ -788,5 +787,17 @@
   "wsBuildArea": "Baubereich: {{ n }} × {{ n }} m",
   "measureButton": "Messen",
   "measureHint": "Zwei Punkte anklicken, um die Entfernung zu messen (Esc zum Beenden)",
-  "measureLabel": "{{ distance }} m · ΔX {{ dx }} · ΔZ {{ dz }}"
+  "measureLabel": "{{ distance }} m · ΔX {{ dx }} · ΔZ {{ dz }}",
+  "addon": {
+    "loadError": "Dieser Bildschirm konnte nicht geladen werden.",
+    "retry": "Erneut versuchen",
+    "accessHint": "Jedes Add-on hat seine eigene Liste. Der Administrator hat immer die Stufe Aktion.",
+    "accessUser": "Benutzer",
+    "accessLevel": "Stufe",
+    "levelNone": "Keine",
+    "levelRead": "Lesen",
+    "levelAction": "Aktion",
+    "accessError": "Das Add-on hat nicht geantwortet oder die Änderung abgelehnt."
+  },
+  "adminTab_accounts": "Konten"
 }

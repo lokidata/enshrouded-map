@@ -1,0 +1,21 @@
+{
+  "api_version": 1,
+  "script": "/addon/main.js",
+  "styles": "/addon/styles.css",
+  "addons": [
+    {
+      "id": "server",
+      "version": "0.2.0",
+      "level": "action",
+      "name": { "fr": "Serveur", "en": "Server" },
+      "element": "addon-server"
+    },
+    {
+      "id": "chestsort",
+      "version": "0.2.0",
+      "level": "read",
+      "name": { "fr": "Coffres", "en": "Chests" },
+      "element": "addon-chestsort"
+    }
+  ]
+}

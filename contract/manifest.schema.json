@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Add-on manifest, api_version 1",
+  "type": "object",
+  "required": ["api_version", "script", "styles", "addons"],
+  "additionalProperties": false,
+  "properties": {
+    "api_version": { "const": 1 },
+    "script": { "$ref": "#/$defs/path" },
+    "styles": { "$ref": "#/$defs/path" },
+    "addons": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "required": ["id", "version", "level", "name", "element"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9-]{1,20}$" },
+          "version": { "type": "string", "maxLength": 20 },
+          "level": { "enum": ["read", "action"] },
+          "name": {
+            "type": "object",
+            "required": ["fr", "en"],
+            "additionalProperties": false,
+            "properties": {
+              "fr": { "type": "string", "maxLength": 40 },
+              "en": { "type": "string", "maxLength": 40 }
+            }
+          },
+          "element": { "type": "string", "pattern": "^addon-[a-z0-9-]{1,30}$" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "path": {
+      "type": "string",
+      "pattern": "^(?!.*(\\.\\.|//))/addon/[A-Za-z0-9._/-]{1,100}$"
+    }
+  }
+}

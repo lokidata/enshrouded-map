@@ -57,9 +57,6 @@ import { TeamStore } from '../core/team.store';
             <button type="button" role="menuitem" (click)="pick(openProfile)">
               {{ 'profile' | transloco }}
             </button>
-            @if (auth.addonEnabled()) {
-              <a role="menuitem" href="/addon/">{{ 'addonMenu' | transloco }}</a>
-            }
             @if (auth.isAdmin()) {
               <button type="button" role="menuitem" (click)="pick(openAdmin)">
                 {{ 'adminMenu' | transloco }}
