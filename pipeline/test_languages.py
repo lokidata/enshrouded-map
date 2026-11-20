@@ -26,6 +26,20 @@ def test_every_build_language_has_a_game_name():
     assert all(c in L.GAME_NAMES for c in L.BUILD) and L.BUILD[L.FR] == "fr" and L.BUILD[L.EN] == "en"
 
 
+def test_split_keeps_every_language_and_walks_like_js():
+    import split_languages as S
+    n = 3
+    out = [[] for _ in range(n)]
+    data = {"b": {"name": ["b1", "b2", "b3"]}, "2": {"text": ["a", "b", "c"], "tags": ["x", "y", "z"]}, "1": {"desc": ["d", "e", "f"]}}
+    base = S.split_value(data, "", n, out)
+    assert list(base) == ["1", "2", "b"]  # array indexes first, like JS
+    assert base["1"]["desc"] == ["", "", ""] and base["2"]["tags"] == ["x", "y", "z"]
+    kept = S.split_value({"stats": [{"name": ["h", "i", "j"]}]}, "", n, [[] for _ in range(n)])
+    assert kept == {"stats": [{"name": ["h", "i", "j"]}]}  # stat lines stay whole
+    assert out == [["d", "a", "b1"], ["e", "b", "b2"], ["f", "c", "b3"]]
+
+
+
 if __name__ == "__main__":
     for n, f in list(globals().items()):
         if n.startswith("test_"):

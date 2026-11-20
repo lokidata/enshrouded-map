@@ -1,6 +1,5 @@
-import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
+import { DataFiles } from './data-files.service';
 import { LangService } from './lang.service';
 import { Names } from './map-data.model';
 import { Tree, tree } from './skills.logic';
@@ -9,7 +8,7 @@ import { SkillsData } from './skills.model';
 /** The skill tree of the game, loaded after the login. */
 @Injectable({ providedIn: 'root' })
 export class SkillsService {
-  private readonly http = inject(HttpClient);
+  private readonly files = inject(DataFiles);
   private readonly lang = inject(LangService);
 
   /** Null until loaded, and when the server has no skills.json (the Skills entry is then hidden). */
@@ -21,7 +20,7 @@ export class SkillsService {
 
   async load(): Promise<void> {
     try {
-      this.data.set(await firstValueFrom(this.http.get<SkillsData>('skills.json')));
+      this.data.set(await this.files.load<SkillsData>('skills'));
     } catch {
       this.data.set(null);
     }

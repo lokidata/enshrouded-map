@@ -1,6 +1,5 @@
-import { HttpClient } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
+import { DataFiles } from './data-files.service';
 import { LangService } from './lang.service';
 import { GearData, GearItem, GearUpgrade, SlotKey } from './gear.model';
 import { perkDamage, rarityColor } from './gear.logic';
@@ -9,7 +8,7 @@ import { Names } from './map-data.model';
 /** Equipment stats and character constants, loaded after the login. */
 @Injectable({ providedIn: 'root' })
 export class GearService {
-  private readonly http = inject(HttpClient);
+  private readonly files = inject(DataFiles);
   private readonly lang = inject(LangService);
 
   /** Null until loaded, and when the server has no gear.json (no Equipment screen then). */
@@ -17,7 +16,7 @@ export class GearService {
 
   async load(): Promise<void> {
     try {
-      this.data.set(await firstValueFrom(this.http.get<GearData>('gear.json')));
+      this.data.set(await this.files.load<GearData>('gear'));
     } catch {
       this.data.set(null);
     }

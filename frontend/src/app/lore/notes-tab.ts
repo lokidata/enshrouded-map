@@ -170,16 +170,16 @@ export class NotesTab {
     this.notes().reduce((n, x) => n + foundPages(this.progress.done(), x), 0),
   );
 
-  /** What each note says, to search in: names and texts of both languages. */
-  private readonly haystack = computed(
-    () =>
-      new Map(
-        this.notes().map((n) => [
-          n.id,
-          normalize([...n.name, ...n.pages.flatMap((p) => [...p.name, ...p.text])].join(' ')),
-        ]),
-      ),
-  );
+  /** What each note says, to search in: names and texts of the language shown. */
+  private readonly haystack = computed(() => {
+    this.lang.index(); // the texts of a language come when it is chosen
+    return new Map(
+      this.notes().map((n) => [
+        n.id,
+        normalize([...n.name, ...n.pages.flatMap((p) => [...p.name, ...p.text])].join(' ')),
+      ]),
+    );
+  });
 
   protected readonly categories = computed(() => {
     const data = this.lore.data();
