@@ -26,7 +26,8 @@ Portainer → **Stacks → Add stack**:
 | `WEBAUTHN_RP_ID` / `WEBAUTHN_ORIGIN` | for passkeys | Host name players open (e.g. `carte.example.lan`) and its origin (`https://carte.example.lan`). HTTPS and a single name are required: changing it later invalidates the passkeys already registered. Empty: passkeys are off |
 | `REVERSE_PROXY_IP` | behind a proxy | Address your reverse proxy connects from (client IP is trusted only from there) |
 | `WEB_BIND` / `WEB_PORT` | | Published address and port (default `0.0.0.0:8080`) |
-| `IMAGE_TAG` | | `latest` by default |
+| `IMAGE_TAG` | | `latest` by default; the site's `api` and `web` images |
+| `ADDON_IMAGE_TAG` | | only if the optional add-on service is in the stack (see the add-on's `deploy/portainer/`): its own version, since the add-on is released separately |
 | `INVITATION_MINUTES` | | Lifetime of an invitation link (default 20) |
 | `BACKEND_SUBNET` / `WEB_IP` | if 172.28.0.0/24 is taken | Internal network and the web container's address in it |
 
