@@ -86,7 +86,6 @@
   "teamLink": "Lien d'invitation (crée un compte dans l'équipe)",
   "teamLeave": "Quitter l'équipe",
   "teamDissolve": "Dissoudre l'équipe",
-  "addonMenu": "Serveur de jeu",
   "adminMenu": "Administration",
   "teamOwner": "créateur",
   "teamTransferShort": "Nommer créateur",
@@ -788,5 +787,17 @@
   "wsBuildArea": "Zone de construction : {{ n }} × {{ n }} m",
   "measureButton": "Mesurer",
   "measureHint": "Cliquez deux points pour mesurer la distance (Échap pour terminer)",
-  "measureLabel": "{{ distance }} m · ΔX {{ dx }} · ΔZ {{ dz }}"
+  "measureLabel": "{{ distance }} m · ΔX {{ dx }} · ΔZ {{ dz }}",
+  "addon": {
+    "loadError": "Impossible de charger cet écran.",
+    "retry": "Réessayer",
+    "accessHint": "Chaque add-on a sa propre liste. L'administrateur a toujours le niveau action.",
+    "accessUser": "Utilisateur",
+    "accessLevel": "Niveau",
+    "levelNone": "Aucun",
+    "levelRead": "Lecture",
+    "levelAction": "Action",
+    "accessError": "L'add-on n'a pas répondu ou a refusé le changement."
+  },
+  "adminTab_accounts": "Comptes"
 }

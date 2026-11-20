@@ -1,5 +1,8 @@
 import { Component, computed, inject } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { AddonService } from '../core/addon.service';
+import { AddonEntry, entryLabel } from '../core/addon.logic';
+import { LangService } from '../core/lang.service';
 import { CraftService } from '../core/craft.service';
 import { EnemiesService } from '../core/enemies.service';
 import { LoreService } from '../core/lore.service';
@@ -71,6 +74,16 @@ import { AccountBar } from '../sidebar/account-bar';
       >
         {{ 'game' | transloco }}
       </button>
+      @for (e of addons.entries(); track e.id) {
+        <button
+          type="button"
+          [class.active]="views.view() === 'addon' && views.addonId() === e.id"
+          [attr.aria-current]="views.view() === 'addon' && views.addonId() === e.id ? 'page' : null"
+          (click)="views.openAddon(e.id)"
+        >
+          {{ label(e) }}
+        </button>
+      }
     </nav>
     <span class="spacer"></span>
     <app-account-bar />
@@ -177,6 +190,11 @@ export class TopBar {
   protected readonly skills = inject(SkillsService);
   protected readonly gear = inject(GearService);
   protected readonly views = inject(ViewStore);
+  protected readonly addons = inject(AddonService);
+  private readonly lang = inject(LangService);
+  protected label(e: AddonEntry): string {
+    return entryLabel(e, this.lang.lang());
+  }
   protected readonly inBuild = computed(() =>
     ['build', 'equipment', 'skills'].includes(this.views.view()),
   );

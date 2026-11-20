@@ -1,14 +1,18 @@
 /* A global stylesheet (angular.json), shared by the workshop, lore, enemies, skills, character, equipment and game
-   screens: everything is scoped by this rule. Look: a codex of the Shroud (see src/styles.css for the tokens).
+   screens, and by `[data-addon]` (the wrapper of an add-on's custom element, see addon-host): everything is scoped by this rule. Look: a codex of the Shroud (see src/styles.css for the tokens).
    Structure carries meaning: small capitals name a kind of thing, a diamond on a rule opens a section, the lit
    (ember) edge marks what is open or chosen, and plates have two bronze corners, not four, so they read as cut. */
+[data-addon][hidden] {
+  display: none; /* an opened add-on stays mounted while another screen shows */
+}
 app-workshop,
 app-lore,
 app-enemies,
 app-skills,
 app-build,
 app-equipment,
-app-game {
+app-game,
+[data-addon] {
   & {
     display: flex;
     flex-direction: column;
@@ -167,6 +171,30 @@ app-game {
     padding: 14px 16px;
     border: 1px dashed var(--gold-dim);
     border-radius: 3px;
+  }
+
+  /* ---- figures: label and value tiles (used by the add-ons) ---- */
+  .tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+    gap: 12px;
+  }
+  .tile {
+    margin: 0;
+    padding: 9px 12px;
+    border: 1px solid var(--gold-dim);
+    border-radius: 3px;
+    background: var(--panel-deep);
+  }
+  .tile .k {
+    margin-right: 6px;
+    color: var(--muted);
+  }
+  .tile .v {
+    color: var(--text);
+  }
+  .tile .v.up {
+    color: var(--ok);
   }
 
   /* ---- plates: entries, filters, bars ---- */

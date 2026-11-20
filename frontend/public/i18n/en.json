@@ -86,7 +86,6 @@
   "teamLink": "Invitation link (creates an account in the team)",
   "teamLeave": "Leave team",
   "teamDissolve": "Disband team",
-  "addonMenu": "Game server",
   "adminMenu": "Administration",
   "teamOwner": "owner",
   "teamTransferShort": "Make owner",
@@ -788,5 +787,17 @@
   "wsBuildArea": "Build area: {{ n }} × {{ n }} m",
   "measureButton": "Measure",
   "measureHint": "Click two points to measure the distance (Esc to end)",
-  "measureLabel": "{{ distance }} m · ΔX {{ dx }} · ΔZ {{ dz }}"
+  "measureLabel": "{{ distance }} m · ΔX {{ dx }} · ΔZ {{ dz }}",
+  "addon": {
+    "loadError": "This screen could not be loaded.",
+    "retry": "Retry",
+    "accessHint": "Each add-on has its own list. The administrator always has the action level.",
+    "accessUser": "User",
+    "accessLevel": "Level",
+    "levelNone": "None",
+    "levelRead": "Read",
+    "levelAction": "Action",
+    "accessError": "The add-on did not answer or refused the change."
+  },
+  "adminTab_accounts": "Accounts"
 }
