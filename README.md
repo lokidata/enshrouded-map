@@ -31,7 +31,7 @@ make check            # backend + frontend lint, types, tests, audits, gitleaks,
 make e2e-stack        # Playwright against the compose stack (wipes its database)
 ```
 
-Backend: `cd backend && uv sync && uv run pytest`. Frontend: `cd frontend && npm ci --ignore-scripts && npx ng serve` (the dev server proxies `/api` to `localhost:8000`). CI uses a tiny fixture map (`frontend/e2e/fixtures/map`), so no game data is needed to run the tests.
+Backend: `cd backend && uv sync && uv run pytest`. Frontend: `cd frontend && npm ci --ignore-scripts && npx ng serve` (the dev server proxies `/api` to `localhost:8000`). CI uses a tiny fixture map (`frontend/e2e/fixtures/map`), so no game data is needed to run the tests (Playwright serves it through the `e2e` Angular configuration: stop your own `ng serve` and API first).
 
 ## Features
 
@@ -45,6 +45,7 @@ The top bar switches between the screens, in this order. The complete functional
 - **Lore** (`lore.json`): Notes (320 notes, per page) and Quests (186), each ticked per player.
 - **Enemies** (`enemies.json`): the bosses and elites with faction, experience, extra health per player, regions and a *show on the map* button; `#enemy=<id>` opens one.
 - **Character** (`gear.json`, `gems.json`, `skills.json`): a sheet modelled on the game's character screen (weapons, shield, rings, armour, upgrades, gems on weapons), the Attributes screen, the Equipment picker and the skill tree (budget 212), with saved builds (up to 50 per player) and a share link. Level and Flame are set here. Exact values (attributes, health, mana, stamina, oxygen, armour, weapon base damage, block, the **Rested** duration from comfort) are told apart from the *estimations* (parry, **frost** duration, gem effects, the hit of a weapon (no crits, target or armour)); unknown values show "—". **Recommendations** flag armour and weapons whose level is too low for the character, taking the Flame into account: at Flame F the expected level is the maximum of the tier opened before it (never above the character level).
+- **Add-ons** (optional, off by default): extra tabs installed by the administrator (the game server panel, small tools), each enabled and granted per account in Administration. How to install and write one: [`docs/addons.md`](docs/addons.md).
 - **Game** (always shown): the 38 dedicated-server settings with the Default / Relaxed / Hard / Survival presets and a Custom set, import and export of `enshrouded_server.json`. The configuration is saved on the server: yours without a team, the team's with one (only the team owner edits it, the other members see it read-only). The values also feed the Character (health, mana, stamina, oxygen, Shroud time, parry).
 
 Optional screens appear only when the server has their data file (see [`pipeline/README.md`](pipeline/README.md)): without `craft.json` there is no Workshop, without `lore.json` no Lore, and so on; without `gear.json` the Character entry opens the skill tree.

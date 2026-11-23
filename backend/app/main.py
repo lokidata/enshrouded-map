@@ -12,6 +12,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.api.deps import csrf_protect
 from app.api.limiter import limiter
 from app.api.v1 import (
+    addons,
     auth,
     builds,
     characters,
@@ -24,6 +25,7 @@ from app.api.v1 import (
     settings,
     team,
 )
+from app.core.addon_registry import AddonRegistry
 from app.core.config import get_settings
 from app.core.logging import setup_logging
 from app.core.setup_token import setup_token
@@ -60,6 +62,7 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
     app.state.limiter = limiter
+    app.state.addons = AddonRegistry(config)  # lazy: nothing is fetched before first use
 
     @app.middleware("http")
     async def limit_body(
@@ -99,6 +102,7 @@ def create_app() -> FastAPI:
         characters,
         fog,
         markers,
+        addons,
     ):
         app.include_router(module.router, prefix="/api/v1")
     return app

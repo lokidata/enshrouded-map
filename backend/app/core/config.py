@@ -24,7 +24,9 @@ class Settings(BaseSettings):
     webauthn_rp_name: str = "Carte Enshrouded"
 
     # Optional server add-on (separate container behind nginx /addon/). Empty = feature off.
-    addon_url: str = ""
+    addon_url: str = ""  # alias of ADDONS=main=<url>
+    addons: str = ""  # "key=https://origin,key=http://host:port" (see core/addons.py)
+    addons_dir: str = "/addons"  # static folder root served for the add-ons
 
     login_rate_limit: str = "10/5 minutes"  # per client address
     register_rate_limit: str = "10/hour"  # setup and invitations

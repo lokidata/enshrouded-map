@@ -1,0 +1,11 @@
+[data-addon] addon-hello {
+  display: block;
+  flex: 1;
+  padding: 20px 24px;
+}
+
+[data-addon] addon-hello label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--gold);
+}

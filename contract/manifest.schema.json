@@ -1,42 +1,75 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Add-on manifest, api_version 1",
+  "title": "Add-on manifest, api_version 2",
+  "description": "Served publicly at GET /addon/api/manifest. The site validates it (backend/app/core/addons.py `parse_manifest`) and drops the whole manifest when anything is off. The add-on never knows the key the site gave it, so every path is add-on-relative (/addon/<file>); the site rewrites it to /addon/<key>/<file>. Who may use an entry is decided by the site (enabled flag and access list), not by this document.",
   "type": "object",
-  "required": ["api_version", "script", "styles", "addons"],
+  "required": ["api_version", "entries"],
   "additionalProperties": false,
   "properties": {
-    "api_version": { "const": 1 },
-    "script": { "$ref": "#/$defs/path" },
-    "styles": { "$ref": "#/$defs/path" },
-    "addons": {
+    "api_version": { "const": 2, "description": "Contract version; the site refuses any other value." },
+    "entries": {
       "type": "array",
       "maxItems": 20,
-      "items": {
-        "type": "object",
-        "required": ["id", "version", "level", "name", "element"],
-        "additionalProperties": false,
-        "properties": {
-          "id": { "type": "string", "pattern": "^[a-z0-9-]{1,20}$" },
-          "version": { "type": "string", "maxLength": 20 },
-          "level": { "enum": ["read", "action"] },
-          "name": {
-            "type": "object",
-            "required": ["fr", "en"],
-            "additionalProperties": false,
-            "properties": {
-              "fr": { "type": "string", "maxLength": 40 },
-              "en": { "type": "string", "maxLength": 40 }
-            }
-          },
-          "element": { "type": "string", "pattern": "^addon-[a-z0-9-]{1,30}$" }
-        }
-      }
+      "description": "The screens this add-on offers. Ids must be unique within the manifest (checked by the site; JSON Schema here only bounds the size).",
+      "items": { "$ref": "#/$defs/entry" }
     }
   },
   "$defs": {
+    "entry": {
+      "type": "object",
+      "required": ["id", "version", "name", "description", "element", "capabilities", "script", "styles"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]{1,20}$",
+          "description": "Entry id, unique in the manifest; the site's per-entry routes use it (/api/v1/addons/<id>/me)."
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20,
+          "description": "Version of the add-on that serves this entry."
+        },
+        "name": { "$ref": "#/$defs/text40", "description": "Menu and tab label, per language." },
+        "description": { "$ref": "#/$defs/text200", "description": "One sentence shown in the site's Administration dialog, per language." },
+        "element": {
+          "type": "string",
+          "pattern": "^addon-[a-z0-9-]{1,30}$",
+          "description": "Custom element the site mounts for this entry. It receives the attributes lang, active and base (the add-on's public path, /addon/<key>/)."
+        },
+        "capabilities": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "enum": ["tab", "map-layer"] },
+          "description": "Where the element may be mounted: a workshop-style tab, or a map layer."
+        },
+        "script": { "$ref": "#/$defs/path", "description": "The entry's JavaScript bundle (ES module)." },
+        "styles": { "$ref": "#/$defs/path", "description": "The entry's stylesheet." }
+      }
+    },
     "path": {
       "type": "string",
-      "pattern": "^(?!.*(\\.\\.|//))/addon/[A-Za-z0-9._/-]{1,100}$"
+      "pattern": "^(?!.*(\\.\\.|//))/addon/[A-Za-z0-9._/-]{1,100}$",
+      "description": "Add-on-relative public path, no '..' and no '//'."
+    },
+    "text40": {
+      "type": "object",
+      "required": ["fr", "en"],
+      "additionalProperties": false,
+      "properties": {
+        "fr": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "en": { "type": "string", "minLength": 1, "maxLength": 40 }
+      }
+    },
+    "text200": {
+      "type": "object",
+      "required": ["fr", "en"],
+      "additionalProperties": false,
+      "properties": {
+        "fr": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "en": { "type": "string", "minLength": 1, "maxLength": 200 }
+      }
     }
   }
 }

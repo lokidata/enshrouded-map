@@ -32,8 +32,36 @@
     [attr.role]="tabs().length > 1 ? 'tabpanel' : null"
     [attr.aria-labelledby]="tabs().length > 1 ? 'admin-tab-' + active() : null"
   >
-    @if (active() !== 'accounts') {
-      <app-addon-access [addon]="active()" />
+    @if (current(); as e) {
+      <section>
+        <h3>
+          {{ label(e.id) }} <small>{{ e.version }}</small>
+        </h3>
+        <p>{{ description(e) }}</p>
+        <p class="hint">
+          {{ 'addon.capabilities' | transloco }}:
+          @for (c of e.capabilities; track c) {
+            {{
+              c === 'tab'
+                ? ('addon.capTab' | transloco)
+                : c === 'map-layer'
+                  ? ('addon.capMapLayer' | transloco)
+                  : c
+            }}{{ $last ? '' : ', ' }}
+          }
+        </p>
+        <label>
+          <input type="checkbox" [checked]="e.enabled" (change)="toggle(e, $event)" />
+          {{ 'addon.enable' | transloco }}
+        </label>
+        <p class="hint">{{ 'addon.enableHint' | transloco }}</p>
+        <div class="error" role="alert">
+          {{ addonError() ? ('addon.accessError' | transloco) : '' }}
+        </div>
+      </section>
+      @if (e.enabled) {
+        <app-addon-access [addon]="e.id" />
+      }
     } @else {
       <section>
         <h3>{{ 'resetSection' | transloco }}</h3>

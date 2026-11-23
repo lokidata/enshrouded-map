@@ -1,0 +1,60 @@
+name: Docs
+
+# Builds the MkDocs site (`make docs-src`, then MkDocs Material) and publishes it to GitHub Pages.
+# One-time setup in the repository: Settings > Pages > Build and deployment > Source: GitHub Actions.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "README.md"
+      - "pipeline/README.md"
+      - "deploy/README.md"
+      - "frontend/CLAUDE.md"
+      - "mkdocs.yml"
+      - "Makefile"
+      - ".github/workflows/docs.yml"
+  workflow_dispatch:
+
+permissions: {}
+
+# One publication at a time; a running one is never cancelled half way.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+      - run: make docs-src
+      # Versions are pinned here (Dependabot does not follow uvx); --strict fails on a broken link.
+      - run: uvx --python 3.13 --from mkdocs==1.6.1 --with mkdocs-material==9.8.2 mkdocs build --strict
+        env:
+          NO_MKDOCS_2_WARNING: "1"
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: .site
+
+  deploy:
+    name: deploy
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write # publish
+      id-token: write # prove the deployment comes from this workflow
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

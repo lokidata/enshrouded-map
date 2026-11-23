@@ -1,5 +1,6 @@
-import { Component, ElementRef, effect, inject, signal, untracked } from '@angular/core';
+import { Component, ElementRef, computed, effect, inject, signal, untracked } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { baseOf } from '../core/addon.logic';
 import { AddonService } from '../core/addon.service';
 import { LangService } from '../core/lang.service';
 import { ViewStore } from '../core/view.store';
@@ -12,7 +13,7 @@ import { ViewStore } from '../core/view.store';
   selector: 'app-addon-host',
   imports: [TranslocoPipe],
   template: `
-    @if (failed()) {
+    @if (failedId() !== null && failedId() === shownId()) {
       <div class="addon-error" role="alert">
         <p>{{ 'addon.loadError' | transloco }}</p>
         <button type="button" class="retry" (click)="retry()">
@@ -39,7 +40,11 @@ export class AddonHost {
   private readonly addons = inject(AddonService);
   private readonly views = inject(ViewStore);
   private readonly lang = inject(LangService);
-  protected readonly failed = signal(false);
+  // the entry whose script failed: the error shows only while that entry is the one open
+  protected readonly failedId = signal<string | null>(null);
+  protected readonly shownId = computed(() =>
+    this.views.view() === 'addon' ? this.views.addonId() : null,
+  );
 
   constructor() {
     effect(() => {
@@ -51,9 +56,9 @@ export class AddonHost {
   }
 
   protected retry(): void {
-    this.failed.set(false);
+    this.failedId.set(null);
     void this.sync(
-      this.views.view() === 'addon' ? this.views.addonId() : null,
+      this.shownId(),
       this.lang.lang(),
       this.addons.entries(),
     );
@@ -67,12 +72,12 @@ export class AddonHost {
     const entry = id ? entries.find((e) => e.id === id) : undefined;
     if (entry && !this.wrapper(entry.id)) {
       try {
-        await this.addons.ensureLoaded();
+        await this.addons.ensureLoaded(entry);
       } catch {
-        this.failed.set(true);
+        this.failedId.set(entry.id);
         return;
       }
-      this.failed.set(false);
+      this.failedId.set(null);
       if (!this.wrapper(entry.id)) {
         // two syncs can wait for the same script: only the first one mounts
         const box = document.createElement('div');
@@ -88,6 +93,8 @@ export class AddonHost {
       const shown = box.dataset['id'] === current;
       box.toggleAttribute('hidden', !shown);
       const el = box.firstElementChild;
+      const own = entries.find((e) => e.id === box.dataset['id']);
+      if (own) el?.setAttribute('base', baseOf(own));
       el?.setAttribute('lang', lang);
       el?.setAttribute('active', String(shown));
     }

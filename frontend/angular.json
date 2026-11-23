@@ -101,6 +101,37 @@
                   "output": "/fonts"
                 }
               ]
+            },
+            "e2e": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "assets": [
+                {
+                  "glob": "**/*",
+                  "input": "public"
+                },
+                {
+                  "glob": "**/*",
+                  "input": "e2e/fixtures/map",
+                  "output": "/"
+                },
+                {
+                  "glob": "alegreya-sans-latin-{400,500,700}-*.woff2",
+                  "input": "node_modules/@fontsource/alegreya-sans/files",
+                  "output": "/fonts"
+                },
+                {
+                  "glob": "*-latin-*-*.woff2",
+                  "input": "node_modules/@fontsource/im-fell-english/files",
+                  "output": "/fonts"
+                },
+                {
+                  "glob": "*-latin-*-*.woff2",
+                  "input": "node_modules/@fontsource/im-fell-english-sc/files",
+                  "output": "/fonts"
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"
@@ -113,6 +144,9 @@
             },
             "development": {
               "buildTarget": "frontend:build:development"
+            },
+            "e2e": {
+              "buildTarget": "frontend:build:e2e"
             }
           },
           "defaultConfiguration": "development",

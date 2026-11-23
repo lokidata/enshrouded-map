@@ -5,7 +5,7 @@ import { KsdError } from './ksd';
  * A section starts with `[16 bytes GUID][min x, y, z: 3 x u32 LE][max x, y, z: 3 x u32 LE]`, then voxel data that is
  * not read. The unit is HALF a metre, y is the height. The box is the altar's build area: a square of 40 m per level,
  * centred on the altar (checked on one real save, 1 altar of level 4 and 4 of level 1, confirmed in game; the sizes of
- * levels 2 and 3 follow from the sizes the user gave). See docs/DESIGN-save-import.md.
+ * levels 2 and 3 follow from the sizes the user gave).
  */
 export interface Altar {
   /** Centre in whole metres (the map's x and z), and the height in metres. */

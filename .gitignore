@@ -12,3 +12,5 @@ docs/samples/
 
 # local dev databases (accounts, sessions)
 backend/data/
+.site-src/
+.site/

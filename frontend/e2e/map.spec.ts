@@ -98,7 +98,7 @@ test.afterEach(async ({ page }) => {
   }
 });
 
-const user = `e2e${Date.now()}`;
+const user = process.env['E2E_USER'] ?? `e2e${Date.now()}`; // `make e2e-stack` fixes it for addon-stack.spec.ts
 const password = 'correct horse battery';
 const setupToken = process.env['SETUP_TOKEN']!; // set by the Playwright config or by `make e2e-stack`
 
@@ -2663,27 +2663,35 @@ test('save import: the character sheet (level, worn equipment, skills) goes into
     .toEqual(['id', 'name', 'nodes', 'updated_at']);
 });
 
-// ---- add-ons: the site lists what /addon/api/manifest allows and mounts the custom elements ----
-const addonFile = (name: string) => readFileSync(join(__dirname, 'fixtures/addon', name), 'utf8');
+// ---- add-ons: the site lists what GET /api/v1/addons allows and mounts the custom elements (mocked API) ----
+const addonFile = (name: string) =>
+  readFileSync(join(__dirname, 'fixtures/addons/hello', name), 'utf8');
 
-/** A fake add-on behind `/addon/`: the site's own /auth/me and /auth/login say `addon: true`, the rest is served from fixtures. */
-async function fakeAddon(
-  page: Page,
-  opts: { enabled?: boolean; manifest?: unknown; script?: () => number } = {},
-) {
-  const { enabled = true, manifest = JSON.parse(addonFile('manifest.json')) } = opts;
+const helloEntry = {
+  id: 'hello',
+  key: 'hello',
+  name: { fr: 'Bonjour', en: 'Hello' },
+  element: 'addon-hello',
+  capabilities: ['tab'],
+  script: '/addon/hello/main.js',
+  styles: '/addon/hello/styles.css',
+  level: 'action',
+};
+
+/** The add-on API is mocked and the example add-on's files come from the fixtures: this cannot prove the real enable and grant flow (see addon-stack.spec.ts). */
+async function fakeAddon(page: Page, opts: { entries?: unknown[]; script?: () => number } = {}) {
+  const { entries = [helloEntry] } = opts;
   await page.route('**/api/v1/auth/{me,login}', async (route) => {
     const res = await route.fetch();
-    const body = await res.json();
-    await route.fulfill({ response: res, json: enabled ? { ...body, addon: true } : body });
+    await route.fulfill({ response: res, json: { ...(await res.json()), addon: true } });
   });
-  await page.route('**/addon/api/manifest', (route) => route.fulfill({ json: manifest as object }));
-  await page.route('**/addon/styles.css', (route) =>
-    route.fulfill({ contentType: 'text/css', body: addonFile('elements.css') }),
+  await page.route('**/api/v1/addons', (route) => route.fulfill({ json: entries }));
+  await page.route('**/addon/hello/styles.css', (route) =>
+    route.fulfill({ contentType: 'text/css', body: addonFile('styles.css') }),
   );
-  await page.route('**/addon/main.js', (route) =>
+  await page.route('**/addon/hello/main.js', (route) =>
     (opts.script?.() ?? 200) === 200
-      ? route.fulfill({ contentType: 'text/javascript', body: addonFile('elements.js') })
+      ? route.fulfill({ contentType: 'text/javascript', body: addonFile('main.js') })
       : route.fulfill({ status: 404, body: 'nope' }),
   );
 }
@@ -2699,27 +2707,33 @@ async function signInAgain(page: Page): Promise<void> {
   await expect(page.locator('.who')).toContainText(user);
 }
 
-test('add-ons: no tab unless /auth/me says the add-on exists', async ({ page }) => {
-  let asked = false;
-  await fakeAddon(page, { enabled: false });
-  await page.route('**/addon/api/manifest', (route) => {
-    asked = true; // registered last, so it answers first
-    return route.fulfill({ json: {} });
-  });
+const helloTab = (page: Page) =>
+  page.locator('app-topbar').getByRole('button', { name: 'Bonjour' });
+
+test('add-ons: no entry, no tab', async ({ page }) => {
+  await fakeAddon(page, { entries: [] });
   await signInAgain(page);
-  await expect(page.locator('app-topbar').getByRole('button', { name: 'Serveur' })).toHaveCount(0);
-  expect(asked).toBe(false);
+  await expect(helloTab(page)).toHaveCount(0);
 });
 
-test('add-ons: a hostile manifest shows nothing and injects nothing', async ({ page }) => {
-  const bad = { ...JSON.parse(addonFile('manifest.json')), script: 'https://evil.example/x.js' };
-  await fakeAddon(page, { manifest: bad });
+test('add-ons: an outage of the add-on API shows no tab and throws nothing', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message)); // the failed request itself is logged by the browser
+  await fakeAddon(page);
+  await page.route('**/api/v1/addons', (route) => route.abort()); // registered last: answers first
   await signInAgain(page);
-  await expect(page.locator('app-topbar').getByRole('button', { name: 'Serveur' })).toHaveCount(0);
+  await expect(helloTab(page)).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test('add-ons: a hostile entry shows nothing and injects nothing', async ({ page }) => {
+  await fakeAddon(page, { entries: [{ ...helloEntry, script: 'https://evil.example/x.js' }] });
+  await signInAgain(page);
+  await expect(helloTab(page)).toHaveCount(0);
   expect(await page.locator('script[src*="evil"]').count()).toBe(0);
 });
 
-test('add-ons: tabs from the manifest, the element gets lang and active, the draft survives, AXE', async ({
+test('add-ons: the tab opens the element, which gets lang, base and active, keeps its draft, AXE', async ({
   page,
 }) => {
   await fakeAddon(page);
@@ -2727,35 +2741,36 @@ test('add-ons: tabs from the manifest, the element gets lang and active, the dra
   const bar = page.locator('app-topbar');
   const h1Color = () => page.locator('app-topbar h1').evaluate((e) => getComputedStyle(e).color);
   const before = await h1Color();
-  await expect(bar.getByRole('button', { name: 'Serveur' })).toBeVisible();
-  await expect(bar.getByRole('button', { name: 'Coffres' })).toBeVisible();
+  await expect(helloTab(page)).toBeVisible();
 
-  await bar.getByRole('button', { name: 'Serveur' }).click();
-  const el = page.locator('[data-addon] addon-server');
-  await expect(el.locator('#state')).toHaveText('lang=fr active=true');
-  await expect(bar.getByRole('button', { name: 'Serveur' })).toHaveAttribute(
-    'aria-current',
-    'page',
-  );
-  await el.getByLabel('Draft').fill('my unsaved draft');
+  await helloTab(page).click();
+  const el = page.locator('[data-addon] addon-hello');
+  await expect(el.locator('#state')).toHaveText('lang=fr base=/addon/hello/ active=true');
+  await expect(helloTab(page)).toHaveAttribute('aria-current', 'page');
+  await el.getByLabel('Name').fill('my unsaved draft');
   expect(
     (await new AxeBuilder({ page }).include('[data-addon]:not([hidden])').analyze()).violations,
   ).toEqual([]);
 
+  // the form downloads a JSON file built from the field
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    el.getByRole('button', { name: 'Download JSON' }).click(),
+  ]);
+  expect(download.suggestedFilename()).toBe('hello.json');
+
   // another screen: the element stays mounted, hidden and inactive, with its draft
   await bar.getByRole('button', { name: 'Partie', exact: true }).click();
   await expect(page.locator('[data-addon]').first()).toBeHidden();
-  await expect(el.locator('#state')).toHaveText('lang=fr active=false');
-  await bar.getByRole('button', { name: 'Serveur' }).click();
-  await expect(el.getByLabel('Draft')).toHaveValue('my unsaved draft');
+  await expect(el.locator('#state')).toHaveText('lang=fr base=/addon/hello/ active=false');
+  await helloTab(page).click();
+  await expect(el.getByLabel('Name')).toHaveValue('my unsaved draft');
 
-  // a link to #addon/<id> opens the other tab
-  await page.evaluate(() => (location.hash = '#addon/chestsort'));
-  await expect(bar.getByRole('button', { name: 'Coffres' })).toHaveAttribute(
-    'aria-current',
-    'page',
-  );
-  await expect(page.locator('[data-addon] addon-chestsort')).toBeVisible();
+  // a link to #addon/<id> opens it too
+  await bar.getByRole('button', { name: 'Partie', exact: true }).click();
+  await page.evaluate(() => (location.hash = '#addon/hello'));
+  await expect(helloTab(page)).toHaveAttribute('aria-current', 'page');
+  await expect(el).toBeVisible();
   // the add-on's stylesheet changed nothing of the site's own look
   expect(await h1Color()).toBe(before);
 });
@@ -2766,36 +2781,55 @@ test('add-ons: a script that does not load shows an error, and Retry loads it', 
   let status = 404;
   await fakeAddon(page, { script: () => status });
   await signInAgain(page);
-  await page.locator('app-topbar').getByRole('button', { name: 'Serveur' }).click();
+  await helloTab(page).click();
   const host = page.locator('app-addon-host');
   await expect(host.getByRole('alert')).toBeVisible();
   status = 200;
   await host.getByRole('button', { name: 'Réessayer' }).click();
-  await expect(page.locator('[data-addon] addon-server #state')).toBeVisible();
+  await expect(page.locator('[data-addon] addon-hello #state')).toBeVisible();
   await expect(host.getByRole('alert')).toHaveCount(0);
 });
 
-test('add-ons: the Administration dialog has one access tab per add-on', async ({ page }) => {
+test('add-ons: the Administration dialog enables an entry and sets who may use it', async ({
+  page,
+}) => {
   await fakeAddon(page);
-  const puts: { url: string; body: unknown; header: string | undefined }[] = [];
-  await page.route('**/addon/api/server/access**', (route) => {
+  const admin = {
+    id: 'hello',
+    key: 'hello',
+    name: { fr: 'Bonjour', en: 'Hello' },
+    description: { fr: 'Exemple.', en: 'Example.' },
+    capabilities: ['tab'],
+    version: '0.1.0',
+    enabled: false,
+  };
+  const puts: { url: string; body: unknown }[] = [];
+  await page.route('**/api/v1/addons/admin', (route) => route.fulfill({ json: [admin] }));
+  await page.route('**/api/v1/addons/hello', (route) => {
+    puts.push({ url: route.request().url(), body: route.request().postDataJSON() });
+    return route.fulfill({ json: { ...admin, enabled: true } });
+  });
+  await page.route('**/api/v1/addons/hello/access**', (route) => {
     const req = route.request();
     if (req.method() === 'PUT') {
-      puts.push({ url: req.url(), body: req.postDataJSON(), header: req.headers()['x-addon'] });
-      return route.fulfill({ json: {} });
+      puts.push({ url: req.url(), body: req.postDataJSON() });
+      return route.fulfill({ status: 204 });
     }
-    return route.fulfill({ json: [{ user_key: '9:t', username: 'bob', level: 'read' }] });
+    return route.fulfill({ json: [{ user_id: 9, username: 'bob', level: 'read' }] });
   });
   await signInAgain(page);
   await menu(page, 'Administration');
   const dialog = page.getByRole('dialog');
-  await expect(dialog.getByRole('tab')).toHaveText(['Comptes', 'Serveur', 'Coffres']);
+  await expect(dialog.getByRole('tab')).toHaveText(['Comptes', 'Bonjour']);
   await expect(dialog.getByRole('button', { name: 'Générer le lien' })).toBeVisible();
-  await dialog.getByRole('tab', { name: 'Serveur' }).click();
+  await dialog.getByRole('tab', { name: 'Bonjour' }).click();
+  await dialog.getByLabel('Activer cet add-on').check();
+  await expect.poll(() => puts.length).toBe(1);
+  expect(puts[0].body).toEqual({ enabled: true });
   await expect(dialog.getByLabel('bob')).toHaveValue('read');
   await dialog.getByLabel('bob').selectOption('action');
-  await expect.poll(() => puts.length).toBe(1);
-  expect(puts[0]).toMatchObject({ body: { level: 'action' }, header: '1' });
-  expect(puts[0].url).toContain('/addon/api/server/access/9%3At');
+  await expect.poll(() => puts.length).toBe(2);
+  expect(puts[1]).toMatchObject({ body: { level: 'action' } });
+  expect(puts[1].url).toContain('/api/v1/addons/hello/access/9');
   expect((await new AxeBuilder({ page }).include('dialog[open]').analyze()).violations).toEqual([]);
 });

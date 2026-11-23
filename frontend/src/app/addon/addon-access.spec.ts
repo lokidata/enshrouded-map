@@ -24,8 +24,8 @@ async function setup(addon: string) {
   fx.componentRef.setInput('addon', addon);
   fx.detectChanges();
   http
-    .expectOne(`/addon/api/${addon}/access`)
-    .flush([{ user_key: '2:t', username: 'alice', level: 'read' }]);
+    .expectOne(`/api/v1/addons/${addon}/access`)
+    .flush([{ user_id: 2, username: 'alice', level: 'read' }]);
   await fx.whenStable();
   fx.detectChanges();
   const sel = fx.nativeElement.querySelector('select') as HTMLSelectElement;
@@ -42,20 +42,20 @@ describe('AddonAccess', () => {
     expect(sel.value).toBe('read');
   });
 
-  it('sends the change to that add-on with the X-Addon header and the encoded key', async () => {
+  it('sends the change to the site API by entry id and user id, without X-Addon', async () => {
     const { http, sel } = await setup('server');
     pick(sel, 'action');
-    const req = http.expectOne('/addon/api/server/access/2%3At');
+    const req = http.expectOne('/api/v1/addons/server/access/2');
     expect(req.request.method).toBe('PUT');
-    expect(req.request.headers.get('X-Addon')).toBe('1');
+    expect(req.request.headers.has('X-Addon')).toBe(false);
     expect(req.request.body).toEqual({ level: 'action' });
-    req.flush({});
+    req.flush(null, { status: 204, statusText: 'No Content' });
   });
 
   it('puts the old level back and says so when the add-on refuses', async () => {
     const { http, fx, sel } = await setup('server');
     pick(sel, 'action');
-    http.expectOne('/addon/api/server/access/2%3At').flush({}, { status: 403, statusText: 'x' });
+    http.expectOne('/api/v1/addons/server/access/2').flush({}, { status: 403, statusText: 'x' });
     await fx.whenStable();
     fx.detectChanges();
     expect(sel.value).toBe('read');

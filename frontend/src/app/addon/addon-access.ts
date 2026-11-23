@@ -4,12 +4,12 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { firstValueFrom } from 'rxjs';
 
 export interface AccessRow {
-  user_key: string;
+  user_id: number;
   username: string;
   level: 'read' | 'action' | null;
 }
 
-/** The administrator's list for one add-on: who may read, who may act. The add-on keeps the list itself. */
+/** The administrator's list for one add-on: who may read, who may act. The site keeps the list. */
 @Component({
   selector: 'app-addon-access',
   imports: [TranslocoPipe],
@@ -24,7 +24,7 @@ export interface AccessRow {
           </tr>
         </thead>
         <tbody>
-          @for (u of rows(); track u.user_key) {
+          @for (u of rows(); track u.user_id) {
             <tr>
               <td>
                 <label [for]="id(u)">{{ u.username }}</label>
@@ -93,12 +93,14 @@ export class AddonAccess {
   }
 
   protected id(u: AccessRow): string {
-    return `${this.addon()}-lvl-${u.user_key.replace(/\W/g, '_')}`;
+    return `${this.addon()}-lvl-${u.user_id}`;
   }
 
   private async load(addon: string): Promise<void> {
     try {
-      this.rows.set(await firstValueFrom(this.http.get<AccessRow[]>(`/addon/api/${addon}/access`)));
+      this.rows.set(
+        await firstValueFrom(this.http.get<AccessRow[]>(`/api/v1/addons/${addon}/access`)),
+      );
       this.failed.set(false);
     } catch {
       this.rows.set([]);
@@ -111,17 +113,13 @@ export class AddonAccess {
     const level = (sel.value || null) as AccessRow['level'];
     try {
       await firstValueFrom(
-        this.http.put(
-          `/addon/api/${this.addon()}/access/${encodeURIComponent(u.user_key)}`,
-          { level },
-          { headers: { 'X-Addon': '1' } }, // the add-on refuses a write without it
-        ),
+        this.http.put(`/api/v1/addons/${this.addon()}/access/${u.user_id}`, { level }),
       );
       this.failed.set(false);
       u.level = level;
     } catch {
       this.failed.set(true);
-      sel.value = u.level ?? ''; // back to what the add-on holds
+      sel.value = u.level ?? ''; // back to what the site holds
     }
   }
 }

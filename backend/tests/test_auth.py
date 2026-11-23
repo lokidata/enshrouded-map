@@ -1,4 +1,5 @@
 from datetime import timedelta
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -72,9 +73,44 @@ def test_me_carries_the_addon_fields_only_when_enabled(
     assert r.json()["addon"] is True and isinstance(r.json()["id"], int) and r.json()["created_at"]
     monkeypatch.setattr(get_settings(), "addon_url", "")
     assert client.post(LOGIN, json={"username": "alice", "password": PW}).json()["addon"] is False
+    monkeypatch.setattr(get_settings(), "addons", "pelican=http://a:8000")
+    assert client.post(LOGIN, json={"username": "alice", "password": PW}).json()["addon"] is True
+    monkeypatch.setattr(get_settings(), "addons", "")
     client.post("/api/v1/auth/logout")
     out = client.get("/api/v1/auth/me").json()
     assert out["addon"] is False and "id" not in out
+
+
+@pytest.mark.parametrize(
+    ("addons", "addon_url", "folder", "expected"),
+    [
+        ("pelican=http://a:8000", "", None, True),
+        ("", "http://addon:8000", None, True),
+        ("", "", "k", True),
+        ("", "", "Bad_Key", False),
+        ("", "", None, False),
+        ("garbage", "", None, False),
+        ("garbage", "", "k", True),
+    ],
+)
+def test_addon_flag_sources(
+    client: ApiClient,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    addons: str,
+    addon_url: str,
+    folder: str | None,
+    expected: bool,
+) -> None:
+    if folder:
+        (tmp_path / folder).mkdir()
+        (tmp_path / folder / "addon.json").write_text("{}")
+    s = get_settings()
+    monkeypatch.setattr(s, "addons", addons)
+    monkeypatch.setattr(s, "addon_url", addon_url)
+    monkeypatch.setattr(s, "addons_dir", str(tmp_path))
+    r = client.post(SETUP, json={"username": "alice", "password": PW, "setup_token": SETUP_TOKEN})
+    assert r.status_code == 200 and r.json()["addon"] is expected
 
 
 def test_setup_needs_the_setup_token(client: ApiClient) -> None:

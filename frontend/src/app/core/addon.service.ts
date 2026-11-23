@@ -1,54 +1,62 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { AddonEntry, AddonManifest, parseManifest } from './addon.logic';
+import { AddonEntry, parseEntries } from './addon.logic';
 
-/** The add-ons the account may use, read from the add-on's manifest. Any failure means "none". */
+/** The add-ons the account may use, read from the site's API. Any failure means "none". */
 @Injectable({ providedIn: 'root' })
 export class AddonService {
   private readonly http = inject(HttpClient);
-  private manifest: AddonManifest | null = null;
-  private loading: Promise<void> | null = null;
+  private readonly loading = new Map<string, Promise<void>>(); // by script path
+  private readonly styled = new Set<string>(); // stylesheet paths already added
   private readonly _entries = signal<AddonEntry[]>([]);
   readonly entries = this._entries.asReadonly();
 
   async load(): Promise<void> {
+    let list: AddonEntry[] | null = null;
     try {
-      this.manifest = parseManifest(
-        await firstValueFrom(this.http.get<unknown>('/addon/api/manifest')),
-      );
+      list = parseEntries(await firstValueFrom(this.http.get<unknown>('/api/v1/addons')));
     } catch {
-      this.manifest = null; // add-on down, not installed or not allowed: no tab, nothing to report
+      // add-ons off or not allowed: no tab, nothing to report
     }
-    this._entries.set(this.manifest?.entries ?? []);
+    this._entries.set(list ?? []);
   }
 
   clear(): void {
-    this.manifest = null;
-    this.loading = null;
+    this.loading.clear();
+    this.styled.clear();
     this._entries.set([]);
   }
 
-  /** Adds the add-on's stylesheet and script once; a failure can be retried by calling again. */
-  ensureLoaded(): Promise<void> {
-    const m = this.manifest;
-    if (!m) return Promise.reject(new Error('no add-on manifest'));
-    this.loading ??= new Promise<void>((resolve, reject) => {
-      const link = document.createElement('link');
-      link.rel = 'stylesheet';
-      link.href = m.styles;
-      const script = document.createElement('script');
-      script.type = 'module';
-      script.src = m.script;
-      script.onload = () => resolve();
-      script.onerror = () => {
-        script.remove();
-        link.remove();
-        this.loading = null;
-        reject(new Error('add-on script failed to load'));
-      };
-      document.head.append(link, script);
-    });
-    return this.loading;
+  /** Adds the entry's stylesheet and script, each once per path; a failure can be retried by calling again. */
+  ensureLoaded(entry: AddonEntry): Promise<void> {
+    const { script: src, styles } = entry;
+    let p = this.loading.get(src);
+    if (!p) {
+      p = new Promise<void>((resolve, reject) => {
+        const nodes: HTMLElement[] = [];
+        if (!this.styled.has(styles)) {
+          const link = document.createElement('link');
+          link.rel = 'stylesheet';
+          link.href = styles;
+          this.styled.add(styles);
+          nodes.push(link);
+        }
+        const script = document.createElement('script');
+        script.type = 'module';
+        script.src = src;
+        script.onload = () => resolve();
+        script.onerror = () => {
+          script.remove();
+          nodes.forEach((n) => n.remove());
+          if (nodes.length) this.styled.delete(styles);
+          this.loading.delete(src);
+          reject(new Error('add-on script failed to load'));
+        };
+        document.head.append(...nodes, script);
+      });
+      this.loading.set(src, p);
+    }
+    return p;
   }
 }

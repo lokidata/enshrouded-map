@@ -237,3 +237,24 @@ class Build(Base):
     gems: Mapped[dict[str, dict[str, str | int]]] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class AddonEntryRow(Base):
+    """Whether the administrator switched an add-on entry on (entries are off by default)."""
+
+    __tablename__ = "addon_entries"
+
+    entry_id: Mapped[str] = mapped_column(String(20), primary_key=True)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+
+
+class AddonAccess(Base):
+    """The level ("read" or "action") a player holds on an add-on entry."""
+
+    __tablename__ = "addon_access"
+
+    entry_id: Mapped[str] = mapped_column(String(20), primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True, index=True
+    )
+    level: Mapped[str] = mapped_column(String(6))

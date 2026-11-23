@@ -111,3 +111,12 @@ CurrentUser = Annotated[User, Depends(require_user)]
 def require_session(row: Annotated[AuthSession | None, Depends(current_session)]) -> None:
     if row is None:
         raise HTTPException(401, "login")
+
+
+def _require_admin(user: CurrentUser) -> User:
+    if not user.first_account:
+        raise HTTPException(403, "forbidden")
+    return user
+
+
+Admin = Annotated[User, Depends(_require_admin)]

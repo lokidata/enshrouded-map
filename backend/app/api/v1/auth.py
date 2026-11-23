@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import (
     SESSION_COOKIE,
+    Admin,
     CurrentUser,
     DbSession,
     current_user,
@@ -238,15 +239,6 @@ def me(user: Annotated[User | None, Depends(current_user)], db: DbSession) -> Us
 
 
 # ---- password: change it, or reset it with a link from the first account ----
-
-
-def _require_admin(user: CurrentUser) -> User:
-    if not user.first_account:
-        raise HTTPException(403, "forbidden")
-    return user
-
-
-Admin = Annotated[User, Depends(_require_admin)]
 
 
 def _set_password(db: Session, user: User, password: str) -> None:

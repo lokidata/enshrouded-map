@@ -1,0 +1,18 @@
+{
+  "api_version": 2,
+  "entries": [
+    {
+      "id": "hello",
+      "version": "0.1.0",
+      "name": { "fr": "Bonjour", "en": "Hello" },
+      "description": {
+        "fr": "Exemple minimal : un champ et un export JSON.",
+        "en": "Minimal example: one field and a JSON export."
+      },
+      "element": "addon-hello",
+      "capabilities": ["tab"],
+      "script": "/addon/main.js",
+      "styles": "/addon/styles.css"
+    }
+  ]
+}
