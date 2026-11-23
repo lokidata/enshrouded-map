@@ -12,7 +12,7 @@ FROM nginxinc/nginx-unprivileged:1.31-alpine@sha256:b5047b9b76845eac124358373c68
 COPY --from=build /build/dist/frontend/browser /usr/share/nginx/html
 # Fixed packages that the pinned base image does not have yet (openssl, zlib, musl, brotli, curl, libexpat, libxslt); Dependabot moves the base forward.
 USER root
-RUN apk upgrade --no-cache libcrypto3 libssl3 zlib musl musl-utils brotli-libs curl libcurl libexpat libxslt
+RUN apk upgrade --no-cache libcrypto3 libssl3 zlib musl musl-utils brotli-libs curl libcurl libexpat libxslt libxml2
 # Config baked into the image: nothing to mount, so the same image runs from compose or Portainer.
 COPY nginx/default.conf.template /etc/nginx/templates/default.conf.template
 COPY nginx/security-headers.conf /etc/nginx/security-headers.conf
