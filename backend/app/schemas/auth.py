@@ -1,8 +1,10 @@
 from datetime import datetime
+from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any
 
 from pydantic import BaseModel, Field, StringConstraints, model_serializer
 
+from app.core.addons import KEY_RE, configured_origins
 from app.core.config import get_settings
 from app.schemas.common import StrictModel
 
@@ -34,10 +36,10 @@ class UserOut(BaseModel):
     setup_required: bool = False  # no account exists yet: the first one must be created
     is_admin: bool = False  # the first account: can generate password reset links
     passkeys_enabled: bool = False  # the server is configured for passkeys (sent by /me only)
-    # Sent by /me for a logged-in user (the optional server add-on identifies accounts with them).
+    # Sent by /me when logged in. Add-ons no longer need them (they use /addons/{id}/me).
     id: int | None = None
     created_at: datetime | None = None
-    addon: bool = False  # ADDON_URL is set: the page shows the add-on's menu entry
+    addon: bool = False  # any add-on is configured (ADDONS, ADDON_URL or a static folder)
 
     @model_serializer(mode="wrap")
     def _omit_empty_identity(self, handler: Any) -> dict[str, Any]:
@@ -48,6 +50,19 @@ class UserOut(BaseModel):
         return out
 
 
+def _has_addons() -> bool:
+    """A container is configured or the static folder holds a `<key>/addon.json`."""
+    settings = get_settings()
+    try:
+        if configured_origins(settings):
+            return True
+    except ValueError:  # a bad ADDONS value must not break login
+        pass
+    return any(
+        KEY_RE.fullmatch(p.parent.name) for p in Path(settings.addons_dir).glob("*/addon.json")
+    )
+
+
 def logged_in_user(user: "User", passkeys_enabled: bool = False) -> UserOut:
     """The answer for a logged-in user, the same for /me, login, setup, accept and passkey login."""
     return UserOut(
@@ -56,7 +71,7 @@ def logged_in_user(user: "User", passkeys_enabled: bool = False) -> UserOut:
         passkeys_enabled=passkeys_enabled,
         id=user.id,
         created_at=user.created_at,
-        addon=bool(get_settings().addon_url),
+        addon=_has_addons(),
     )
 
 
