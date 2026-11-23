@@ -113,7 +113,7 @@ server {
         expires -1;
     }
 
-    # Optional server add-on: addon.inc exists only when ADDON_URL is set (40-addon.sh).
+    # Optional server add-on: addon.inc exists only when add-ons are enabled: ADDONS, the ADDON_URL alias, or a static folder (40-addon.sh).
     include /etc/nginx/conf.d/addon*.inc;
 
     location ~ /\. {

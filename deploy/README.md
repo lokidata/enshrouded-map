@@ -34,7 +34,14 @@ docker compose cp backup.db api:/data/app.db   # restore (stop the stack first: 
 ## Notes
 
 - `REVERSE_PROXY_IP` must be the address your reverse proxy connects from: nginx only trusts `X-Forwarded-For` from it, and the API only trusts nginx (`172.28.0.10`).
-- Optional server add-on: set `ADDON_URL` (origin only, e.g. `http://addon:8000`, reachable from the web container) in `.env`. The web container then proxies `/addon/` to it (the name is resolved at request time: the site starts even if the add-on is down, `/addon/` answers 502 until it is up) and the site adds one top-bar tab per add-on the account may use (read from the add-on's manifest). The administrator grants access to each add-on in the Administration dialog (the lists start empty). The chestsort editor also reads `item-names.json` from the map data (see `pipeline/`; optional). Unset (default): no proxy block, no tab.
+- Optional server add-ons (`ADDONS`, `ADDONS_DIR`, `ADDONS_PATH`, in `.env`):
+  - Container add-on: `ADDONS=key=http://host:port,key2=...` (key `[a-z0-9-]{1,20}`, origin only, no path; `ADDON_URL=<origin>` still works and means `main=<origin>`). The web container proxies `/addon/<key>/...` to it, rewritten to `/addon/...` (the add-on never knows its key). The name is resolved at request time: the site starts even if the add-on is down, `/addon/<key>/` answers 502 until it is up. The add-on checks the session itself.
+  - Static add-on: a folder `<key>/` holding `addon.json` and its files, in `ADDONS_PATH` (default `./addons`, mounted read-only on `/addons` in `api` and `web`). Served at `/addon/<key>/...`, for logged-in sessions only. A key that is both a container and a folder is the container.
+  - A malformed `ADDONS` stops the web container at start (message in its log); unset: no block, no tab.
+  - After deploying, open Administration: add-ons start disabled. Enable each entry, then grant access per account (the administrator always has full access once it is enabled).
+  - Ship the site and the add-on together: the add-on's manifest `api_version` (2) must match the site, so update both in the same deployment.
+  - Upgrading to the release that brings contract v2: add-ons stay hidden until enabled and granted again (no import of old lists); `ADDON_URL` tolerates one trailing slash, an `ADDONS` value with one stops the web container (remove it); `ADDONS` must have no spaces after the commas.
+  - The chestsort editor also reads `item-names.json` from the map data (see `pipeline/`; optional).
 - The API runs a single worker because the login rate limit is counted in memory.
 - Switching to PostgreSQL: add a `db` service, set `DATABASE_URL` and add `psycopg[binary]` to the image's requirements.
 - CSP allows inline *styles* (Angular injects component styles at run time); scripts are `'self'` only.

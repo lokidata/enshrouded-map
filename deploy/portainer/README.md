@@ -28,6 +28,8 @@ Portainer → **Stacks → Add stack**:
 | `WEB_BIND` / `WEB_PORT` | | Published address and port (default `0.0.0.0:8080`) |
 | `IMAGE_TAG` | | `latest` by default; the site's `api` and `web` images |
 | `ADDON_IMAGE_TAG` | | only if the optional add-on service is in the stack (see the add-on's `deploy/portainer/`): its own version, since the add-on is released separately |
+| `ADDONS` | | optional add-ons as `key=http://service:port,...` (key `[a-z0-9-]{1,20}`, origin only). `ADDON_URL` is an alias of `main=<origin>` |
+| `ADDONS_PATH` | | host folder with static add-ons (`<key>/addon.json` + files), mounted read-only on `/addons`; set an absolute path (a relative `./addons` resolves inside Portainer's own directory and creates an empty root-owned folder). Enable each add-on in Administration, then grant access. Update the site and the add-on together. Upgrading: add-ons stay hidden until enabled and granted again; `ADDON_URL` tolerates one trailing slash, `ADDONS` values do not, no spaces in `ADDONS` |
 | `INVITATION_MINUTES` | | Lifetime of an invitation link (default 20) |
 | `BACKEND_SUBNET` / `WEB_IP` | if 172.28.0.0/24 is taken | Internal network and the web container's address in it |
 
