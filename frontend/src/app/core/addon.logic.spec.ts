@@ -1,92 +1,94 @@
 import { describe, expect, it } from 'vitest';
-import schema from '../../../../contract/manifest.schema.json';
-import {
-  ADDON_API_VERSION,
-  ELEMENT_RE,
-  ID_RE,
-  PATH_RE,
-  entryLabel,
-  parseManifest,
-} from './addon.logic';
+import { baseOf, entryLabel, parseEntries } from './addon.logic';
 
 const entry = (over: Record<string, unknown> = {}) => ({
   id: 'server',
-  version: '0.2.0',
-  level: 'read',
+  key: 'main',
   name: { fr: 'Serveur', en: 'Server' },
   element: 'addon-server',
+  capabilities: ['tab'],
+  script: '/addon/main/main.js',
+  styles: '/addon/main/main.css',
+  level: 'read',
   ...over,
 });
-const manifest = (over: Record<string, unknown> = {}) => ({
-  api_version: 1,
-  script: '/addon/elements.js',
-  styles: '/addon/elements.css',
-  addons: [entry(), entry({ id: 'chestsort', level: 'action', element: 'addon-chestsort' })],
-  ...over,
-});
+const list = (...e: Record<string, unknown>[]) =>
+  e.length ? e : [entry(), entry({ id: 'chestsort', level: 'action', element: 'addon-chestsort' })];
 
-describe('parseManifest', () => {
-  it('reads a valid manifest', () => {
-    const m = parseManifest(manifest());
-    expect(m?.script).toBe('/addon/elements.js');
-    expect(m?.entries.map((e) => e.id)).toEqual(['server', 'chestsort']);
-    expect(m?.entries[1].level).toBe('action');
+describe('parseEntries', () => {
+  it('reads valid entries', () => {
+    const m = parseEntries(list());
+    expect(m?.map((e) => e.id)).toEqual(['server', 'chestsort']);
+    expect(m?.[1].level).toBe('action');
+    expect(m?.[0].script).toBe('/addon/main/main.js');
   });
 
-  it('refuses everything on an unknown api_version', () => {
-    expect(parseManifest(manifest({ api_version: 2 }))).toBeNull();
+  it('accepts a 128-char path (the backend maximum) and refuses 129', () => {
+    const key = 'k'.repeat(20);
+    const path = (n: number) => `/addon/${key}/${'x'.repeat(n)}`;
+    expect(path(100).length).toBe(128);
+    const ok = entry({ key, script: path(100), styles: path(100) });
+    expect(parseEntries([ok])).not.toBeNull();
+    expect(parseEntries([entry({ key, script: path(101), styles: path(100) })])).toBeNull();
   });
 
-  it('refuses an external or traversing script or styles', () => {
+  it('has no cap on the number of entries', () => {
+    const many = Array.from({ length: 50 }, (_, i) =>
+      entry({ id: `e${i}`, element: `addon-e${i}` }),
+    );
+    expect(parseEntries(many)?.length).toBe(50);
+  });
+
+  it('refuses a script or styles outside /addon/<key>/ or traversing', () => {
     for (const bad of [
       'https://x/y.js',
       '//x',
-      '/addon/../x',
-      '/other/x.js',
-      '/addon//x',
-      'elements.js',
+      '/addon/main/../x',
+      '/addon/other/x.js',
+      '/addon/main.js',
+      '/addon/main//x',
+      'main.js',
     ]) {
-      expect(parseManifest(manifest({ script: bad }))).toBeNull();
-      expect(parseManifest(manifest({ styles: bad }))).toBeNull();
+      expect(parseEntries([entry({ script: bad })])).toBeNull();
+      expect(parseEntries([entry({ styles: bad })])).toBeNull();
     }
   });
 
   it('refuses an element that is not an addon- custom element', () => {
     for (const bad of ['script', 'div', 'addon-', 'addon-X', 'addon-a b']) {
-      expect(parseManifest(manifest({ addons: [entry({ element: bad })] }))).toBeNull();
+      expect(parseEntries([entry({ element: bad })])).toBeNull();
     }
   });
 
-  it('refuses an invalid id, level, name or shape', () => {
+  it('refuses an invalid id, key, level, name or shape', () => {
     for (const bad of ['', 'A', 'a b', 'x'.repeat(21), '../x']) {
-      expect(parseManifest(manifest({ addons: [entry({ id: bad })] }))).toBeNull();
+      expect(parseEntries([entry({ id: bad })])).toBeNull();
+      expect(parseEntries([entry({ key: bad })])).toBeNull();
     }
-    expect(parseManifest(manifest({ addons: [entry({ level: 'admin' })] }))).toBeNull();
-    expect(parseManifest(manifest({ addons: [entry({ name: 'Server' })] }))).toBeNull();
-    for (const raw of [null, 'x', 3, [], {}, manifest({ addons: 'no' })]) {
-      expect(parseManifest(raw)).toBeNull();
+    expect(parseEntries([entry({ level: 'none' })])).toBeNull();
+    expect(parseEntries([entry({ name: 'Server' })])).toBeNull();
+    expect(parseEntries([entry({ name: { en: 'Server' } })])).toBeNull();
+    expect(parseEntries([entry({ capabilities: 'tab' })])).toBeNull();
+    for (const raw of [null, 'x', 3, {}, [null], [1]]) {
+      expect(parseEntries(raw)).toBeNull();
     }
   });
 
-  it('accepts a manifest with no add-on', () => {
-    expect(parseManifest(manifest({ addons: [] }))?.entries).toEqual([]);
+  it('accepts no entry', () => {
+    expect(parseEntries([])).toEqual([]);
+  });
+});
+
+describe('baseOf', () => {
+  it('is the entry public folder', () => {
+    expect(baseOf(parseEntries(list())![0])).toBe('/addon/main/');
   });
 });
 
 describe('entryLabel', () => {
-  const e = parseManifest(manifest())!.entries[0];
+  const e = parseEntries(list())![0];
   it('uses the language, falling back to English', () => {
     expect(entryLabel(e, 'fr')).toBe('Serveur');
     expect(entryLabel(e, 'de')).toBe('Server');
-  });
-});
-
-describe('the contract copy', () => {
-  it('has the same rules as the code', () => {
-    const item = schema.properties.addons.items.properties;
-    expect(new RegExp(item.id.pattern).source).toBe(ID_RE.source);
-    expect(new RegExp(item.element.pattern).source).toBe(ELEMENT_RE.source);
-    expect(new RegExp(schema.$defs.path.pattern).source).toBe(PATH_RE.source);
-    expect(schema.properties.api_version.const).toBe(ADDON_API_VERSION);
   });
 });

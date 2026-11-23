@@ -789,6 +789,11 @@
   "measureHint": "Cliquez deux points pour mesurer la distance (Échap pour terminer)",
   "measureLabel": "{{ distance }} m · ΔX {{ dx }} · ΔZ {{ dz }}",
   "addon": {
+    "enable": "Activer cet add-on",
+    "capabilities": "Capacités déclarées",
+    "capTab": "Onglet",
+    "capMapLayer": "Calque de carte",
+    "enableHint": "Les capacités déclarées sont informatives : un add-on s'exécute avec les droits de votre compte.",
     "loadError": "Impossible de charger cet écran.",
     "retry": "Réessayer",
     "accessHint": "Chaque add-on a sa propre liste. L'administrateur a toujours le niveau action.",

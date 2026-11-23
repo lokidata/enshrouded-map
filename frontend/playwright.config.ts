@@ -47,9 +47,11 @@ export default defineConfig({
       reuseExistingServer: false,
     },
     {
-      command: 'npx ng serve --port 4200 --host 127.0.0.1',
+      // the `e2e` configuration serves the fixture map (e2e/fixtures/map), whatever `map-artifacts` points to;
+      // an already running dev server would serve the real map and break the tests: stop it first
+      command: 'npx ng serve --configuration e2e --port 4200 --host 127.0.0.1',
       url: 'http://127.0.0.1:4200',
-      reuseExistingServer: true,
+      reuseExistingServer: false,
       timeout: 120_000,
     },
   ],

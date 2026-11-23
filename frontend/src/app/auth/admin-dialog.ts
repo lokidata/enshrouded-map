@@ -1,8 +1,10 @@
+import { HttpClient } from '@angular/common/http';
 import { Component, ElementRef, computed, effect, inject, signal, viewChild } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { AddonAccess } from '../addon/addon-access';
 import { AddonService } from '../core/addon.service';
-import { entryLabel } from '../core/addon.logic';
+import { AdminAddon, entryDescription, entryLabel } from '../core/addon.logic';
 import { AuthService, errorCode } from '../core/auth.service';
 import { LangService } from '../core/lang.service';
 import { tabAfterKey } from '../core/tabs';
@@ -18,7 +20,8 @@ import { copyText, hashLink, timeOf } from '../core/links';
 export class AdminDialog {
   protected readonly auth = inject(AuthService);
   private readonly transloco = inject(TranslocoService);
-  protected readonly addons = inject(AddonService);
+  private readonly addons = inject(AddonService);
+  private readonly http = inject(HttpClient);
   private readonly lang = inject(LangService);
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
 
@@ -30,16 +33,46 @@ export class AdminDialog {
   protected readonly copied = signal(false);
   protected readonly resetError = signal('');
 
-  /** `accounts`, then one tab per add-on the manifest lists (each add-on keeps its own access list). */
+  /** `accounts`, then one tab per add-on the manifest lists (the site keeps the access lists). */
   protected readonly tab = signal('accounts');
-  protected readonly tabs = computed(() => ['accounts', ...this.addons.entries().map((e) => e.id)]);
+  protected readonly entries = signal<AdminAddon[]>([]);
+  protected readonly addonError = signal(false);
+  protected readonly tabs = computed(() => ['accounts', ...this.entries().map((e) => e.id)]);
+  protected readonly current = computed(() => this.entries().find((e) => e.id === this.active()));
   protected readonly active = computed(() =>
     this.tabs().includes(this.tab()) ? this.tab() : 'accounts',
   );
 
   protected label(id: string): string {
-    const e = this.addons.entries().find((x) => x.id === id);
+    const e = this.entries().find((x) => x.id === id);
     return e ? entryLabel(e, this.lang.lang()) : id;
+  }
+
+  protected description(e: AdminAddon): string {
+    return entryDescription(e, this.lang.lang());
+  }
+
+  protected async toggle(e: AdminAddon, event: Event): Promise<void> {
+    const box = event.target as HTMLInputElement;
+    this.addonError.set(false);
+    try {
+      const row = await firstValueFrom(
+        this.http.put<AdminAddon>(`/api/v1/addons/${e.id}`, { enabled: box.checked }),
+      );
+      this.entries.update((l) => l.map((x) => (x.id === row.id ? row : x)));
+      await this.addons.load(); // top bar and host follow at once
+    } catch {
+      box.checked = e.enabled;
+      this.addonError.set(true);
+    }
+  }
+
+  private async loadAddons(): Promise<void> {
+    try {
+      this.entries.set(await firstValueFrom(this.http.get<AdminAddon[]>('/api/v1/addons/admin')));
+    } catch {
+      this.entries.set([]); // add-ons off: the accounts tab alone
+    }
   }
 
   protected keys(event: KeyboardEvent): void {
@@ -61,6 +94,8 @@ export class AdminDialog {
         this.resetError.set('');
         this.deleteError.set('');
         void this.loadUsers();
+        void this.loadAddons();
+        this.addonError.set(false);
       }
       if (!open && el.open) el.close();
     });
