@@ -796,7 +796,7 @@
     "enableHint": "Declared capabilities are informative: an add-on runs with your account's rights.",
     "loadError": "This screen could not be loaded.",
     "retry": "Retry",
-    "accessHint": "Each add-on has its own list. The administrator always has the action level.",
+    "accessHint": "The site keeps this list for each add-on. The administrator always has the action level.",
     "accessUser": "User",
     "accessLevel": "Level",
     "levelNone": "None",
