@@ -796,7 +796,7 @@
     "enableHint": "Deklarierte Fähigkeiten sind nur informativ: Ein Add-on läuft mit den Rechten Ihres Kontos.",
     "loadError": "Dieser Bildschirm konnte nicht geladen werden.",
     "retry": "Erneut versuchen",
-    "accessHint": "Jedes Add-on hat seine eigene Liste. Der Administrator hat immer die Stufe Aktion.",
+    "accessHint": "Die Seite verwaltet diese Liste für jedes Add-on. Der Administrator hat immer die Stufe Aktion.",
     "accessUser": "Benutzer",
     "accessLevel": "Stufe",
     "levelNone": "Keine",

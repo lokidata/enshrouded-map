@@ -796,7 +796,7 @@
     "enableHint": "Les capacités déclarées sont informatives : un add-on s'exécute avec les droits de votre compte.",
     "loadError": "Impossible de charger cet écran.",
     "retry": "Réessayer",
-    "accessHint": "Chaque add-on a sa propre liste. L'administrateur a toujours le niveau action.",
+    "accessHint": "Le site garde cette liste pour chaque add-on. L'administrateur a toujours le niveau action.",
     "accessUser": "Utilisateur",
     "accessLevel": "Niveau",
     "levelNone": "Aucun",
