@@ -64,6 +64,16 @@ SemVer `vMAJOR.MINOR.PATCH`, first release `v0.1.0` (0.x: the data formats and t
 
 Label PRs `enhancement`, `bug`, `documentation` for the notes; `skip-changelog` hides one.
 
+## Updating from 0.5.x: add-ons are managed by the site (0.6.0)
+
+Only matters if you run the optional server add-on (or want to). Details of the new setup are in the "Optional server add-ons" part above and in [`docs/addons.md`](../docs/addons.md).
+
+- **Update the site and the add-on together.** Add-on 0.6.0 speaks manifest v2: an older add-on shows nothing behind this site, and the new add-on needs this site.
+- **Add-ons start disabled and the old access lists are not imported.** The migration (0018) runs by itself. Open Administration, enable each entry, then grant access again.
+- **Check your `.env` before restarting**: `ADDON_URL` is an origin (one trailing slash is tolerated); in `ADDONS` no trailing slash and no space after a comma, otherwise the web container stops at start (the reason is in its log).
+- The add-on is now reached at `/addon/<key>/` (`/addon/main/` for `ADDON_URL`); `#addon/server` links keep working.
+- New: static add-ons (a folder in `ADDONS_PATH`, no container), and the docs site (GitHub Pages).
+
 ## Updating from 0.4.x or older: the data files changed (0.5.0)
 
 `craft`, `gear`, `lore`, `skills` and `gems` are now split by language: next to `craft.json` the server needs `craft.fr.json`, `craft.en.json` and `craft.de.json` (same for the four others), and the base files themselves change. The new site cannot read the old files (the Workshop, Lore, Character and Skills screens would not load), and the old site cannot read the new ones: **copy the new data files and update the images together**.
