@@ -53,7 +53,7 @@ docs-src:
 	cp pipeline/README.md .site-src/pipeline.md && cp deploy/README.md .site-src/deploy.md && cp frontend/CLAUDE.md .site-src/frontend.md
 	sed -i -e 's#](docs/RULES.md)#](RULES.md)#; s#](docs/TODO.md)#](TODO.md)#; s#](docs/addons.md)#](addons.md)#; s#](pipeline/README.md)#](pipeline.md)#; s#](pipeline)#](pipeline.md)#' \
 	  -e 's#](deploy/portainer/README.md)#](https://github.com/lokidata/enshrouded-map/blob/main/deploy/portainer/README.md)#; s#](SECURITY.md)#](https://github.com/lokidata/enshrouded-map/blob/main/SECURITY.md)#; s#](LICENSE)#](https://github.com/lokidata/enshrouded-map/blob/main/LICENSE)#' .site-src/index.md
-	sed -i 's#](portainer/README.md)#](https://github.com/lokidata/enshrouded-map/blob/main/deploy/portainer/README.md)#' .site-src/deploy.md
+	sed -i -e 's#](portainer/README.md)#](https://github.com/lokidata/enshrouded-map/blob/main/deploy/portainer/README.md)#; s#](../docs/addons.md)#](addons.md)#' .site-src/deploy.md
 	sed -i 's#](../deploy)#](deploy.md)#' .site-src/pipeline.md
 docs: docs-src
 	uvx --with mkdocs-material mkdocs build
