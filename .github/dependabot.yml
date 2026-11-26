@@ -23,6 +23,9 @@ updates:
       # Angular pins the TypeScript range: a major bump breaks `npm ci` until Angular supports it.
       - dependency-name: typescript
         update-types: ["version-update:semver-major"]
+      # 1.65.x crashes Firefox on the workshop e2e test (Page crashed); the CI image tag must follow this package.
+      - dependency-name: "@playwright/test"
+        versions: [">=1.65.0"]
   - package-ecosystem: docker
     directory: /backend
     schedule: {interval: weekly}
