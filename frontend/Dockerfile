@@ -13,6 +13,8 @@ COPY --from=build /build/dist/frontend/browser /usr/share/nginx/html
 # Fixed packages that the pinned base image does not have yet (openssl, zlib, musl, brotli, curl, libexpat, libxslt); Dependabot moves the base forward.
 USER root
 RUN apk upgrade --no-cache libcrypto3 libssl3 zlib musl musl-utils brotli-libs curl libcurl libexpat libxslt libxml2
+# Minimum version: forces this layer to rebuild (the CI GHA cache kept an older libxml2) and fails the build if the repo lacks the fix.
+RUN apk add --no-cache "libxml2>=2.13.9-r5"
 # Config baked into the image: nothing to mount, so the same image runs from compose or Portainer.
 COPY nginx/default.conf.template /etc/nginx/templates/default.conf.template
 COPY nginx/security-headers.conf /etc/nginx/security-headers.conf
