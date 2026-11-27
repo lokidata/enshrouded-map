@@ -24,6 +24,7 @@ dev = [
     "bandit>=1.8",
     "pip-audit>=2.7",
     "psycopg[binary]>=3.3.9",
+    "hypothesis>=6.170.17",
 ]
 
 [tool.ruff]
